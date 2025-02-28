@@ -12,11 +12,11 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CommentService {
 
     private final CommentRepository commentRepository;
 
-    @Transactional
     public CommentDto createComment(CommentDto commentDto) {
         Comment comment = Comment.builder()
                 .memberId(commentDto.getMemberId())
@@ -28,7 +28,6 @@ public class CommentService {
         return CommentDto.fromEntity(savedComment);
     }
 
-    @Transactional
     public List<CommentDto> getCommentsByCurationId(Long curationId) {
         return commentRepository.findByCurationId(curationId)
                 .stream()
@@ -36,7 +35,7 @@ public class CommentService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional
+
     public void deleteComment(Long commentId) {
         commentRepository.deleteById(commentId);
     }
