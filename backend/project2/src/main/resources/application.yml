@@ -1,0 +1,6 @@
+spring:
+  application.name: project1
+  datasource:
+    url: jdbc:mysql://localhost:3306/project1
+    username: dbuser
+    password: 1234
