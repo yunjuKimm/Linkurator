@@ -20,29 +20,29 @@ public class CurationController {
 
     // 글 생성
     @PostMapping
-    public ResponseEntity<Curation> createPost(@RequestBody Curation curation) {
-        Curation createdPost = curationService.createCuration(curation);
-        return ResponseEntity.ok(createdPost);
+    public ResponseEntity<Curation> createCuration(@RequestBody Curation curation) {
+        Curation createdCuration = curationService.createCuration(curation);
+        return ResponseEntity.ok(createdCuration);
     }
 
     // 글 수정
     @PutMapping("/{id}")
-    public ResponseEntity<Curation> updatePost(@PathVariable Long id, @RequestBody Curation curation) {
-        Curation updatedPost = curationService.updateCuration(id, curation);
-        return ResponseEntity.ok(updatedPost);
+    public ResponseEntity<Curation> updateCuration(@PathVariable Long id, @RequestBody Curation curation) {
+        Curation updatedCuration = curationService.updateCuration(id, curation);
+        return ResponseEntity.ok(updatedCuration);
     }
 
     // 글 삭제
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePost(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteCuration(@PathVariable Long id) {
         curationService.deleteCuration(id);
         return ResponseEntity.noContent().build();
     }
 
     // 글 조회
     @GetMapping("/{id}")
-    public ResponseEntity<Curation> getPost(@PathVariable Long id) {
-        Optional<Curation> curation = curationService.getPost(id);
+    public ResponseEntity<Curation> getCuration(@PathVariable Long id) {
+        Optional<Curation> curation = curationService.getCuration(id);
         return curation.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

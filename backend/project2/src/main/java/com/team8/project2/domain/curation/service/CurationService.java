@@ -23,26 +23,26 @@ public class CurationService {
     }
 
     // 글 수정
-    public Curation updateCuration(Long postId, Curation updatedCuration) {
-        Optional<Curation> curationOptional = curationRepository.findById(postId);
+    public Curation updateCuration(Long curationId, Curation updatedCuration) {
+        Optional<Curation> curationOptional = curationRepository.findById(curationId);
         if (curationOptional.isPresent()) {
-            Curation post = curationOptional.get();
-            post.setTitle(updatedCuration.getTitle());
-            post.setContent(updatedCuration.getContent());
-            post.setModifiedAt(LocalDateTime.now());
-            return curationRepository.save(post);
+            Curation curation = curationOptional.get();
+            curation.setTitle(updatedCuration.getTitle());
+            curation.setContent(updatedCuration.getContent());
+            curation.setModifiedAt(LocalDateTime.now());
+            return curationRepository.save(curation);
         }
-        throw new RuntimeException("Post not found");
+        throw new RuntimeException("Curation not found");
     }
 
     // 글 삭제
-    public void deleteCuration(Long postId) {
-        curationRepository.deleteById(postId);
+    public void deleteCuration(Long curationId) {
+        curationRepository.deleteById(curationId);
     }
 
     // 글 조회
-    public Optional<Curation> getPost(Long postId) {
-        return curationRepository.findById(postId);
+    public Optional<Curation> getCuration(Long curationId) {
+        return curationRepository.findById(curationId);
     }
 
 
