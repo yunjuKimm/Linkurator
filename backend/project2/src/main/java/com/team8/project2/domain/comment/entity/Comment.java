@@ -19,13 +19,13 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long commentId;
 
-//    작성자
-//    @Column(nullable = false)
-//    private Long memberId;
+    // 작성자
+    @Column(nullable = false)
+    private Long memberId;
 
-//    글 ID
-//    @Column(nullable = false)
-//    private Long curationId;
+    // 글 ID
+    @Column(nullable = false)
+    private Long curationId;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
