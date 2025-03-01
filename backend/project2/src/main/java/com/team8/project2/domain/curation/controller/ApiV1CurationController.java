@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/curation")
+@RequestMapping("/api/v1/curation")
 public class ApiV1CurationController {
 
     private final CurationService curationService;
