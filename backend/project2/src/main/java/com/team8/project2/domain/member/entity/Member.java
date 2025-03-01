@@ -30,13 +30,15 @@ public class Member {
     @Setter(AccessLevel.PRIVATE)
     private LocalDateTime modifiedDate;
 
+    @Column(nullable = false, unique = true)
+    private String userId;
     @Column(length = 100, unique = true)
     private String username;
+    @Column(nullable = false)
+    private String password;
 
     @Column(nullable = false)
     private RoleEnum role;
-    @Column(nullable = false)
-    private String password;
     @Column(nullable = false)
     private String imgUrl;
     @Column(nullable = false)
