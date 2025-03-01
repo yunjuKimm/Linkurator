@@ -7,9 +7,13 @@
       </configuration>
     </facet>
   </component>
-  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_21">
+  <component name="NewModuleRootManager">
     <output url="file://$MODULE_DIR$/../../project2/build/classes/java/main" />
     <exclude-output />
+    <content url="file://$MODULE_DIR$/../../project2/src/main">
+      <sourceFolder url="file://$MODULE_DIR$/../../project2/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../project2/src/main/resources" type="java-resource" />
+    </content>
     <content url="file://$MODULE_DIR$/../../project2/src/main">
       <sourceFolder url="file://$MODULE_DIR$/../../project2/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../../project2/src/main/resources" type="java-resource" />
