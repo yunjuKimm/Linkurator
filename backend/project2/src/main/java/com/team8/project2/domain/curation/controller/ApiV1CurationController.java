@@ -3,7 +3,6 @@ package com.team8.project2.domain.curation.controller;
 import com.team8.project2.domain.curation.entity.Curation;
 import com.team8.project2.domain.curation.service.CurationService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,8 +10,8 @@ import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/curation")
-public class CurationController {
+@RequestMapping("/api/v1/curation")
+public class ApiV1CurationController {
 
     private final CurationService curationService;
 

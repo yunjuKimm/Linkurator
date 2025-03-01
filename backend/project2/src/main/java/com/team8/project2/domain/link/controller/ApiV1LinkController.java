@@ -9,9 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/link")
+@RequestMapping("/api/v1/link")
 @RequiredArgsConstructor
-public class LinkController {
+public class ApiV1LinkController {
 
     private final LinkService linkService;
 
