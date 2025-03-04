@@ -69,10 +69,12 @@ public class CurationService {
     }
 
     // 글 삭제
+    @Transactional
     public void deleteCuration(Long curationId) {
         if (!curationRepository.existsById(curationId)) {
             throw new ServiceException("404-1", "해당 글을 찾을 수 없습니다.");
         }
+        curationLinkRepository.deleteByCurationId(curationId);
         curationRepository.deleteById(curationId);
     }
 

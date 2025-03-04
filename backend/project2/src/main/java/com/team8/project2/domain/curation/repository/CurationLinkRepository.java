@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CurationLinkRepository extends JpaRepository<CurationLink, Long> {
+    void deleteByCurationId(Long curationId);
 }
