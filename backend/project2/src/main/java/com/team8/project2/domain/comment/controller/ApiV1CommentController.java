@@ -2,6 +2,7 @@ package com.team8.project2.domain.comment.controller;
 
 import com.team8.project2.domain.comment.dto.CommentDto;
 import com.team8.project2.domain.comment.service.CommentService;
+import com.team8.project2.global.dto.Empty;
 import com.team8.project2.global.dto.RsData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
