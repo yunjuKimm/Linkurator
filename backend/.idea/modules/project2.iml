@@ -14,6 +14,15 @@
       <excludeFolder url="file://$MODULE_DIR$/../../project2/.gradle" />
       <excludeFolder url="file://$MODULE_DIR$/../../project2/build" />
     </content>
+    <content url="file://$MODULE_DIR$/../../project2" />
+    <content url="file://$MODULE_DIR$/../../project2">
+      <excludeFolder url="file://$MODULE_DIR$/../../project2/.gradle" />
+      <excludeFolder url="file://$MODULE_DIR$/../../project2/build" />
+    </content>
+    <content url="file://$MODULE_DIR$/../../project2">
+      <excludeFolder url="file://$MODULE_DIR$/../../project2/.gradle" />
+      <excludeFolder url="file://$MODULE_DIR$/../../project2/build" />
+    </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

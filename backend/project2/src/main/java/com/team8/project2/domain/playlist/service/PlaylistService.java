@@ -1,13 +1,13 @@
 package com.team8.project2.domain.playlist.service;
 
+import com.team8.project2.global.exception.BadRequestException;
+import com.team8.project2.global.exception.NotFoundException;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
