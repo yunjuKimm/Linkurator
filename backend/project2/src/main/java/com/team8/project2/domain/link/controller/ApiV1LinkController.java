@@ -1,6 +1,6 @@
 package com.team8.project2.domain.link.controller;
 
-import com.team8.project2.domain.link.dto.LinkDTO;
+import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.global.dto.RsData;
@@ -17,15 +17,15 @@ public class ApiV1LinkController {
 
     // 링크 추가
     @PostMapping
-    public RsData<Link> addLink(@RequestBody @Valid LinkDTO linkDTO) {
-        Link link = linkService.addLink(linkDTO.getUrl(), linkDTO.getTitle(), linkDTO.getDescription(), linkDTO.getThumbnail());
+    public RsData<Link> addLink(@RequestBody @Valid LinkReqDTO linkDTO) {
+        Link link = linkService.addLink(linkDTO.getUrl());
         return new RsData<>("201-1", "링크가 성공적으로 추가되었습니다.", link);
     }
 
     // 링크 수정
     @PutMapping("/{linkId}")
-    public RsData<Link> updateLink(@PathVariable Long linkId, @RequestBody @Valid LinkDTO linkDTO) {
-        Link updatedLink = linkService.updateLink(linkId, linkDTO.getTitle(), linkDTO.getDescription(), linkDTO.getThumbnail());
+    public RsData<Link> updateLink(@PathVariable Long linkId, @RequestBody @Valid LinkReqDTO linkDTO) {
+        Link updatedLink = linkService.updateLink(linkId, linkDTO.getUrl());
         return new RsData<>("200-1", "링크가 성공적으로 수정되었습니다.", updatedLink);
     }
 
