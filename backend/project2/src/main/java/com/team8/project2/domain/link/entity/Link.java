@@ -14,8 +14,9 @@ import java.time.LocalDateTime;
 public class Link {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "linkId", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "url", nullable = false)
     private String url;

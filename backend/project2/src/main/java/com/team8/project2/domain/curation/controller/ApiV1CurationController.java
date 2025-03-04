@@ -22,21 +22,21 @@ public class ApiV1CurationController {
 
     // 글 수정
     @PutMapping("/{id}")
-    public RsData<Curation> updateCuration(@PathVariable String id, @RequestBody Curation curation) {
+    public RsData<Curation> updateCuration(@PathVariable Long id, @RequestBody Curation curation) {
         Curation updatedCuration = curationService.updateCuration(id, curation);
         return new RsData<>("200-1", "글이 성공적으로 수정되었습니다.", updatedCuration);
     }
 
     // 글 삭제
     @DeleteMapping("/{id}")
-    public RsData<Void> deleteCuration(@PathVariable String id) {
+    public RsData<Void> deleteCuration(@PathVariable Long id) {
         curationService.deleteCuration(id);
         return new RsData<>("204-1", "글이 성공적으로 삭제되었습니다.", null);
     }
 
     // 글 조회
     @GetMapping("/{id}")
-    public RsData<Curation> getCuration(@PathVariable String id) {
+    public RsData<Curation> getCuration(@PathVariable Long id) {
         Curation curation = curationService.getCuration(id);
         return new RsData<>("200-1", "조회 성공", curation);
     }
