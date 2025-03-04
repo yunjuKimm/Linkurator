@@ -1,10 +1,13 @@
 package com.team8.project2.domain.curation.controller;
 
+import com.team8.project2.domain.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.entity.Curation;
 import com.team8.project2.domain.curation.service.CurationService;
 import com.team8.project2.global.dto.RsData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -15,15 +18,27 @@ public class ApiV1CurationController {
 
     // 글 생성
     @PostMapping
-    public RsData<Curation> createCuration(@RequestBody Curation curation) {
-        Curation createdCuration = curationService.createCuration(curation);
+    public RsData<Curation> createCuration(@RequestBody CurationReqDTO curationReq) {
+        Curation createdCuration = curationService.createCuration(
+                curationReq.getTitle(),
+                curationReq.getContent(),
+                curationReq.getLinkReqDtos().stream()
+                        .map(url -> url.getUrl())
+                        .collect(Collectors.toUnmodifiableList()));
         return new RsData<>("201-1", "글이 성공적으로 생성되었습니다.", createdCuration);
     }
 
     // 글 수정
     @PutMapping("/{id}")
-    public RsData<Curation> updateCuration(@PathVariable Long id, @RequestBody Curation curation) {
-        Curation updatedCuration = curationService.updateCuration(id, curation);
+    public RsData<Curation> updateCuration(@PathVariable Long id, @RequestBody CurationReqDTO curationReq) {
+        Curation updatedCuration = curationService.updateCuration(
+                id,
+                curationReq.getTitle(),
+                curationReq.getContent(),
+                curationReq.getLinkReqDtos().stream()
+                        .map(url -> url.getUrl())
+                        .collect(Collectors.toUnmodifiableList())
+                );
         return new RsData<>("200-1", "글이 성공적으로 수정되었습니다.", updatedCuration);
     }
 

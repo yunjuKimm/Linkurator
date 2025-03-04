@@ -1,35 +1,70 @@
 package com.team8.project2.domain.curation.service;
 
 import com.team8.project2.domain.curation.entity.Curation;
+import com.team8.project2.domain.curation.entity.CurationLink;
+import com.team8.project2.domain.curation.repository.CurationLinkRepository;
 import com.team8.project2.domain.curation.repository.CurationRepository;
-import com.team8.project2.global.dto.RsData;
+import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CurationService {
 
     private final CurationRepository curationRepository;
+    private final CurationLinkRepository curationLinkRepository;
+    private final LinkService linkService;
+
 
     // 글 생성
-    public Curation createCuration(Curation curation) {
-        curation.setCreatedAt(LocalDateTime.now());
-        return curationRepository.save(curation);
+    @Transactional
+    public Curation createCuration(String title, String content, List<String> urls) {
+        Curation curation = Curation.builder()
+                .title(title)
+                .content(content)
+                .build();
+        curationRepository.save(curation);
+
+        // 큐레이션 - 링크 연결
+        List<CurationLink> curationLinks = urls.stream()
+                .map(url -> {
+                    CurationLink curationLink = new CurationLink();
+                    return curationLink.setCurationAndLink(curation, linkService.getLink(url));
+                }).collect(Collectors.toUnmodifiableList());
+        for (CurationLink curationLink : curationLinks) {
+            curationLinkRepository.save(curationLink);
+        }
+
+        return curation;
     }
 
     // 글 수정
-    public Curation updateCuration(Long curationId, Curation updatedCuration) {
+    @Transactional
+    public Curation updateCuration(Long curationId, String title, String content, List<String> urls) {
+
         Curation curation = curationRepository.findById(curationId)
                 .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
 
-        curation.setTitle(updatedCuration.getTitle());
-        curation.setContent(updatedCuration.getContent());
-        curation.setModifiedAt(LocalDateTime.now());
+        curation.setTitle(title);
+        curation.setContent(content);
+
+
+        // 큐레이션 - 링크 연결
+        List<CurationLink> curationLinks = urls.stream()
+                .map(url -> {
+                    CurationLink curationLink = new CurationLink();
+                    return curationLink.setCurationAndLink(curation, linkService.getLink(url));
+                }).collect(Collectors.toUnmodifiableList());
+        for (CurationLink curationLink : curationLinks) {
+            curationLinkRepository.save(curationLink);
+        }
+
         return curationRepository.save(curation);
     }
 
@@ -46,6 +81,4 @@ public class CurationService {
         return curationRepository.findById(curationId)
                 .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
     }
-
-
 }
