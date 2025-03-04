@@ -1,15 +1,22 @@
 package com.team8.project2.domain.link.entity;
 
+import com.team8.project2.domain.curation.entity.CurationLink;
 import jakarta.persistence.Entity;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "Link")
 public class Link {
 
@@ -21,18 +28,14 @@ public class Link {
     @Column(name = "url", nullable = false)
     private String url;
 
-    @Column(name = "title", nullable = false, length = 255)
-    private String title;
-
     @Column(name = "click", nullable = false)
-    private int click;
+    private int click = 0;
 
-    @Column(name = "description", nullable = false, columnDefinition = "TEXT")
-    private String description;
-
+    @CreatedDate
+    @Setter(AccessLevel.PRIVATE)
     @Column(name = "createdAt", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "thumbnail", nullable = false)
-    private String thumbnail;
+    @OneToMany(mappedBy = "link")
+    private List<CurationLink> curationLinks;
 }

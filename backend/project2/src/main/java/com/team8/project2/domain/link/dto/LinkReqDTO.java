@@ -5,17 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class LinkDTO {
+public class LinkReqDTO {
     @NotNull
     private String url;
-
-    @NotNull
-    private String title;
-
-    @NotNull
-    private String description;
-
-    @NotNull
-    private String thumbnail;
-
 }
