@@ -17,21 +17,21 @@ public class ApiV1CommentController {
 
     private final CommentService commentService;
 
-    @PostMapping
-    public ResponseEntity<RsData<CommentDto>> createComment(@RequestBody CommentDto commentDto) {
-        CommentDto createdComment = commentService.createComment(commentDto);
-        return ResponseEntity.ok(RsData.success(createdComment));
-    }
+//    @PostMapping
+//    public ResponseEntity<RsData<CommentDto>> createComment(@RequestBody CommentDto commentDto) {
+//        CommentDto createdComment = commentService.createComment(commentDto);
+//        return ResponseEntity.ok(RsData.success(createdComment));
+//    }
 
-    @GetMapping("/{curationId}")
-    public ResponseEntity<RsData<List<CommentDto>>> getCommentsByCurationId(@PathVariable Long curationId) {
-        List<CommentDto> comments = commentService.getCommentsByCurationId(curationId);
-        return ResponseEntity.ok(RsData.success(comments));
-    }
-
-    @DeleteMapping("/{commentId}")
-    public ResponseEntity<RsData<Empty>> deleteComment(@PathVariable Long commentId) {
-        commentService.deleteComment(commentId);
-        return ResponseEntity.ok(RsData.success(new Empty()));
-    }
+//    @GetMapping("/{curationId}")
+//    public ResponseEntity<RsData<List<CommentDto>>> getCommentsByCurationId(@PathVariable Long curationId) {
+//        List<CommentDto> comments = commentService.getCommentsByCurationId(curationId);
+//        return ResponseEntity.ok(RsData.success(comments));
+//    }
+//
+//    @DeleteMapping("/{commentId}")
+//    public ResponseEntity<RsData<Empty>> deleteComment(@PathVariable Long commentId) {
+//        commentService.deleteComment(commentId);
+//        return ResponseEntity.ok(RsData.success(new Empty()));
+//    }
 }
