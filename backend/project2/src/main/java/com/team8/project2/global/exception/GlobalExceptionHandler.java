@@ -34,23 +34,23 @@ public class GlobalExceptionHandler {
 			);
 	}
 
-	/** 404 - Not Found (EntityNotFoundException) */
-	@ExceptionHandler(EntityNotFoundException.class)
-	public ResponseEntity<RsData<Empty>> handleEntityNotFoundException(EntityNotFoundException e) {
-		return ResponseEntity
-				.status(HttpStatus.NOT_FOUND)
-				.body(new RsData<>("404-1", e.getMessage()));
-	}
-
-	/** 400 - 잘못된 요청 (IllegalArgumentException) */
-	@ExceptionHandler(IllegalArgumentException.class)
-	public ResponseEntity<RsData<Empty>> handleIllegalArgumentException(IllegalArgumentException e) {
+	/** 400 - Bad Request (BadRequestException 및 IllegalArgumentException) */
+	@ExceptionHandler({BadRequestException.class, IllegalArgumentException.class})
+	public ResponseEntity<RsData<Empty>> handleBadRequestException(RuntimeException e) {
 		return ResponseEntity
 				.status(HttpStatus.BAD_REQUEST)
 				.body(new RsData<>("400-2", e.getMessage()));
 	}
 
-	/** 500 - 서버 내부 에러 (예상치 못한 모든 예외) */
+	/** 404 - Not Found (NotFoundException) */
+	@ExceptionHandler(NotFoundException.class)
+	public ResponseEntity<RsData<Empty>> handleNotFoundException(NotFoundException e) {
+		return ResponseEntity
+				.status(HttpStatus.NOT_FOUND)
+				.body(new RsData<>("404-1", e.getMessage()));
+	}
+
+	/** 500 - Internal Server Error */
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<RsData<Empty>> handleGlobalException(Exception e) {
 		return ResponseEntity
