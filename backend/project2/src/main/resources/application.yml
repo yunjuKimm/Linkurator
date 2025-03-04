@@ -1,6 +1,19 @@
+server:
+  port: 8080
+
 spring:
-  application.name: project1
+  profiles:
+    active: dev
+  output:
+    ansi:
+      enables: always
   datasource:
     url: jdbc:mysql://localhost:3306/project1
     username: dbuser
     password: 1234
+
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100

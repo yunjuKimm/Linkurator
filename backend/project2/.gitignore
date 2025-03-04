@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### CUSTOM ###
+.DS_STORE
+dev.mv.db
+dev.trace.db
+test.mv.db
+test.trace.db
