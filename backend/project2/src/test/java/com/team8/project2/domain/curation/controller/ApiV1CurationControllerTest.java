@@ -1,10 +1,13 @@
 package com.team8.project2.domain.curation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.team8.project2.domain.curation.dto.CurationReqDTO;
-import com.team8.project2.domain.curation.entity.Curation;
-import com.team8.project2.domain.curation.service.CurationService;
+import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
+import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.repository.CurationRepository;
+import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.curation.tag.dto.TagReqDto;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,8 +49,13 @@ public class ApiV1CurationControllerTest {
         LinkReqDTO linkReqDTO = new LinkReqDTO();
         linkReqDTO.setUrl("https://example.com");
 
+        // TagReqDTO
+        TagReqDto tagReqDto = new TagReqDto();
+        tagReqDto.setName("tag1");
+
         // 링크 리스트에 추가
         curationReqDTO.setLinkReqDtos(Collections.singletonList(linkReqDTO));
+        curationReqDTO.setTagReqDtos(Collections.singletonList(tagReqDto));
     }
 
     // 글 생성 테스트
@@ -59,6 +67,11 @@ public class ApiV1CurationControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.code").value("201-1"))
                 .andExpect(jsonPath("$.msg").value("글이 성공적으로 생성되었습니다."));
+
+        curationRepository.flush();
+
+        var curation = curationService.getCuration(1L);
+        Assertions.assertThat(curation.getTags().getFirst().getTag().getName()).equals("tag1");
     }
 
     // 글 수정 테스트
@@ -70,6 +83,9 @@ public class ApiV1CurationControllerTest {
                 curationReqDTO.getContent(),
                 curationReqDTO.getLinkReqDtos().stream()
                         .map(linkReqDto -> linkReqDto.getUrl())
+                        .collect(Collectors.toUnmodifiableList()),
+                curationReqDTO.getTagReqDtos().stream()
+                        .map(tagReqDto -> tagReqDto.getName())
                         .collect(Collectors.toUnmodifiableList())
         );
 
@@ -90,6 +106,9 @@ public class ApiV1CurationControllerTest {
                 curationReqDTO.getContent(),
                 curationReqDTO.getLinkReqDtos().stream()
                         .map(linkReqDTO -> linkReqDTO.getUrl())
+                        .collect(Collectors.toUnmodifiableList()),
+                curationReqDTO.getTagReqDtos().stream()
+                        .map(tagReqDto -> tagReqDto.getName())
                         .collect(Collectors.toUnmodifiableList())
         );
 
@@ -106,6 +125,9 @@ public class ApiV1CurationControllerTest {
                 curationReqDTO.getContent(),
                 curationReqDTO.getLinkReqDtos().stream()
                         .map(linkReqDto -> linkReqDto.getUrl())
+                        .collect(Collectors.toUnmodifiableList()),
+                curationReqDTO.getTagReqDtos().stream()
+                        .map(tagReqDto -> tagReqDto.getName())
                         .collect(Collectors.toUnmodifiableList())
         );
 
@@ -116,4 +138,7 @@ public class ApiV1CurationControllerTest {
                 .andExpect(jsonPath("$.data.id").value(savedCuration.getId()))
                 .andExpect(jsonPath("$.data.title").value("Test Title"));
     }
+
+    @Autowired
+    private CurationRepository curationRepository;
 }

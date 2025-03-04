@@ -1,6 +1,6 @@
 package com.team8.project2.domain.comment.entity;
 
-import com.team8.project2.domain.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.entity.Curation;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

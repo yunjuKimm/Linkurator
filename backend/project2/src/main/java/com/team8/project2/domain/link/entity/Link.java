@@ -1,6 +1,6 @@
 package com.team8.project2.domain.link.entity;
 
-import com.team8.project2.domain.curation.entity.CurationLink;
+import com.team8.project2.domain.curation.curation.entity.CurationLink;
 import jakarta.persistence.Entity;
 import jakarta.persistence.*;
 import lombok.*;

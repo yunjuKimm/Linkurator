@@ -1,7 +1,7 @@
 package com.team8.project2.domain.comment.dto;
 
 import com.team8.project2.domain.comment.entity.Comment;
-import com.team8.project2.domain.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.entity.Curation;
 import lombok.*;
 
 import java.time.LocalDateTime;

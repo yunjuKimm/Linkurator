@@ -1,6 +1,6 @@
-package com.team8.project2.domain.curation.repository;
+package com.team8.project2.domain.curation.curation.repository;
 
-import com.team8.project2.domain.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.entity.Curation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,4 +1,4 @@
-package com.team8.project2.domain.curation.entity;
+package com.team8.project2.domain.curation.curation.entity;
 
 import com.team8.project2.domain.link.entity.Link;
 import jakarta.persistence.*;

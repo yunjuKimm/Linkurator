@@ -1,4 +1,4 @@
-package com.team8.project2.domain.curation.entity;
+package com.team8.project2.domain.curation.curation.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -7,6 +7,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -44,6 +45,9 @@ public class Curation {
 //    @JoinColumn(name = "memberId", nullable = false)
 //    private Member member;
 
-    @OneToMany
-    private List<CurationLink> curationLinks;
+    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY)
+    private List<CurationLink> curationLinks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY)
+    private List<CurationTag> tags = new ArrayList<>();
 }

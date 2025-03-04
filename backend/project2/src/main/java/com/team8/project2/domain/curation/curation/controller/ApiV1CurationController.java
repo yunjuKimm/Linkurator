@@ -1,8 +1,8 @@
-package com.team8.project2.domain.curation.controller;
+package com.team8.project2.domain.curation.curation.controller;
 
-import com.team8.project2.domain.curation.dto.CurationReqDTO;
-import com.team8.project2.domain.curation.entity.Curation;
-import com.team8.project2.domain.curation.service.CurationService;
+import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
+import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.global.dto.RsData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +24,9 @@ public class ApiV1CurationController {
                 curationReq.getContent(),
                 curationReq.getLinkReqDtos().stream()
                         .map(url -> url.getUrl())
+                        .collect(Collectors.toUnmodifiableList()),
+                curationReq.getTagReqDtos().stream()
+                        .map(tag -> tag.getName())
                         .collect(Collectors.toUnmodifiableList()));
         return new RsData<>("201-1", "글이 성공적으로 생성되었습니다.", createdCuration);
     }
@@ -37,8 +40,10 @@ public class ApiV1CurationController {
                 curationReq.getContent(),
                 curationReq.getLinkReqDtos().stream()
                         .map(url -> url.getUrl())
-                        .collect(Collectors.toUnmodifiableList())
-                );
+                        .collect(Collectors.toUnmodifiableList()),
+                curationReq.getTagReqDtos().stream()
+                        .map(tag -> tag.getName())
+                        .collect(Collectors.toUnmodifiableList()));
         return new RsData<>("200-1", "글이 성공적으로 수정되었습니다.", updatedCuration);
     }
 
