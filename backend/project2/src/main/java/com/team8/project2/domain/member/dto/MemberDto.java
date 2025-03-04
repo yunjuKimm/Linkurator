@@ -1,6 +1,5 @@
 package com.team8.project2.domain.member.dto;
 
-import com.example.auth.domain.member.member.entity.Member;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.team8.project2.domain.member.entity.Member;
 import lombok.Getter;
