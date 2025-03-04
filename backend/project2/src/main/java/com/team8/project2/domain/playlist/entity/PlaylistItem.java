@@ -3,7 +3,6 @@ package com.team8.project2.domain.playlist.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.List;
 
 @Entity
 @Getter
@@ -11,16 +10,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Playlist {
+public class PlaylistItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String title;
+    private Long itemId;
+    private String itemType;
 
-    private String description;
-
-    @OneToMany(mappedBy = "playlist", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PlaylistItem> items;
+    @ManyToOne
+    @JoinColumn(name = "playlist_id")
+    private Playlist playlist;
 }
