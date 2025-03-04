@@ -4,6 +4,7 @@ import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.service.PlaylistService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class ApiV1PlaylistControllerTest {
 
-    private final MockMvc mockMvc;
+    private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks
@@ -30,8 +31,9 @@ class ApiV1PlaylistControllerTest {
     @Mock
     private PlaylistService playlistService;
 
-    ApiV1PlaylistControllerTest() {
-        this.mockMvc = MockMvcBuilders.standaloneSetup(playlistController).build();
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(playlistController).build(); // 🔹 여기서 초기화!
     }
 
     @Test
