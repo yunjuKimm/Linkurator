@@ -24,14 +24,14 @@ public class ApiV1LinkController {
 
     // 링크 수정
     @PutMapping("/{linkId}")
-    public RsData<Link> updateLink(@PathVariable String linkId, @RequestBody @Valid LinkDTO linkDTO) {
+    public RsData<Link> updateLink(@PathVariable Long linkId, @RequestBody @Valid LinkDTO linkDTO) {
         Link updatedLink = linkService.updateLink(linkId, linkDTO.getTitle(), linkDTO.getDescription(), linkDTO.getThumbnail());
         return new RsData<>("200-1", "링크가 성공적으로 수정되었습니다.", updatedLink);
     }
 
     // 링크 삭제
     @DeleteMapping("/{linkId}")
-    public RsData<Void> deleteLink(@PathVariable String linkId) {
+    public RsData<Void> deleteLink(@PathVariable Long linkId) {
         linkService.deleteLink(linkId);
         return new RsData<>("204-1", "링크가 성공적으로 삭제되었습니다.");
     }

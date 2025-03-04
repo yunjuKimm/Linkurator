@@ -13,8 +13,9 @@ import java.time.LocalDateTime;
 public class Curation {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "curationId", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "title", nullable = false)
     private String title;

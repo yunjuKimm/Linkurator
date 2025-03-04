@@ -18,13 +18,12 @@ public class CurationService {
 
     // 글 생성
     public Curation createCuration(Curation curation) {
-        curation.setId(generateCurationId());
         curation.setCreatedAt(LocalDateTime.now());
         return curationRepository.save(curation);
     }
 
     // 글 수정
-    public Curation updateCuration(String curationId, Curation updatedCuration) {
+    public Curation updateCuration(Long curationId, Curation updatedCuration) {
         Curation curation = curationRepository.findById(curationId)
                 .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
 
@@ -35,7 +34,7 @@ public class CurationService {
     }
 
     // 글 삭제
-    public void deleteCuration(String curationId) {
+    public void deleteCuration(Long curationId) {
         if (!curationRepository.existsById(curationId)) {
             throw new ServiceException("404-1", "해당 글을 찾을 수 없습니다.");
         }
@@ -43,13 +42,10 @@ public class CurationService {
     }
 
     // 글 조회
-    public Curation getCuration(String curationId) {
+    public Curation getCuration(Long curationId) {
         return curationRepository.findById(curationId)
                 .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
     }
 
-    private String generateCurationId() {
-        // 링크 ID 생성 로직
-        return "generated-link-id"; // 임시
-    }
+
 }
