@@ -74,7 +74,7 @@ class CurationServiceTest {
 
     @Test
     @DisplayName("큐레이션을 생성할 수 있다")
-    public void createCuration() {
+    void createCuration() {
         List<String> urls = Arrays.asList("http://example.com", "http://another-url.com");
         List<String> tags = Arrays.asList("tag1", "tag2", "tag3");
 
@@ -98,7 +98,7 @@ class CurationServiceTest {
 
     @Test
     @DisplayName("큐레이션을 수정할 수 있다")
-    public void UpdateCuration() {
+    void UpdateCuration() {
         List<String> urls = Arrays.asList("http://updated-url.com", "http://another-url.com");
         List<String> tags = Arrays.asList("updated-tag1", "updated-tag2", "updated-tag3");
 
@@ -125,7 +125,7 @@ class CurationServiceTest {
 
     @Test
     @DisplayName("실패 - 존재하지 않는 큐레이션을 수정하면 실패한다")
-    public void UpdateCurationNotFound() {
+    void UpdateCurationNotFound() {
         List<String> urls = Arrays.asList("http://updated-url.com");
         List<String> tags = Arrays.asList("tag1", "tag2", "tag3");
 
@@ -142,7 +142,7 @@ class CurationServiceTest {
 
     @Test
     @DisplayName("큐레이션을 삭제할 수 있다")
-    public void DeleteCuration() {
+    void DeleteCuration() {
         // Mocking repository to return true for existence check
         when(curationRepository.existsById(anyLong())).thenReturn(true);
 
@@ -154,7 +154,7 @@ class CurationServiceTest {
 
     @Test
     @DisplayName("실패 - 존재하지 않는 큐레이션을 삭제할 수 없다")
-    public void DeleteCurationNotFound() {
+    void DeleteCurationNotFound() {
         // Mocking repository to return false for existence check
         when(curationRepository.existsById(anyLong())).thenReturn(false);
 
@@ -168,7 +168,7 @@ class CurationServiceTest {
 
     @Test
     @DisplayName("큐레이션을 조회할 수 있다")
-    public void GetCuration() {
+    void GetCuration() {
         // Mocking repository to return a Curation
         when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
 
@@ -181,7 +181,7 @@ class CurationServiceTest {
 
     @Test
     @DisplayName("실패 - 존재하지 않는 큐레이션을 조회하면 실패한다")
-    public void GetCurationNotFound() {
+    void GetCurationNotFound() {
         // Mocking repository to return empty Optional
         when(curationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
@@ -191,5 +191,17 @@ class CurationServiceTest {
         } catch (ServiceException e) {
             assert e.getMessage().contains("해당 글을 찾을 수 없습니다.");
         }
+    }
+
+    @Test
+    void findAllCuration() {
+        when(curationRepository.searchByFilters(ArgumentMatchers.anyList(), anyString(), anyString()))
+                .thenReturn(List.of(curation));
+
+        List<Curation> foundCurations = curationService.searchCurations(List.of("tag"), "title", "content");
+
+        // Verify the result
+        assert foundCurations != null;
+        assert foundCurations.size() == 1;
     }
 }

@@ -3,7 +3,6 @@ package com.team8.project2.domain.curation.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.entity.Curation;
-import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.curation.tag.dto.TagReqDto;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
@@ -37,9 +36,6 @@ public class ApiV1CurationControllerTest {
     private CurationService curationService; // 실제 서비스 사용
 
     private CurationReqDTO curationReqDTO;
-
-	@Autowired
-	private CurationRepository curationRepository;
 
     @BeforeEach
     void setUp() {
@@ -143,16 +139,39 @@ public class ApiV1CurationControllerTest {
                 .andExpect(jsonPath("$.data.title").value("Test Title"));
     }
 
-    // 태그로 글 조회 테스트
+    // 글 전체 조회
+    @Test
+    void findAll() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            curationService.createCuration(
+                    curationReqDTO.getTitle(),
+                    curationReqDTO.getContent(),
+                    curationReqDTO.getLinkReqDtos().stream()
+                            .map(linkReqDto -> linkReqDto.getUrl())
+                            .collect(Collectors.toUnmodifiableList()),
+                    curationReqDTO.getTagReqDtos().stream()
+                            .map(tagReqDto -> tagReqDto.getName())
+                            .collect(Collectors.toUnmodifiableList())
+            );
+        }
+
+        mockMvc.perform(get("/api/v1/curation"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
+                .andExpect(jsonPath("$.data.length()").value(10));
+    }
+
+
+    // 태그로 글 검색
     @Test
     void findCurationByTags() throws Exception {
-        // 테스트용 데이터 저장
         Curation savedCuration1 = createCurationWithTags(List.of("tag1", "tag2", "tag3"));
         Curation savedCuration2 = createCurationWithTags(List.of("tag2", "tag3", "tag4", "tag5"));
         Curation savedCuration3 = createCurationWithTags(List.of("tag2", "tag1", "tag3"));
 
-        mockMvc.perform(get("/api/v1/curation/search")
-                .param("tags", "tag1"))
+        mockMvc.perform(get("/api/v1/curation")
+                        .param("tags", "tag1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-1"))
                 .andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
@@ -167,6 +186,91 @@ public class ApiV1CurationControllerTest {
                         .map(linkReqDto -> linkReqDto.getUrl())
                         .collect(Collectors.toUnmodifiableList()),
                 tags
+        );
+    }
+
+    // 제목으로 글 검색
+    @Test
+    void findCurationByTitle() throws Exception {
+        Curation savedCuration1 = createCurationWithTitle("title1");
+        Curation savedCuration2 = createCurationWithTitle("test-title");
+        Curation savedCuration3 = createCurationWithTitle("test");
+
+        mockMvc.perform(get("/api/v1/curation")
+                        .param("title", "title"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
+                .andExpect(jsonPath("$.data.length()").value(2));
+    }
+
+    private Curation createCurationWithTitle(String title) {
+        return curationService.createCuration(
+                title,
+                curationReqDTO.getContent(),
+                curationReqDTO.getLinkReqDtos().stream()
+                        .map(linkReqDto -> linkReqDto.getUrl())
+                        .collect(Collectors.toUnmodifiableList()),
+                curationReqDTO.getTagReqDtos().stream()
+                        .map(tagReqDto -> tagReqDto.getName())
+                        .collect(Collectors.toUnmodifiableList())
+        );
+    }
+
+    // 내용으로 글 검색
+    @Test
+    void findCurationByContent() throws Exception {
+        Curation savedCuration1 = createCurationWithContent("content1");
+        Curation savedCuration2 = createCurationWithContent("test-content");
+        Curation savedCuration3 = createCurationWithContent("test");
+
+        mockMvc.perform(get("/api/v1/curation")
+                        .param("content", "content"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
+                .andExpect(jsonPath("$.data.length()").value(2));
+    }
+
+    private Curation createCurationWithContent(String content) {
+        return curationService.createCuration(
+                curationReqDTO.getTitle(),
+                content,
+                curationReqDTO.getLinkReqDtos().stream()
+                        .map(linkReqDto -> linkReqDto.getUrl())
+                        .collect(Collectors.toUnmodifiableList()),
+                curationReqDTO.getTagReqDtos().stream()
+                        .map(tagReqDto -> tagReqDto.getName())
+                        .collect(Collectors.toUnmodifiableList())
+        );
+    }
+
+    // 제목과 내용으로 글 검색
+    @Test
+    void findCurationByTitleAndContent() throws Exception {
+        Curation savedCuration1 = createCurationWithTitleAndContent("title", "content1");
+        Curation savedCuration2 = createCurationWithTitleAndContent("sample", "test-content");
+        Curation savedCuration3 = createCurationWithTitleAndContent("test","test");
+
+        mockMvc.perform(get("/api/v1/curation")
+                        .param("title", "title")
+                        .param("content", "content"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
+                .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    private Curation createCurationWithTitleAndContent(String title, String content) {
+        return curationService.createCuration(
+                title,
+                content,
+                curationReqDTO.getLinkReqDtos().stream()
+                        .map(linkReqDto -> linkReqDto.getUrl())
+                        .collect(Collectors.toUnmodifiableList()),
+                curationReqDTO.getTagReqDtos().stream()
+                        .map(tagReqDto -> tagReqDto.getName())
+                        .collect(Collectors.toUnmodifiableList())
         );
     }
 }
