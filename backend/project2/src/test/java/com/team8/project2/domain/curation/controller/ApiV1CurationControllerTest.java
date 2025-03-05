@@ -250,7 +250,7 @@ public class ApiV1CurationControllerTest {
     void findCurationByTitleAndContent() throws Exception {
         Curation savedCuration1 = createCurationWithTitleAndContent("title", "content1");
         Curation savedCuration2 = createCurationWithTitleAndContent("sample", "test-content");
-        Curation savedCuration3 = createCurationWithTitleAndContent("test","test");
+        Curation savedCuration3 = createCurationWithTitleAndContent("test", "test");
 
         mockMvc.perform(get("/api/v1/curation")
                         .param("title", "title")
@@ -272,5 +272,74 @@ public class ApiV1CurationControllerTest {
                         .map(tagReqDto -> tagReqDto.getName())
                         .collect(Collectors.toUnmodifiableList())
         );
+    }
+
+    // 최신순으로 글 조회
+    @Test
+    void findCurationByLatest() throws Exception {
+        Curation savedCuration1 = createCurationWithTitleAndContent("title1", "content1");
+        Curation savedCuration2 = createCurationWithTitleAndContent("title2", "content2");
+        Curation savedCuration3 = createCurationWithTitleAndContent("title3", "content3");
+
+        mockMvc.perform(get("/api/v1/curation")
+                        .param("order", "LATEST"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
+                .andExpect(jsonPath("$.data[0].content").value("content3"))
+                .andExpect(jsonPath("$.data[1].content").value("content2"))
+                .andExpect(jsonPath("$.data[2].content").value("content1"));
+    }
+
+    // 오래된순으로 글 조회
+    @Test
+    void findCurationByOldest() throws Exception {
+        Curation savedCuration1 = createCurationWithTitleAndContent("title1", "content1");
+        Curation savedCuration2 = createCurationWithTitleAndContent("title2", "content2");
+        Curation savedCuration3 = createCurationWithTitleAndContent("title3", "content3");
+
+        mockMvc.perform(get("/api/v1/curation")
+                        .param("order", "OLDEST"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
+                .andExpect(jsonPath("$.data[0].content").value("content1"))
+                .andExpect(jsonPath("$.data[1].content").value("content2"))
+                .andExpect(jsonPath("$.data[2].content").value("content3"));
+    }
+
+    // 좋아요순으로 글 조회
+    @Test
+    void findCurationByLikeCount() throws Exception {
+        Curation savedCuration1 = createCurationWithTitleAndContentAndLikeCount("title1", "content1", 4L);
+        Curation savedCuration2 = createCurationWithTitleAndContentAndLikeCount("title2", "content2", 10L);
+        Curation savedCuration3 = createCurationWithTitleAndContentAndLikeCount("title3", "content3", 2L);
+
+        mockMvc.perform(get("/api/v1/curation")
+                        .param("order", "LIKECOUNT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
+                .andExpect(jsonPath("$.data[0].content").value("content2"))
+                .andExpect(jsonPath("$.data[1].content").value("content1"))
+                .andExpect(jsonPath("$.data[2].content").value("content3"));
+    }
+
+    private Curation createCurationWithTitleAndContentAndLikeCount(String title, String content, Long likeCount) {
+        Curation curation = curationService.createCuration(
+                title,
+                content,
+                curationReqDTO.getLinkReqDtos().stream()
+                        .map(linkReqDto -> linkReqDto.getUrl())
+                        .collect(Collectors.toList()),
+                curationReqDTO.getTagReqDtos().stream()
+                        .map(tagReqDto -> tagReqDto.getName())
+                        .collect(Collectors.toList())
+        );
+
+        for (long l = 0; l < likeCount; l++) {
+            curationService.likeCuration(curation.getId());
+        }
+        return curation;
     }
 }
