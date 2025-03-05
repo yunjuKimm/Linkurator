@@ -25,4 +25,10 @@ public class PlaylistItem {
     @ManyToOne
     @JoinColumn(name = "playlist_id", nullable = false) // 🔹 NULL 허용 안 함 (반드시 Playlist와 연결)
     private Playlist playlist;
+
+    public enum PlaylistItemType {
+        LINK,
+        CURATION
+    }
+
 }
