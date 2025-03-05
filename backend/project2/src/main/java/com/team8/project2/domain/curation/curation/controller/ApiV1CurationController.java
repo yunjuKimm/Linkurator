@@ -8,6 +8,7 @@ import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.global.dto.RsData;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,6 +51,7 @@ public class ApiV1CurationController {
     }
 
     // 전체 글 조회 및 검색
+    @Transactional(readOnly = true)
     @GetMapping
     public RsData<List<CurationResDto>> searchCuration(
             @RequestParam(required = false) List<String> tags,
