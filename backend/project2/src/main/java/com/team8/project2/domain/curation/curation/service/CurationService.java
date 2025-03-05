@@ -44,6 +44,7 @@ public class CurationService {
         for (CurationLink curationLink : curationLinks) {
             curationLinkRepository.save(curationLink);
         }
+        curation.setCurationLinks(curationLinks);
 
         // 큐레이션 - 태그 연결
         List<CurationTag> curationTags = tags.stream()
@@ -54,6 +55,7 @@ public class CurationService {
         for (CurationTag curationTag : curationTags) {
             curationTagRepository.save(curationTag);
         }
+        curation.setTags(curationTags);
 
         return curation;
     }
@@ -74,20 +76,18 @@ public class CurationService {
                 .map(url -> {
                     CurationLink curationLink = new CurationLink();
                     return curationLink.setCurationAndLink(curation, linkService.getLink(url));
-                }).collect(Collectors.toUnmodifiableList());
-        for (CurationLink curationLink : curationLinks) {
-            curationLinkRepository.save(curationLink);
-        }
+                }).collect(Collectors.toList());
+        curationLinkRepository.saveAll(curationLinks);
+        curation.setCurationLinks(curationLinks);
 
         // 큐레이션 - 태그 연결
         List<CurationTag> curationTags = tags.stream()
                 .map(tag -> {
                     CurationTag curationTag = new CurationTag();
                     return curationTag.setCurationAndTag(curation, tagService.getTag(tag));
-                }).collect(Collectors.toUnmodifiableList());
-        for (CurationTag curationTag : curationTags) {
-            curationTagRepository.save(curationTag);
-        }
+                }).collect(Collectors.toList());
+        curationTagRepository.saveAll(curationTags);
+        curation.setTags(curationTags);
 
         return curationRepository.save(curation);
     }

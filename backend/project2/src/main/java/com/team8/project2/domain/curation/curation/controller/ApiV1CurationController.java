@@ -1,6 +1,7 @@
 package com.team8.project2.domain.curation.curation.controller;
 
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
+import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.global.dto.RsData;
@@ -18,7 +19,7 @@ public class ApiV1CurationController {
 
     // 글 생성
     @PostMapping
-    public RsData<Curation> createCuration(@RequestBody CurationReqDTO curationReq) {
+    public RsData<CurationResDto> createCuration(@RequestBody CurationReqDTO curationReq) {
         Curation createdCuration = curationService.createCuration(
                 curationReq.getTitle(),
                 curationReq.getContent(),
@@ -28,12 +29,12 @@ public class ApiV1CurationController {
                 curationReq.getTagReqDtos().stream()
                         .map(tag -> tag.getName())
                         .collect(Collectors.toUnmodifiableList()));
-        return new RsData<>("201-1", "글이 성공적으로 생성되었습니다.", createdCuration);
+        return new RsData<>("201-1", "글이 성공적으로 생성되었습니다.", new CurationResDto(createdCuration));
     }
 
     // 글 수정
     @PutMapping("/{id}")
-    public RsData<Curation> updateCuration(@PathVariable Long id, @RequestBody CurationReqDTO curationReq) {
+    public RsData<CurationResDto> updateCuration(@PathVariable Long id, @RequestBody CurationReqDTO curationReq) {
         Curation updatedCuration = curationService.updateCuration(
                 id,
                 curationReq.getTitle(),
@@ -44,7 +45,7 @@ public class ApiV1CurationController {
                 curationReq.getTagReqDtos().stream()
                         .map(tag -> tag.getName())
                         .collect(Collectors.toUnmodifiableList()));
-        return new RsData<>("200-1", "글이 성공적으로 수정되었습니다.", updatedCuration);
+        return new RsData<>("200-1", "글이 성공적으로 수정되었습니다.", new CurationResDto(updatedCuration));
     }
 
     // 글 삭제
@@ -56,8 +57,8 @@ public class ApiV1CurationController {
 
     // 글 조회
     @GetMapping("/{id}")
-    public RsData<Curation> getCuration(@PathVariable Long id) {
+    public RsData<CurationResDto> getCuration(@PathVariable Long id) {
         Curation curation = curationService.getCuration(id);
-        return new RsData<>("200-1", "조회 성공", curation);
+        return new RsData<>("200-1", "조회 성공", new CurationResDto(curation));
     }
 }
