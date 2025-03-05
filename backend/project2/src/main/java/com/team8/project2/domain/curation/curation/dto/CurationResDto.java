@@ -9,14 +9,29 @@ import lombok.Setter;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 큐레이션 응답 DTO 클래스입니다.
+ * 클라이언트에 전달할 큐레이션 데이터를 변환하여 제공합니다.
+ */
 @Getter
 @Setter
 public class CurationResDto {
+
+    /** 큐레이션 제목 */
     private String title;
+
+    /** 큐레이션 내용 */
     private String content;
+
+    /** 큐레이션에 포함된 링크 목록 */
     private List<LinkResDto> urls;
+
+    /** 큐레이션에 포함된 태그 목록 */
     private List<TagResDto> tags;
 
+    /**
+     * 링크 정보를 포함하는 내부 DTO 클래스
+     */
     @Getter
     @Setter
     static class LinkResDto {
@@ -27,6 +42,9 @@ public class CurationResDto {
         }
     }
 
+    /**
+     * 태그 정보를 포함하는 내부 DTO 클래스
+     */
     @Getter
     @Setter
     static class TagResDto {
@@ -37,6 +55,10 @@ public class CurationResDto {
         }
     }
 
+    /**
+     * 큐레이션 엔티티를 DTO로 변환하는 생성자
+     * @param curation 변환할 큐레이션 엔티티
+     */
     public CurationResDto(Curation curation) {
         this.title = curation.getTitle();
         this.content = curation.getContent();
