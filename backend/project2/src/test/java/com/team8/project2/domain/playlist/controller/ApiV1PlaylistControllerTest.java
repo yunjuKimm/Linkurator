@@ -2,6 +2,7 @@ package com.team8.project2.domain.playlist.controller;
 
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
+import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.service.PlaylistService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -59,4 +63,30 @@ class ApiV1PlaylistControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value("New Playlist"));
     }
+
+    @Test
+    @DisplayName("플레이리스트에 링크 추가가 정상적으로 이루어져야 한다.")
+    void addLinkToPlaylist() throws Exception {
+        Long playlistId = 1L;
+        String linkIdStr = "100";
+        Map<String, String> request = new HashMap<>();
+        request.put("linkId", linkIdStr);
+
+        PlaylistDto sampleDto = PlaylistDto.builder()
+                .id(playlistId)
+                .title("테스트 플레이리스트")
+                .description("테스트 설명")
+                .build();
+
+        when(playlistService.addPlaylistItem(eq(playlistId), anyLong(), eq(PlaylistItem.PlaylistItemType.LINK)))
+                .thenReturn(sampleDto);
+
+        mockMvc.perform(post("/api/v1/playlists/{id}/items/link", playlistId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(playlistId))
+                .andExpect(jsonPath("$.data.title").value("테스트 플레이리스트"));
+    }
+
 }
