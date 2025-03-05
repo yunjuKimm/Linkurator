@@ -16,42 +16,46 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                // ✅ CORS 설정 적용
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+	@Bean
+	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+		http
+			// ✅ CORS 설정 적용
+			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // ✅ 요청별 인증/인가 설정
-                .authorizeHttpRequests(authorize -> authorize
-                        // 🔹 Swagger UI 접근 허용
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+			// ✅ 요청별 인증/인가 설정
+			.authorizeHttpRequests(authorize -> authorize
+				// 🔹 Swagger UI 접근 허용
+				.requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        // 🔹 특정 API 엔드포인트에 대한 인증 예외
-                        .requestMatchers(HttpMethod.GET, "/api/v1/playlists", "/api/v1/playlists/{id}").permitAll()
-                        .requestMatchers("/api/v1/playlists/**").authenticated()
+				// 🔹 특정 API 엔드포인트에 대한 인증 예외
+				.requestMatchers(HttpMethod.GET, "/api/v1/playlists", "/api/v1/playlists/{id}").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/v1/curation/**").permitAll()
+				.requestMatchers(HttpMethod.PUT, "/api/v1/curation/**").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/v1/curation/**").permitAll()
+				.requestMatchers(HttpMethod.DELETE, "/api/v1/curation/**").permitAll()
+				.requestMatchers("/api/v1/playlists/**").authenticated()
 
-                        // 🔹 그 외 모든 요청 인증 필요
-                        .anyRequest().authenticated()
-                )
+				// 🔹 그 외 모든 요청 인증 필요
+				.anyRequest().authenticated()
+			)
 
-                // ✅ CSRF 비활성화 (API 사용을 위해 필수)
-                .csrf(csrf -> csrf.disable());
+			// ✅ CSRF 비활성화 (API 사용을 위해 필수)
+			.csrf(csrf -> csrf.disable());
 
-        return http.build();
-    }
+		return http.build();
+	}
 
-    // ✅ CORS 설정
-    @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowCredentials(true);
-        configuration.setAllowedOrigins(List.of("http://localhost:3000")); // 허용할 프론트엔드 주소
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+	// ✅ CORS 설정
+	@Bean
+	CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowCredentials(true);
+		configuration.setAllowedOrigins(List.of("http://localhost:3000")); // 허용할 프론트엔드 주소
+		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
+	}
 }
