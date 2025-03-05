@@ -4,6 +4,7 @@ package com.team8.project2.domain.curation.service;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
 import com.team8.project2.domain.curation.curation.entity.CurationTag;
+import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.repository.CurationLinkRepository;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.repository.CurationTagRepository;
@@ -195,10 +196,10 @@ class CurationServiceTest {
 
     @Test
     void findAllCuration() {
-        when(curationRepository.searchByFilters(ArgumentMatchers.anyList(), anyString(), anyString()))
+        when(curationRepository.searchByFilters(ArgumentMatchers.anyList(), anyString(), anyString(), any()))
                 .thenReturn(List.of(curation));
 
-        List<Curation> foundCurations = curationService.searchCurations(List.of("tag"), "title", "content");
+        List<Curation> foundCurations = curationService.searchCurations(List.of("tag"), "title", "content", SearchOrder.LATEST);
 
         // Verify the result
         assert foundCurations != null;
