@@ -48,7 +48,7 @@ public class Curation {
     private Long likeCount = 0L;
 
    @ManyToOne(fetch = FetchType.LAZY)
-   @JoinColumn(name = "memberId", nullable = false)
+   @JoinColumn(name = "memberId", nullable = true)
    private Member member;
 
     @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY)
