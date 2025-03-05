@@ -21,26 +21,27 @@ public class PlaylistService {
 
     private final PlaylistRepository playlistRepository;
 
-    /** 플레이리스트 생성 */
+    /** 🔹 플레이리스트 생성 (Member 없이 동작) */
     public PlaylistDto createPlaylist(PlaylistCreateDto request) {
         validatePlaylistData(request.getTitle(), request.getDescription());
 
         Playlist playlist = Playlist.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
+                .isPublic(request.getIsPublic()) // 공개 여부 설정
                 .build();
 
         return PlaylistDto.fromEntity(playlistRepository.save(playlist));
     }
 
-    /** 특정 플레이리스트 조회 */
+    /** 🔹 특정 플레이리스트 조회 */
     public PlaylistDto getPlaylist(Long id) {
         Playlist playlist = playlistRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
         return PlaylistDto.fromEntity(playlist);
     }
 
-    /** 모든 플레이리스트 조회 */
+    /** 🔹 모든 플레이리스트 조회 */
     public List<PlaylistDto> getAllPlaylists() {
         List<Playlist> playlists = playlistRepository.findAll();
         if (playlists.isEmpty()) {
@@ -51,20 +52,20 @@ public class PlaylistService {
                 .collect(Collectors.toList());
     }
 
-    /** 플레이리스트 수정 */
+    /** 🔹 플레이리스트 수정 (Member 없이 동작) */
     public PlaylistDto updatePlaylist(Long id, PlaylistUpdateDto request) {
-        validatePlaylistData(request.getTitle(), request.getDescription());
-
         Playlist playlist = playlistRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
 
-        playlist.setTitle(request.getTitle());
-        playlist.setDescription(request.getDescription());
+        // 부분 업데이트 적용
+        if (request.getTitle() != null) playlist.setTitle(request.getTitle());
+        if (request.getDescription() != null) playlist.setDescription(request.getDescription());
+        if (request.getIsPublic() != null) playlist.setPublic(request.getIsPublic());
 
         return PlaylistDto.fromEntity(playlistRepository.save(playlist));
     }
 
-    /** 플레이리스트 삭제 */
+    /** 🔹 플레이리스트 삭제 (Member 없이 동작) */
     public void deletePlaylist(Long id) {
         if (!playlistRepository.existsById(id)) {
             throw new NotFoundException("해당 플레이리스트를 찾을 수 없습니다.");

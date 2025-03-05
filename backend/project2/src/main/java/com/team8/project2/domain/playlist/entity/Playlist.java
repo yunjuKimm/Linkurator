@@ -28,10 +28,6 @@ public class Playlist {
     @Column(nullable = false)
     private boolean isPublic = true; // 🔹 공개 여부 (기본값: 공개)
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false) // 🔹 기존의 user_id → member_id 로 변경
-    private Member owner; // 🔹 플레이리스트 소유자
-
     @OneToMany(mappedBy = "playlist", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PlaylistItem> items = new ArrayList<>();

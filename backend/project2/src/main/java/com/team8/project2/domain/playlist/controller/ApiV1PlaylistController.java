@@ -18,35 +18,37 @@ public class ApiV1PlaylistController {
 
     private final PlaylistService playlistService;
 
-    /** 플레이리스트 생성 */
+    /** 🔹 플레이리스트 생성 */
     @PostMapping
     public ResponseEntity<RsData<PlaylistDto>> createPlaylist(@RequestBody PlaylistCreateDto request) {
         PlaylistDto playlist = playlistService.createPlaylist(request);
         return ResponseEntity.ok(RsData.success("플레이리스트가 생성되었습니다.", playlist));
     }
 
-    /** 특정 플레이리스트 조회 */
+    /** 🔹 특정 플레이리스트 조회 */
     @GetMapping("/{id}")
     public ResponseEntity<RsData<PlaylistDto>> getPlaylist(@PathVariable Long id) {
         PlaylistDto playlist = playlistService.getPlaylist(id);
         return ResponseEntity.ok(RsData.success("플레이리스트 조회 성공", playlist));
     }
 
-    /** 모든 플레이리스트 조회 */
+    /** 🔹 모든 플레이리스트 조회 */
     @GetMapping
     public ResponseEntity<RsData<List<PlaylistDto>>> getAllPlaylists() {
         List<PlaylistDto> playlists = playlistService.getAllPlaylists();
         return ResponseEntity.ok(RsData.success("플레이리스트 목록 조회 성공", playlists));
     }
 
-    /** 플레이리스트 수정 */
-    @PutMapping("/{id}")
-    public ResponseEntity<RsData<PlaylistDto>> updatePlaylist(@PathVariable Long id, @RequestBody PlaylistUpdateDto request) {
+    /** 🔹 플레이리스트 수정 */
+    @PatchMapping("/{id}")
+    public ResponseEntity<RsData<PlaylistDto>> updatePlaylist(
+            @PathVariable Long id,
+            @RequestBody PlaylistUpdateDto request) {
         PlaylistDto updatedPlaylist = playlistService.updatePlaylist(id, request);
         return ResponseEntity.ok(RsData.success("플레이리스트가 수정되었습니다.", updatedPlaylist));
     }
 
-    /** 플레이리스트 삭제 */
+    /** 🔹 플레이리스트 삭제 */
     @DeleteMapping("/{id}")
     public ResponseEntity<RsData<Void>> deletePlaylist(@PathVariable Long id) {
         playlistService.deletePlaylist(id);
