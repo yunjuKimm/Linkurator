@@ -1,5 +1,6 @@
-package com.team8.project2.domain.curation.dto;
+package com.team8.project2.domain.curation.curation.dto;
 
+import com.team8.project2.domain.curation.tag.dto.TagReqDto;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -18,4 +19,6 @@ public class CurationReqDTO {
     private String content;
 
     private List<LinkReqDTO> linkReqDtos;
+
+    private List<TagReqDto> tagReqDtos;
 }
