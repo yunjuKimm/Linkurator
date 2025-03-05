@@ -67,4 +67,15 @@ public class ApiV1PlaylistController {
         return ResponseEntity.ok(RsData.success("플레이리스트에 링크가 추가되었습니다.", updatedPlaylist));
     }
 
+    /** 플레이리스트 큐레이션 추가 */
+    @PostMapping("/{id}/items/curation")
+    public ResponseEntity<RsData<PlaylistDto>> addCurationToPlaylist(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        Long curationId = Long.parseLong(request.get("curationId"));
+        PlaylistDto updatedPlaylist = playlistService.addPlaylistItem(id, curationId, PlaylistItem.PlaylistItemType.CURATION);
+        return ResponseEntity.ok(RsData.success("플레이리스트에 큐레이션이 추가되었습니다.", updatedPlaylist));
+    }
+
+
 }
