@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.team8.project2.domain.member.entity.Member;
+
 @Entity
 @Getter
 @Setter
@@ -45,9 +47,9 @@ public class Curation {
     @Column(name = "likeCount", nullable = false)
     private Long likeCount = 0L;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "memberId", nullable = false)
-//    private Member member;
+   @ManyToOne(fetch = FetchType.LAZY)
+   @JoinColumn(name = "memberId", nullable = true)
+   private Member member;
 
     @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY)
     private List<CurationLink> curationLinks = new ArrayList<>();

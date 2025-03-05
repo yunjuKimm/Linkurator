@@ -12,6 +12,7 @@ import java.io.Serializable;
 @Entity
 @Getter
 @Setter
+@Table(name = "likes")
 public class Like {
 
     @EmbeddedId
