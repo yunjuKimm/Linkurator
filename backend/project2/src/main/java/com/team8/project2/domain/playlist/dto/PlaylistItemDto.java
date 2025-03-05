@@ -15,7 +15,7 @@ public class PlaylistItemDto {
         return PlaylistItemDto.builder()
                 .id(playlistItem.getId())
                 .itemId(playlistItem.getItemId())
-                .itemType(playlistItem.getItemType())
+                .itemType(playlistItem.getItemType().name())
                 .build();
     }
 }
