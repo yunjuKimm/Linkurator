@@ -41,7 +41,7 @@ public class CurationService {
                 .map(url -> {
                     CurationLink curationLink = new CurationLink();
                     return curationLink.setCurationAndLink(curation, linkService.getLink(url));
-                }).collect(Collectors.toUnmodifiableList());
+                }).collect(Collectors.toList());
         for (CurationLink curationLink : curationLinks) {
             curationLinkRepository.save(curationLink);
         }
@@ -52,7 +52,7 @@ public class CurationService {
                 .map(tag -> {
                     CurationTag curationTag = new CurationTag();
                     return curationTag.setCurationAndTag(curation, tagService.getTag(tag));
-                }).collect(Collectors.toUnmodifiableList());
+                }).collect(Collectors.toList());
         for (CurationTag curationTag : curationTags) {
             curationTagRepository.save(curationTag);
         }
@@ -111,10 +111,15 @@ public class CurationService {
     }
 
     public List<Curation> searchCurations(List<String> tags, String title, String content, SearchOrder order) {
-//        if ((tags == null || tags.isEmpty()) && title == null && content == null) {
-//            return curationRepository.findAll(order);
-//        }
+        return curationRepository.searchByFilters(tags, title, content, order.name());
+    }
 
-        return curationRepository.searchByFilters(tags, title, content);//, order);
+    // 좋아요
+    @Transactional
+    public void likeCuration(Long curationId) {
+        Curation curation = curationRepository.findById(curationId)
+                .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+        curation.like();
+        curationRepository.save(curation);
     }
 }
