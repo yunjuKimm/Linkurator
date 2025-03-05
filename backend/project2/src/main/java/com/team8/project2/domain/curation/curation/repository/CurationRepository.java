@@ -17,7 +17,13 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
             "WHERE (:title IS NULL OR c.title LIKE %:title%) " +
             "AND (:content IS NULL OR c.content LIKE %:content%) " +
             "AND (:tags IS NULL OR t.name IN :tags) ")
+//            +
+//            "ORDER BY " +
+//            "CASE WHEN :searchOrder = 'LATEST' THEN c.createdAt END DESC, " +
+//            "CASE WHEN :searchOrder = 'OLDEST' THEN c.createdAt END ASC, " +
+//            "CASE WHEN :searchOrder = 'LIKE' THEN c.like END DESC")
     List<Curation> searchByFilters(@Param("tags") List<String> tags,
                                    @Param("title") String title,
                                    @Param("content") String content);
+//                                   ,@Param("searchOrder") SearchOrder searchOrder);
 }

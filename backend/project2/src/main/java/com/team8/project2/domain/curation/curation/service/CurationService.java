@@ -3,6 +3,7 @@ package com.team8.project2.domain.curation.curation.service;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
 import com.team8.project2.domain.curation.curation.entity.CurationTag;
+import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.repository.CurationLinkRepository;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.repository.CurationTagRepository;
@@ -13,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -110,10 +110,11 @@ public class CurationService {
                 .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
     }
 
-    public List<Curation> searchCurations(List<String> tags, String title, String content) {
-        if ((tags == null || tags.isEmpty()) && title == null && content == null) {
-            return curationRepository.findAll(); // 조건이 없으면 전체 조회
-        }
-        return curationRepository.searchByFilters(tags, title, content);
+    public List<Curation> searchCurations(List<String> tags, String title, String content, SearchOrder order) {
+//        if ((tags == null || tags.isEmpty()) && title == null && content == null) {
+//            return curationRepository.findAll(order);
+//        }
+
+        return curationRepository.searchByFilters(tags, title, content);//, order);
     }
 }

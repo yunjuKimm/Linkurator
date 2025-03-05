@@ -41,6 +41,9 @@ public class Curation {
     @Column(name = "modifiedAt")
     private LocalDateTime modifiedAt;
 
+    @Column(name = "like", nullable = false)
+    private Long like = 0L;
+
 //    @ManyToOne(fetch = FetchType.LAZY)
 //    @JoinColumn(name = "memberId", nullable = false)
 //    private Member member;

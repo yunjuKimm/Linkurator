@@ -3,6 +3,7 @@ package com.team8.project2.domain.curation.curation.controller;
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.global.dto.RsData;
@@ -53,9 +54,10 @@ public class ApiV1CurationController {
     public RsData<List<CurationResDto>> searchCuration(
             @RequestParam(required = false) List<String> tags,
             @RequestParam(required = false) String title,
-            @RequestParam(required = false) String content
+            @RequestParam(required = false) String content,
+            @RequestParam(required = false, defaultValue = "LATEST") SearchOrder order
     ) {
-        List<CurationResDto> result = curationService.searchCurations(tags, title, content)
+        List<CurationResDto> result = curationService.searchCurations(tags, title, content, order)
                 .stream()
                 .map(CurationResDto::new)
                 .collect(Collectors.toUnmodifiableList());

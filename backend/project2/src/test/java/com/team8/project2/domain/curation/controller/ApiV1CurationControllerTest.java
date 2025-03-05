@@ -273,4 +273,21 @@ public class ApiV1CurationControllerTest {
                         .collect(Collectors.toUnmodifiableList())
         );
     }
+
+    // 최신순으로 글 조회
+    @Test
+    void findCurationByLatest() throws Exception {
+        Curation savedCuration1 = createCurationWithTitleAndContent("title1", "content1");
+        Curation savedCuration2 = createCurationWithTitleAndContent("title2", "content2");
+        Curation savedCuration3 = createCurationWithTitleAndContent("title3","content3");
+
+        mockMvc.perform(get("/api/v1/curation")
+                        .param("order", "LATEST"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
+                .andExpect(jsonPath("$.data[0].content").value("content3"))
+                .andExpect(jsonPath("$.data[1].content").value("content2"))
+                .andExpect(jsonPath("$.data[2].content").value("content1"));
+    }
 }
