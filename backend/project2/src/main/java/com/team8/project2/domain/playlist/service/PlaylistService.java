@@ -1,5 +1,6 @@
 package com.team8.project2.domain.playlist.service;
 
+import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.global.exception.BadRequestException;
 import com.team8.project2.global.exception.NotFoundException;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
@@ -82,4 +83,22 @@ public class PlaylistService {
             throw new BadRequestException("플레이리스트 설명은 필수 입력 사항입니다.");
         }
     }
+
+    /** 플레이리스트 항목 추가 */
+    public PlaylistDto addPlaylistItem(Long playlistId, Long itemId, PlaylistItem.PlaylistItemType itemType) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        PlaylistItem newItem = PlaylistItem.builder()
+                .itemId(itemId)
+                .itemType(itemType)
+                .playlist(playlist)
+                .build();
+
+        playlist.getItems().add(newItem);
+        playlistRepository.save(playlist);
+
+        return PlaylistDto.fromEntity(playlist);
+    }
+
 }
