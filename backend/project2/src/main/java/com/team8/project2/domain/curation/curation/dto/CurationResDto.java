@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 public class CurationResDto {
+    private Long id;
     private String title;
     private String content;
     private List<LinkResDto> urls;
@@ -38,6 +39,7 @@ public class CurationResDto {
     }
 
     public CurationResDto(Curation curation) {
+        this.id = curation.getId();
         this.title = curation.getTitle();
         this.content = curation.getContent();
         this.urls = curation.getCurationLinks().stream()
