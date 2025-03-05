@@ -20,7 +20,8 @@ public class PlaylistItem {
     private Long itemId;
 
     @Column(nullable = false) // 🔹 NULL 허용 안 함
-    private String itemType;
+    @Enumerated(EnumType.STRING)
+    private PlaylistItemType itemType;
 
     @ManyToOne
     @JoinColumn(name = "playlist_id", nullable = false) // 🔹 NULL 허용 안 함 (반드시 Playlist와 연결)
