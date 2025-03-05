@@ -1,7 +1,5 @@
 package com.team8.project2.domain.curation.tag.service;
 
-import com.team8.project2.domain.curation.curation.entity.Curation;
-import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.tag.entity.Tag;
 import com.team8.project2.domain.curation.tag.repository.TagRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,7 +10,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,9 +20,6 @@ class TagServiceTest {
 
     @Mock
     private TagRepository tagRepository;
-
-    @Mock
-    private CurationRepository curationRepository;
 
     @InjectMocks
     private TagService tagService;
@@ -66,21 +60,5 @@ class TagServiceTest {
         assertThat(result.getName()).isEqualTo("newTag");
         verify(tagRepository, times(1)).findByName("newTag");
         verify(tagRepository, times(1)).save(any(Tag.class));
-    }
-
-    @Test
-    @DisplayName("태그로 큐레이션을 검색할 수 있다")
-    void findCurationByTags_ShouldReturnCurations() {
-        // given
-        List<String> tags = List.of("testTag1", "testTag2");
-        List<Curation> curations = List.of(mock(Curation.class));
-        when(curationRepository.findByTags(tags)).thenReturn(curations);
-
-        // when
-        List<Curation> result = tagService.findCurationByTags(tags);
-
-        // then
-        assertThat(result).isEqualTo(curations);
-        verify(curationRepository, times(1)).findByTags(tags);
     }
 }

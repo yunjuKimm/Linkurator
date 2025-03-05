@@ -10,8 +10,14 @@ import java.util.List;
 
 @Repository
 public interface CurationRepository extends JpaRepository<Curation, Long> {
-    @Query("SELECT DISTINCT c FROM Curation c " +
-            "JOIN c.tags ct " +
-            "WHERE ct.tag.name IN :tags")
-    List<Curation> findByTags(@Param("tags") List<String> tags);
+
+    @Query("SELECT c FROM Curation c " +
+            "LEFT JOIN c.tags ct " +
+            "LEFT JOIN ct.tag t " +
+            "WHERE (:title IS NULL OR c.title LIKE %:title%) " +
+            "AND (:content IS NULL OR c.content LIKE %:content%) " +
+            "AND (:tags IS NULL OR t.name IN :tags) ")
+    List<Curation> searchByFilters(@Param("tags") List<String> tags,
+                                   @Param("title") String title,
+                                   @Param("content") String content);
 }

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -107,5 +108,12 @@ public class CurationService {
     public Curation getCuration(Long curationId) {
         return curationRepository.findById(curationId)
                 .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+    }
+
+    public List<Curation> searchCurations(List<String> tags, String title, String content) {
+        if ((tags == null || tags.isEmpty()) && title == null && content == null) {
+            return curationRepository.findAll(); // 조건이 없으면 전체 조회
+        }
+        return curationRepository.searchByFilters(tags, title, content);
     }
 }

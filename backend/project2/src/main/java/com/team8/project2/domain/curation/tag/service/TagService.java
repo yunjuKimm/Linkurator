@@ -1,13 +1,10 @@
 package com.team8.project2.domain.curation.tag.service;
 
-import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.tag.entity.Tag;
 import com.team8.project2.domain.curation.tag.repository.TagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @Service
@@ -20,10 +17,5 @@ public class TagService {
     public Tag getTag(String name) {
         return tagRepository.findByName(name)
                 .orElseGet(() -> tagRepository.save(Tag.builder().name(name).build()));
-    }
-
-    // 태그로 글 검색
-    public List<Curation> findCurationByTags(List<String> tags) {
-        return curationRepository.findByTags(tags);
     }
 }
