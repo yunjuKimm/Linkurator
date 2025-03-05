@@ -77,5 +77,12 @@ public class ApiV1PlaylistController {
         return ResponseEntity.ok(RsData.success("플레이리스트에 큐레이션이 추가되었습니다.", updatedPlaylist));
     }
 
-
+    /** 플레이리스트 아이템 삭제 */
+    @DeleteMapping("/{id}/items/{itemId}")
+    public ResponseEntity<RsData<Void>> deletePlaylistItem(
+            @PathVariable("id") Long id,
+            @PathVariable("itemId") Long itemId) {
+        playlistService.deletePlaylistItem(id, itemId);
+        return ResponseEntity.ok(RsData.success("플레이리스트 아이템이 삭제되었습니다.", null));
+    }
 }
