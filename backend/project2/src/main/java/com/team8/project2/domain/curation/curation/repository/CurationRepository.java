@@ -8,9 +8,23 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * 큐레이션(Curation) 데이터를 관리하는 레포지토리 인터페이스입니다.
+ * 큐레이션 검색 기능을 포함하고 있습니다.
+ */
 @Repository
 public interface CurationRepository extends JpaRepository<Curation, Long> {
 
+    /**
+     * 필터 조건을 기반으로 큐레이션을 검색하는 메서드입니다.
+     * 제목, 내용, 태그를 기준으로 검색하며, 정렬 방식(최신순, 오래된순, 좋아요순)을 지원합니다.
+     *
+     * @param tags 태그 목록 (선택적)
+     * @param title 제목 검색어 (선택적)
+     * @param content 내용 검색어 (선택적)
+     * @param searchOrder 정렬 기준 (LATEST, OLDEST, LIKECOUNT)
+     * @return 검색된 큐레이션 목록
+     */
     @Query("SELECT c FROM Curation c " +
             "LEFT JOIN c.tags ct " +
             "LEFT JOIN ct.tag t " +
