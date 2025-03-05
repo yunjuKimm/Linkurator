@@ -101,4 +101,18 @@ public class PlaylistService {
         return PlaylistDto.fromEntity(playlist);
     }
 
+    /** 플레이리스트 항목 삭제 */
+    @Transactional
+    public void deletePlaylistItem(Long playlistId, Long itemId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        boolean removed = playlist.getItems().removeIf(item -> item.getItemId().equals(itemId));
+        if (!removed) {
+            throw new NotFoundException("해당 플레이리스트 항목을 찾을 수 없습니다.");
+        }
+
+        playlistRepository.save(playlist);
+    }
+
 }
