@@ -60,7 +60,7 @@ public class ApiV1PlaylistController {
     /** 🔹 플레이리스트 링크 추가 */
     @PostMapping("/{id}/items/link")
     public ResponseEntity<RsData<PlaylistDto>> addLinkToPlaylist(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody Map<String, String> request) {
         Long linkId = Long.parseLong(request.get("linkId"));
         PlaylistDto updatedPlaylist = playlistService.addPlaylistItem(id, linkId, PlaylistItem.PlaylistItemType.LINK);
@@ -70,7 +70,7 @@ public class ApiV1PlaylistController {
     /** 플레이리스트 큐레이션 추가 */
     @PostMapping("/{id}/items/curation")
     public ResponseEntity<RsData<PlaylistDto>> addCurationToPlaylist(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody Map<String, String> request) {
         Long curationId = Long.parseLong(request.get("curationId"));
         PlaylistDto updatedPlaylist = playlistService.addPlaylistItem(id, curationId, PlaylistItem.PlaylistItemType.CURATION);
