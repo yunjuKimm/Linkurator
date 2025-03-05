@@ -3,6 +3,7 @@ package com.team8.project2.domain.playlist.controller;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
+import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.service.PlaylistService;
 import com.team8.project2.global.dto.RsData;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/playlists")
@@ -54,4 +56,15 @@ public class ApiV1PlaylistController {
         playlistService.deletePlaylist(id);
         return ResponseEntity.ok(RsData.success("플레이리스트가 삭제되었습니다.", null));
     }
+
+    /** 🔹 플레이리스트 링크 추가 */
+    @PostMapping("/{id}/items/link")
+    public ResponseEntity<RsData<PlaylistDto>> addLinkToPlaylist(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        Long linkId = Long.parseLong(request.get("linkId"));
+        PlaylistDto updatedPlaylist = playlistService.addPlaylistItem(id, linkId, PlaylistItem.PlaylistItemType.LINK);
+        return ResponseEntity.ok(RsData.success("플레이리스트에 링크가 추가되었습니다.", updatedPlaylist));
+    }
+
 }
