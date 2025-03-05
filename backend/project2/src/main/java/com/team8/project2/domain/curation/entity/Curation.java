@@ -44,6 +44,6 @@ public class Curation {
 //    @JoinColumn(name = "memberId", nullable = false)
 //    private Member member;
 
-    @OneToMany
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "curation")
     private List<CurationLink> curationLinks;
 }

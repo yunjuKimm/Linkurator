@@ -41,6 +41,7 @@ public class CurationService {
             curationLinkRepository.save(curationLink);
         }
 
+        curation.setCurationLinks(curationLinks);
         return curation;
     }
 
