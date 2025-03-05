@@ -1,6 +1,7 @@
 package com.team8.project2.domain.curation.controller;
 
 import com.team8.project2.domain.curation.dto.CurationReqDTO;
+import com.team8.project2.domain.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.entity.Curation;
 import com.team8.project2.domain.curation.service.CurationService;
 import com.team8.project2.global.dto.RsData;
@@ -18,14 +19,14 @@ public class ApiV1CurationController {
 
     // 글 생성
     @PostMapping
-    public RsData<Curation> createCuration(@RequestBody CurationReqDTO curationReq) {
+    public RsData<CurationResDto> createCuration(@RequestBody CurationReqDTO curationReq) {
         Curation createdCuration = curationService.createCuration(
                 curationReq.getTitle(),
                 curationReq.getContent(),
                 curationReq.getLinkReqDtos().stream()
                         .map(url -> url.getUrl())
                         .collect(Collectors.toUnmodifiableList()));
-        return new RsData<>("201-1", "글이 성공적으로 생성되었습니다.", createdCuration);
+        return new RsData<>("201-1", "글이 성공적으로 생성되었습니다.", new CurationResDto(createdCuration));
     }
 
     // 글 수정

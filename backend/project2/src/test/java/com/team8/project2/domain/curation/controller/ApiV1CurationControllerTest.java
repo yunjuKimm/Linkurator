@@ -3,6 +3,7 @@ package com.team8.project2.domain.curation.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team8.project2.domain.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.entity.Curation;
+import com.team8.project2.domain.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.service.CurationService;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,8 +16,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,6 +37,8 @@ public class ApiV1CurationControllerTest {
     private CurationService curationService; // 실제 서비스 사용
 
     private CurationReqDTO curationReqDTO;
+	@Autowired
+	private CurationRepository curationRepository;
 
     @BeforeEach
     void setUp() {
@@ -59,6 +64,13 @@ public class ApiV1CurationControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.code").value("201-1"))
                 .andExpect(jsonPath("$.msg").value("글이 성공적으로 생성되었습니다."));
+
+        Curation curation = curationRepository.findById(1L).get();
+        List<String> findUrls = curation.getCurationLinks().stream()
+            .map(cl -> cl.getLink().getUrl())
+            .collect(Collectors.toUnmodifiableList());
+
+        assertThat(findUrls).containsExactly("https://example.com");
     }
 
     // 글 수정 테스트
@@ -79,6 +91,13 @@ public class ApiV1CurationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-1"))
                 .andExpect(jsonPath("$.msg").value("글이 성공적으로 수정되었습니다."));
+
+        Curation curation = curationRepository.findById(1L).get();
+        List<String> findUrls = curation.getCurationLinks().stream()
+            .map(cl -> cl.getLink().getUrl())
+            .collect(Collectors.toUnmodifiableList());
+
+        assertThat(findUrls).containsExactly("https://example.com");
     }
 
     // 글 삭제 테스트
