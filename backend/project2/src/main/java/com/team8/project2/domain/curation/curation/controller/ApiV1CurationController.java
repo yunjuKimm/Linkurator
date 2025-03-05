@@ -48,12 +48,18 @@ public class ApiV1CurationController {
         return new RsData<>("200-1", "조회 성공", new CurationResDto(curation));
     }
 
-    // 태그로 글 검색
-    @GetMapping("/search")
-    public RsData<List<CurationResDto>> findCurationByTags(@RequestParam List<String> tags) {
-        List<CurationResDto> result = tagService.findCurationByTags(tags).stream()
-                .map(curation -> new CurationResDto(curation))
+    // 전체 글 조회 및 검색
+    @GetMapping
+    public RsData<List<CurationResDto>> searchCuration(
+            @RequestParam(required = false) List<String> tags,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String content
+    ) {
+        List<CurationResDto> result = curationService.searchCurations(tags, title, content)
+                .stream()
+                .map(CurationResDto::new)
                 .collect(Collectors.toUnmodifiableList());
+
         return new RsData<>("200-1", "글이 검색되었습니다.", result);
     }
 }
