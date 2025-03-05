@@ -1,5 +1,6 @@
 package com.team8.project2.domain.playlist.entity;
 
+import com.team8.project2.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,13 +19,29 @@ public class Playlist {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false) // 🔹 NULL 허용 안 함
-    private String title;
+    @Column(nullable = false)
+    private String title; // 플레이리스트 제목
 
-    @Column(nullable = false) // 🔹 NULL 허용 안 함
-    private String description;
+    @Column(nullable = false)
+    private String description; // 플레이리스트 설명
+
+    @Column(nullable = false)
+    private boolean isPublic = true; // 🔹 공개 여부 (기본값: 공개)
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = false) // 🔹 기존의 user_id → member_id 로 변경
+    private Member owner; // 🔹 플레이리스트 소유자
 
     @OneToMany(mappedBy = "playlist", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<PlaylistItem> items = new ArrayList<>(); // 🔹 NULL 방지 (빈 리스트로 초기화)
+    private List<PlaylistItem> items = new ArrayList<>();
+
+    /**
+     * 🔹 플레이리스트 수정 메서드
+     */
+    public void updatePlaylist(String title, String description, Boolean isPublic) {
+        if (title != null) this.title = title;
+        if (description != null) this.description = description;
+        if (isPublic != null) this.isPublic = isPublic;
+    }
 }
