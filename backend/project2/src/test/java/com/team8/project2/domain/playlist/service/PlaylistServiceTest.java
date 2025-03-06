@@ -4,7 +4,9 @@ import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
 import com.team8.project2.domain.playlist.entity.Playlist;
+import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
+import com.team8.project2.global.exception.BadRequestException;
 import com.team8.project2.global.exception.NotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.List;
 import java.util.Arrays;
@@ -146,4 +149,118 @@ class PlaylistServiceTest {
         // When & Then
         assertThrows(NotFoundException.class, () -> playlistService.deletePlaylist(99L));
     }
+
+    @Test
+    @DisplayName("플레이리스트에 아이템을 추가할 수 있다.")
+    void addPlaylistItem() {
+        // Given
+        Long newItemId = 100L;
+
+        when(playlistRepository.findById(1L)).thenReturn(Optional.of(samplePlaylist));
+        when(playlistRepository.save(any(Playlist.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        PlaylistDto updatedPlaylist = playlistService.addPlaylistItem(1L, newItemId, PlaylistItem.PlaylistItemType.LINK);
+
+        // Then
+        assertNotNull(updatedPlaylist);
+        assertEquals("테스트 플레이리스트", updatedPlaylist.getTitle());
+        assertFalse(updatedPlaylist.getItems().isEmpty());
+        assertEquals(newItemId, updatedPlaylist.getItems().get(0).getItemId());
+        assertEquals("LINK", updatedPlaylist.getItems().get(0).getItemType());
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 플레이리스트에 아이템을 추가할 수 없다.")
+    void addPlaylistItemNotFound() {
+        // Given
+        Long newItemId = 100L;
+        when(playlistRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThrows(NotFoundException.class, () ->
+                playlistService.addPlaylistItem(1L, newItemId, PlaylistItem.PlaylistItemType.LINK));
+    }
+
+    @Test
+    @DisplayName("플레이리스트에서 아이템을 삭제할 수 있다.")
+    void deletePlaylistItem() {
+        // Given
+        Long itemIdToDelete = 100L;
+
+        PlaylistItem item1 = PlaylistItem.builder().itemId(100L).itemType(PlaylistItem.PlaylistItemType.LINK).build();
+        PlaylistItem item2 = PlaylistItem.builder().itemId(101L).itemType(PlaylistItem.PlaylistItemType.CURATION).build();
+
+        samplePlaylist.setItems(new ArrayList<>(Arrays.asList(item1, item2)));
+        when(playlistRepository.findById(samplePlaylist.getId())).thenReturn(Optional.of(samplePlaylist));
+
+        // When
+        playlistService.deletePlaylistItem(samplePlaylist.getId(), itemIdToDelete);
+
+        // Then
+        assertFalse(samplePlaylist.getItems().stream()
+                .anyMatch(item -> item.getItemId().equals(itemIdToDelete)));
+        verify(playlistRepository, times(1)).save(samplePlaylist);
+    }
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 아이템은 삭제할 수 없다.")
+    void deletePlaylistItemNotFound() {
+        // Given
+        Long itemIdToDelete = 100L;
+        samplePlaylist.setItems(new ArrayList<>());
+
+        when(playlistRepository.findById(samplePlaylist.getId()))
+                .thenReturn(Optional.of(samplePlaylist));
+
+        // When & Then
+        assertThrows(NotFoundException.class, () -> {
+            playlistService.deletePlaylistItem(samplePlaylist.getId(), itemIdToDelete);
+        });
+    }
+
+    @Test
+    @DisplayName("플레이리스트 아이템 순서를 변경할 수 있다.")
+    void updatePlaylistItemOrder() {
+        // Given
+        PlaylistItem item1 = PlaylistItem.builder().id(1L).itemId(100L).displayOrder(0).itemType(PlaylistItem.PlaylistItemType.LINK).build();
+        PlaylistItem item2 = PlaylistItem.builder().id(2L).itemId(101L).displayOrder(1).itemType(PlaylistItem.PlaylistItemType.CURATION).build();
+        PlaylistItem item3 = PlaylistItem.builder().id(3L).itemId(102L).displayOrder(2).itemType(PlaylistItem.PlaylistItemType.LINK).build();
+        samplePlaylist.setItems(new ArrayList<>(Arrays.asList(item1, item2, item3)));
+
+        List<Long> newOrder = Arrays.asList(3L, 1L, 2L);
+
+        when(playlistRepository.findById(1L)).thenReturn(Optional.of(samplePlaylist));
+        when(playlistRepository.save(any(Playlist.class))).thenReturn(samplePlaylist);
+
+        // When
+        PlaylistDto updatedDto = playlistService.updatePlaylistItemOrder(1L, newOrder);
+
+        // Then
+        assertEquals(0, samplePlaylist.getItems().stream().filter(item -> item.getId().equals(3L)).findFirst().get().getDisplayOrder());
+        assertEquals(1, samplePlaylist.getItems().stream().filter(item -> item.getId().equals(1L)).findFirst().get().getDisplayOrder());
+        assertEquals(2, samplePlaylist.getItems().stream().filter(item -> item.getId().equals(2L)).findFirst().get().getDisplayOrder());
+
+        assertNotNull(updatedDto);
+        assertEquals("테스트 플레이리스트", updatedDto.getTitle());
+    }
+
+    @Test
+    @DisplayName("실패 - 플레이리스트 아이템 순서 변경 시 아이템 개수가 일치해야 한다.")
+    void updatePlaylistItemOrder_itemCount() {
+        // Given
+        PlaylistItem item1 = PlaylistItem.builder().id(1L).itemId(100L).displayOrder(0).itemType(PlaylistItem.PlaylistItemType.LINK).build();
+        PlaylistItem item2 = PlaylistItem.builder().id(2L).itemId(101L).displayOrder(1).itemType(PlaylistItem.PlaylistItemType.CURATION).build();
+        PlaylistItem item3 = PlaylistItem.builder().id(3L).itemId(102L).displayOrder(2).itemType(PlaylistItem.PlaylistItemType.LINK).build();
+        samplePlaylist.setItems(new ArrayList<>(Arrays.asList(item1, item2, item3)));
+
+        List<Long> newOrder = Arrays.asList(3L, 1L);
+
+        when(playlistRepository.findById(1L)).thenReturn(Optional.of(samplePlaylist));
+
+        // When & Then
+        assertThrows(BadRequestException.class, () ->
+                playlistService.updatePlaylistItemOrder(1L, newOrder));
+    }
+
 }
