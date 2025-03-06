@@ -59,12 +59,11 @@ public class PlaylistService {
     /**
      * 모든 플레이리스트를 조회합니다.
      * @return 플레이리스트 목록 DTO 리스트
+     * 예외 대신 빈 리스트 반환
      */
     public List<PlaylistDto> getAllPlaylists() {
         List<Playlist> playlists = playlistRepository.findAll();
-        if (playlists.isEmpty()) {
-            throw new NotFoundException("등록된 플레이리스트가 없습니다.");
-        }
+
         return playlists.stream()
                 .map(PlaylistDto::fromEntity)
                 .collect(Collectors.toList());
