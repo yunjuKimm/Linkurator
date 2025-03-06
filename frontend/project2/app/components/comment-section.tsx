@@ -2,65 +2,56 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Heart, Flag } from "lucide-react";
 
+// 댓글 데이터 타입 정의
 type Comment = {
-  id: string;
-  author: string;
-  authorImage: string;
+  authorName: string;
   content: string;
-  postedAt: string;
-  likes: number;
   isLiked: boolean;
 };
 
+// API에서 받은 데이터 타입
+type CurationData = {
+  title: string;
+  content: string;
+  comments: Comment[];
+};
+
+// 댓글 섹션 컴포넌트
 export default function CommentSection({ postId }: { postId: string }) {
-  // 초기 댓글 데이터
-  const initialComments: Comment[] = [
-    {
-      id: "1",
-      author: "이성준",
-      authorImage: "/placeholder.svg?height=36&width=36",
-      content:
-        "정말 유익한 글이네요! 특히 실제 적용 사례 부분이 도움이 많이 되었습니다.",
-      postedAt: "3시간 전",
-      likes: 8,
-      isLiked: false,
-    },
-    {
-      id: "2",
-      author: "김하늘",
-      authorImage: "/placeholder.svg?height=36&width=36",
-      content:
-        "좋은 정보 감사합니다. 혹시 관련 자료나 참고할 만한 문서가 더 있을까요?",
-      postedAt: "1일 전",
-      likes: 5,
-      isLiked: false,
-    },
-    {
-      id: "3",
-      author: "정민우",
-      authorImage: "/placeholder.svg?height=36&width=36",
-      content:
-        "저도 비슷한 경험이 있는데, 글에서 언급한 방법을 적용하니 정말 효과가 있었습니다. 다음 글도 기대하고 있겠습니다!",
-      postedAt: "1일 전",
-      likes: 12,
-      isLiked: false,
-    },
-  ];
+  const [comments, setComments] = useState<Comment[]>([]); // 댓글 상태
+  const [newComment, setNewComment] = useState(""); // 새 댓글 상태
 
-  const [comments, setComments] = useState<Comment[]>(initialComments);
-  const [newComment, setNewComment] = useState("");
+  // API에서 커레이션 데이터를 불러오는 함수
+  const fetchCurationData = async (id: string) => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/curation/${id}`);
+      const data = await res.json();
+      if (data.code === "200-1") {
+        setComments(data.data.comments); // 댓글 데이터를 설정
+      } else {
+        console.error("댓글 데이터를 불러오는 데 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("API 호출 중 오류 발생:", error);
+    }
+  };
 
+  // 컴포넌트 마운트 시 API 호출
+  useEffect(() => {
+    fetchCurationData(postId); // 주어진 postId로 커레이션 데이터를 가져옵니다.
+  }, [postId]);
+
+  // 댓글 좋아요 기능
   const handleLikeComment = (commentId: string) => {
     setComments(
-      comments.map((comment) => {
-        if (comment.id === commentId) {
+      comments.map((comment, index) => {
+        if (commentId === index.toString()) {
           return {
             ...comment,
-            likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1,
             isLiked: !comment.isLiked,
           };
         }
@@ -69,22 +60,19 @@ export default function CommentSection({ postId }: { postId: string }) {
     );
   };
 
+  // 새 댓글 작성 기능
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
 
     const newCommentObj: Comment = {
-      id: `${comments.length + 1}`,
-      author: "현재 사용자",
-      authorImage: "/placeholder.svg?height=36&width=36",
+      authorName: "현재 사용자",
       content: newComment,
-      postedAt: "방금 전",
-      likes: 0,
       isLiked: false,
     };
 
-    setComments([newCommentObj, ...comments]);
-    setNewComment("");
+    setComments([newCommentObj, ...comments]); // 새 댓글 추가
+    setNewComment(""); // 입력 필드 초기화
   };
 
   return (
@@ -111,20 +99,20 @@ export default function CommentSection({ postId }: { postId: string }) {
       </form>
 
       <div className="space-y-4">
-        {comments.map((comment) => (
-          <div key={comment.id} className="rounded-lg border p-4">
+        {comments.map((comment, index) => (
+          <div key={index} className="rounded-lg border p-4">
             <div className="flex justify-between">
               <div className="flex items-center space-x-2">
                 <Image
-                  src={comment.authorImage || "/placeholder.svg"}
-                  alt={comment.author}
+                  src="/placeholder.svg"
+                  alt={comment.authorName}
                   width={36}
                   height={36}
                   className="rounded-full"
                 />
                 <div>
-                  <p className="font-medium">{comment.author}</p>
-                  <p className="text-xs text-gray-500">{comment.postedAt}</p>
+                  <p className="font-medium">{comment.authorName}</p>
+                  <p className="text-xs text-gray-500">방금 전</p>
                 </div>
               </div>
               <button className="text-gray-400 hover:text-gray-500">
@@ -136,7 +124,7 @@ export default function CommentSection({ postId }: { postId: string }) {
 
             <div className="mt-3 flex items-center space-x-4">
               <button
-                onClick={() => handleLikeComment(comment.id)}
+                onClick={() => handleLikeComment(index.toString())}
                 className="flex items-center space-x-1 text-xs text-gray-500 hover:text-gray-700"
               >
                 <Heart
@@ -144,7 +132,7 @@ export default function CommentSection({ postId }: { postId: string }) {
                     comment.isLiked ? "fill-red-500 text-red-500" : ""
                   }`}
                 />
-                <span>{comment.likes}</span>
+                <span>{comment.isLiked ? 1 : 0}</span>
               </button>
               <button className="text-xs text-gray-500 hover:text-gray-700">
                 답글
