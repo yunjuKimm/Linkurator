@@ -1,6 +1,7 @@
 package com.team8.project2.domain.member.service;
 
 import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.entity.RoleEnum;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,12 +14,12 @@ import java.util.Optional;
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    public Member join(String userId, String username, String password, String apiKey, String role, String email) {
-        return join(userId, username, password, apiKey, role, email, null, null);
+    public Member join(String userId, String username, String password,RoleEnum role, String email, String imgUrl) {
+        return join(userId, username, password, role, email, imgUrl, null);
     }
 
     @Transactional
-    public Member join(String userId, String username, String password, String apiKey, String role, String imgUrl, String email, String description) {
+    public Member join(String userId, String username, String password, RoleEnum role, String email, String imgUrl, String description) {
 
         //TODO: apikey 할당방식 지정
         //TODO: RoleEnum 확인 이후 주입 로직 필요
@@ -33,4 +34,8 @@ public class MemberService {
         return memberRepository.save(member);
     }
     public Optional<Member> findByApiKey(String apiKey) { return memberRepository.findByApiKey(apiKey);}
+
+    public Optional<Member> findByUserId(String userId) {
+        return memberRepository.findByUserId(userId);
+    }
 }

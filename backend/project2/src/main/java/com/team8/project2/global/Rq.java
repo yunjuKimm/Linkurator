@@ -33,27 +33,5 @@ public class Rq {
         }
 
         return opActor.get();
-
-    }
-
-    public void setLogin(String username) {
-    }
-
-    public Member getActor() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if(authentication == null) {
-            throw new ServiceException("401-2", "로그인이 필요합니다.");
-        }
-
-        UserDetails user = (UserDetails) authentication.getPrincipal();
-
-        if(user == null) {
-            throw new ServiceException("401-3", "로그인이 필요합니다.");
-        }
-
-        String username = user.getUsername();
-        return memberService.findByUsername(username).get();
-
     }
 }
