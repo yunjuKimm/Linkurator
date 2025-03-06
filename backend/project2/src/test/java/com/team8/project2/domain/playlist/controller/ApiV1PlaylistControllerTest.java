@@ -89,4 +89,18 @@ class ApiV1PlaylistControllerTest {
                 .andExpect(jsonPath("$.data.title").value("테스트 플레이리스트"));
     }
 
+    @Test
+    @DisplayName("플레이리스트에서 항목이 삭제되어야 한다.")
+    void deletePlaylistItem_success() throws Exception {
+        Long playlistId = 1L;
+        Long itemId = 100L;
+
+        mockMvc.perform(delete("/api/v1/playlists/{id}/items/{itemId}", playlistId, itemId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.msg").value("플레이리스트 아이템이 삭제되었습니다."));
+
+        verify(playlistService, times(1)).deletePlaylistItem(playlistId, itemId);
+    }
+
+
 }
