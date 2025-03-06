@@ -32,14 +32,6 @@ export default function Header() {
           </nav>
         </div>
         <div className="ml-auto flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-            <input
-              type="search"
-              placeholder="인사이트 검색..."
-              className="h-9 w-[300px] rounded-md border bg-white pl-8 pr-3 text-sm"
-            />
-          </div>
           <button className="inline-flex h-9 items-center justify-center rounded-md bg-black px-3 text-sm font-medium text-white shadow hover:bg-gray-800">
             새 글쓰기
           </button>
