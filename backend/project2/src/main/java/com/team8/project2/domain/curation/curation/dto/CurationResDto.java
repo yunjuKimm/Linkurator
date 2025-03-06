@@ -6,6 +6,7 @@ import com.team8.project2.domain.link.entity.Link;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 public class CurationResDto {
+    private Long id;
 
     /** 큐레이션 제목 */
     private String title;
@@ -28,6 +30,9 @@ public class CurationResDto {
 
     /** 큐레이션에 포함된 태그 목록 */
     private List<TagResDto> tags;
+    private LocalDateTime createdAt;
+    private LocalDateTime modifiedAt;
+    private Long likeCount;
 
     /**
      * 링크 정보를 포함하는 내부 DTO 클래스
@@ -60,6 +65,7 @@ public class CurationResDto {
      * @param curation 변환할 큐레이션 엔티티
      */
     public CurationResDto(Curation curation) {
+        this.id = curation.getId();
         this.title = curation.getTitle();
         this.content = curation.getContent();
         this.urls = curation.getCurationLinks().stream()
@@ -68,5 +74,8 @@ public class CurationResDto {
         this.tags = curation.getTags().stream()
                 .map(tag -> new TagResDto(tag.getTag()))
                 .collect(Collectors.toList());
+        this.createdAt = curation.getCreatedAt();
+        this.modifiedAt = curation.getModifiedAt();
+        this.likeCount = curation.getLikeCount();
     }
 }

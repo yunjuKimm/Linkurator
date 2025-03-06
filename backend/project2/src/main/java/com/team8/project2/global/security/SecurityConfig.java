@@ -34,13 +34,14 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.PUT, "/api/v1/curation/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/curation/**").permitAll()
 				.requestMatchers(HttpMethod.DELETE, "/api/v1/curation/**").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/v1/curations/**").permitAll()
-				.requestMatchers(HttpMethod.PUT, "/api/v1/curations/**").permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/v1/curations/**").permitAll()
-				.requestMatchers(HttpMethod.DELETE, "/api/v1/curations/**").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/v1/link/**").permitAll()
 				.requestMatchers(HttpMethod.GET, "/h2-console/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
 				.requestMatchers("/api/v1/playlists/**").authenticated()
+
+				// 🔹 h2-console 접근 허용
+				.requestMatchers(HttpMethod.GET, "/h2-console/**").permitAll()
+				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
 
 				// 🔹 그 외 모든 요청 인증 필요
 				.anyRequest().authenticated()

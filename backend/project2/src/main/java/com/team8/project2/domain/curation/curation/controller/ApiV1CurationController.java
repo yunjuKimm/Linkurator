@@ -8,6 +8,7 @@ import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.global.dto.RsData;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -90,6 +91,7 @@ public class ApiV1CurationController {
      * @return 검색된 큐레이션 목록 응답
      */
     @GetMapping
+    @Transactional(readOnly = true)
     public RsData<List<CurationResDto>> searchCuration(
             @RequestParam(required = false) List<String> tags,
             @RequestParam(required = false) String title,
@@ -112,6 +114,6 @@ public class ApiV1CurationController {
     @PostMapping("/{id}")
     public RsData<Void> likeCuration(@PathVariable Long id) {
         curationService.likeCuration(id);
-        return new RsData<>("200-1", "글에 좋아요를 했습니다.");
+        return new RsData<>("200-1", "글에 좋아요를 했습니다.", null);
     }
 }
