@@ -2,11 +2,14 @@ package com.team8.project2.global.init;
 
 import java.util.List;
 
+import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.team8.project2.domain.comment.dto.CommentDto;
+import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.service.CurationService;
@@ -26,7 +29,7 @@ public class BaseInitData {
 
 	@Transactional
 	@Bean
-	public ApplicationRunner init() {
+	public ApplicationRunner init(CommentService commentService) {
 		return args -> {
 			if (memberRepository.count() == 0 && curationRepository.count() == 0) {
 				Member member = Member.builder()
@@ -40,14 +43,20 @@ public class BaseInitData {
 					.build();
 				memberRepository.save(member);
 
-				curationService.createCuration(
+				Curation curation = curationService.createCuration(
 					"curation test title",
 					"curation test content",
 					List.of("url1", "url2"),
 					List.of("tag1", "tag2")
 				);
+
+				commentService.createComment(
+					curation.getId(),
+					CommentDto.builder()
+						.content("comment test content")
+						.build()
+				);
 			}
 		};
 	}
-
 }
