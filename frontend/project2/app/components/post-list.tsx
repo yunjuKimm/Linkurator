@@ -71,15 +71,6 @@ export default function PostList() {
     }
   };
 
-  const sortCurations = (curations: Curation[], order: SortOrder) => {
-    if (order === "LATEST") {
-      return curations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } else if (order === "LIKECOUNT") {
-      return curations.sort((a, b) => b.likeCount - a.likeCount);
-    }
-    return curations;
-  };
-
 
   // 필터 버튼 클릭 시
   const openFilterModal = () => {
@@ -153,11 +144,6 @@ export default function PostList() {
     }
   };
 
-  // 정렬 변경 시 API 호출
-  useEffect(() => {
-    fetchCurations({});
-  }, [sortOrder]);
-
   // 큐레이션마다 메타 데이터 추출
   useEffect(() => {
     curations.forEach((curation) => {
@@ -185,6 +171,10 @@ export default function PostList() {
     const minutes = String(date.getMinutes()).padStart(2, "0");
     return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
   };
+
+  useEffect(() => {
+    fetchCurations({}); // 페이지 로딩 시 한번 API 호출
+  }, []); // 빈 배열을 의존성으로 두어 처음 한 번만 호출되게 설정
 
   return (
     <>
