@@ -6,6 +6,7 @@ import com.team8.project2.domain.link.entity.Link;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,6 +18,9 @@ public class CurationResDto {
     private String content;
     private List<LinkResDto> urls;
     private List<TagResDto> tags;
+    private LocalDateTime createdAt;
+    private LocalDateTime modifiedAt;
+    private Long likeCount;
 
     @Getter
     @Setter
@@ -48,5 +52,8 @@ public class CurationResDto {
         this.tags = curation.getTags().stream()
                 .map(tag -> new TagResDto(tag.getTag()))
                 .collect(Collectors.toList());
+        this.createdAt = curation.getCreatedAt();
+        this.modifiedAt = curation.getModifiedAt();
+        this.likeCount = curation.getLikeCount();
     }
 }

@@ -71,6 +71,6 @@ public class ApiV1CurationController {
     @PostMapping("/{id}")
     public RsData<Void> likeCuration(@PathVariable Long id) {
         curationService.likeCuration(id);
-        return new RsData<>("200-1", "글에 좋아요를 했습니다.");
+        return new RsData<>("200-1", "글에 좋아요를 했습니다.", null);
     }
 }
