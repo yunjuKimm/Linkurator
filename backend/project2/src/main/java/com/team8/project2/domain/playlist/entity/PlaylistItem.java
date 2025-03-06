@@ -43,7 +43,9 @@ public class PlaylistItem {
     @JoinColumn(name = "playlist_id", nullable = false) // NULL 허용 안 함 (반드시 Playlist와 연결)
     private Playlist playlist;
 
-
+    /**
+     * 항목의 표시 순서
+     */
     @Column(nullable = false)
     private Integer displayOrder;
 
