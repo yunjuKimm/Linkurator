@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -111,7 +113,7 @@ public class PlaylistService {
         }
     }
 
-    /** 플레이리스트 항목 추가 */
+    /** 플레이리스트 아이템 추가 */
     public PlaylistDto addPlaylistItem(Long playlistId, Long itemId, PlaylistItem.PlaylistItemType itemType) {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
@@ -128,7 +130,7 @@ public class PlaylistService {
         return PlaylistDto.fromEntity(playlist);
     }
 
-    /** 플레이리스트 항목 삭제 */
+    /** 플레이리스트 아이템 삭제 */
     @Transactional
     public void deletePlaylistItem(Long playlistId, Long itemId) {
         Playlist playlist = playlistRepository.findById(playlistId)
@@ -136,10 +138,37 @@ public class PlaylistService {
 
         boolean removed = playlist.getItems().removeIf(item -> item.getItemId().equals(itemId));
         if (!removed) {
-            throw new NotFoundException("해당 플레이리스트 항목을 찾을 수 없습니다.");
+            throw new NotFoundException("해당 플레이리스트 아이템을 찾을 수 없습니다.");
         }
 
         playlistRepository.save(playlist);
+    }
+
+    /** 플레이리스트 아이템 순서 변경 */
+    @Transactional
+    public PlaylistDto updatePlaylistItemOrder(Long playlistId, List<Long> orderedItemIds) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        if (playlist.getItems().size() != orderedItemIds.size()) {
+            throw new BadRequestException("플레이리스트 아이템 개수가 일치하지 않습니다.");
+        }
+
+        Map<Long, PlaylistItem> itemMap = playlist.getItems().stream()
+                .collect(Collectors.toMap(PlaylistItem::getId, Function.identity()));
+
+        for (int i = 0; i < orderedItemIds.size(); i++) {
+            Long playlistItemId = orderedItemIds.get(i);
+            PlaylistItem item = itemMap.get(playlistItemId);
+            if (item != null) {
+                item.setDisplayOrder(i);
+            } else {
+                throw new BadRequestException("존재하지 않는 플레이리스트 아이템 ID가 포함되어 있습니다.");
+            }
+        }
+
+        playlistRepository.save(playlist);
+        return PlaylistDto.fromEntity(playlist);
     }
 
 }

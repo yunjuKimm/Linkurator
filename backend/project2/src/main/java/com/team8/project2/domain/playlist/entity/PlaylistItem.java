@@ -44,7 +44,7 @@ public class PlaylistItem {
     private Playlist playlist;
 
     /**
-     * 항목의 표시 순서
+     * 아이템 순서
      */
     @Column(nullable = false)
     private Integer displayOrder;
