@@ -61,22 +61,30 @@ export default function PostList() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ "url" : url }), // body에 JSON 형태로 URL을 전달
+        body: JSON.stringify({ "url": url }), // body에 JSON 형태로 URL을 전달
       });
   
       if (!response.ok) {
         throw new Error("Failed to fetch link metadata");
       }
-      
+  
       const data = await response.json();
-      setLinkMetaDataList((prev) => ({
-        ...prev,
-        [curationId]: [...(prev[curationId] || []), data.data], // 메타 데이터 배열로 업데이트
-      })); // 메타 데이터 상태 업데이트
+      setLinkMetaDataList((prev) => {
+        const existingMetaData = prev[curationId] || [];
+        // 중복된 메타 데이터가 추가되지 않도록 필터링
+        const newMetaData = existingMetaData.filter(
+          (meta) => meta.url !== data.data.url // 이미 존재하는 URL은 제외
+        );
+        return {
+          ...prev,
+          [curationId]: [...newMetaData, data.data], // 중복 제거 후 메타 데이터 추가
+        };
+      });
     } catch (error) {
       console.error("Error fetching link metadata:", error);
     }
   };
+  
 
   // 좋아요 추가 API 호출 함수
   const likeCuration = async (id: number) => {
@@ -105,11 +113,16 @@ export default function PostList() {
     curations.forEach((curation) => {
       if (curation.urls.length > 0) {
         curation.urls.forEach(urlObj => {
-          fetchLinkMetaData(urlObj.url, curation.id); // 각 URL에 대해 메타 데이터 추출
+          // URL이 이미 메타 데이터에 포함되지 않았다면 메타 데이터를 가져옴
+          if (!linkMetaDataList[curation.id]?.some(meta => meta.url === urlObj.url)) {
+            fetchLinkMetaData(urlObj.url, curation.id); // 메타 데이터 가져오기
+          }
         });
       }
     });
-  }, [curations]);
+  }, [curations, linkMetaDataList]); // linkMetaDataList도 의존성에 추가
+  
+  
 
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
