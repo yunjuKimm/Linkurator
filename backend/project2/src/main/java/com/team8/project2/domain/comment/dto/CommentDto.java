@@ -1,10 +1,16 @@
 package com.team8.project2.domain.comment.dto;
 
+import java.time.LocalDateTime;
+
 import com.team8.project2.domain.comment.entity.Comment;
 import com.team8.project2.domain.curation.curation.entity.Curation;
-import lombok.*;
+import com.team8.project2.domain.member.entity.Member;
 
-import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * 댓글(Comment) 데이터 전송 객체(DTO) 클래스입니다.
@@ -21,10 +27,7 @@ public class CommentDto {
     private Long id;
 
     /** 댓글 작성자의 사용자 ID */
-    private Long memberId;
-
-    /** 댓글이 속한 큐레이션의 ID */
-    private Long curationId;
+    private String authorName;
 
     /** 댓글 내용 */
     private String content;
@@ -43,8 +46,7 @@ public class CommentDto {
     public static CommentDto fromEntity(Comment comment) {
         return CommentDto.builder()
                 .id(comment.getId())
-                .memberId(comment.getMemberId())
-                .curationId(comment.getCuration().getId()) // Curation 엔티티에서 ID만 전달
+                .authorName(comment.getAuthor().getUsername())
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
                 .modifiedAt(comment.getModifiedAt())
@@ -56,14 +58,11 @@ public class CommentDto {
      * @param curation 댓글이 속한 큐레이션 엔티티
      * @return 변환된 댓글 엔티티
      */
-    public Comment toEntity(Curation curation) {
+    public Comment toEntity(Member member,Curation curation) {
         return Comment.builder()
-                .id(id)
-                .memberId(memberId)
+                .author(member)
                 .curation(curation)
                 .content(content)
-                .createdAt(createdAt)
-                .modifiedAt(modifiedAt)
                 .build();
     }
 }
