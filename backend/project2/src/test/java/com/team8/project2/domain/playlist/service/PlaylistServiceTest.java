@@ -6,6 +6,7 @@ import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
+import com.team8.project2.global.exception.BadRequestException;
 import com.team8.project2.global.exception.NotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -244,5 +245,22 @@ class PlaylistServiceTest {
         assertEquals("테스트 플레이리스트", updatedDto.getTitle());
     }
 
+    @Test
+    @DisplayName("실패 - 플레이리스트 아이템 순서 변경 시 아이템 개수가 일치해야 한다.")
+    void updatePlaylistItemOrder_itemCount() {
+        // Given
+        PlaylistItem item1 = PlaylistItem.builder().id(1L).itemId(100L).displayOrder(0).itemType(PlaylistItem.PlaylistItemType.LINK).build();
+        PlaylistItem item2 = PlaylistItem.builder().id(2L).itemId(101L).displayOrder(1).itemType(PlaylistItem.PlaylistItemType.CURATION).build();
+        PlaylistItem item3 = PlaylistItem.builder().id(3L).itemId(102L).displayOrder(2).itemType(PlaylistItem.PlaylistItemType.LINK).build();
+        samplePlaylist.setItems(new ArrayList<>(Arrays.asList(item1, item2, item3)));
+
+        List<Long> newOrder = Arrays.asList(3L, 1L);
+
+        when(playlistRepository.findById(1L)).thenReturn(Optional.of(samplePlaylist));
+
+        // When & Then
+        assertThrows(BadRequestException.class, () ->
+                playlistService.updatePlaylistItemOrder(1L, newOrder));
+    }
 
 }
