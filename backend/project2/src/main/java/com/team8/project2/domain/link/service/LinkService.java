@@ -76,7 +76,12 @@ public class LinkService {
                 .orElseGet(() -> linkRepository.save(Link.builder().url(url).build()));
     }
 
-    // 링크 메타 데이터 추출
+    /**
+     * 링크 URL을 입력받아 해당 링크의 메타 데이터를 추출합니다.
+     *
+     * @param url 링크 URL
+     * @return 링크 메타 데이터 DTO
+     */
     @Transactional
     public LinkResDTO getLinkMetaData(String url) {
         try {
@@ -102,7 +107,13 @@ public class LinkService {
         }
     }
 
-    // 메타 태그 내용 추출 유틸리티 함수
+    /**
+     * Jsoup Document에서 메타 태그의 content 속성을 추출합니다.
+     *
+     * @param doc      Jsoup Document
+     * @param property 메타 태그 property 속성
+     * @return 메타 태그 content 속성 값
+     */
     private String getMetaTagContent(Document doc, String property) {
         Element metaTag = doc.select("meta[property=" + property + "]").first();
         return metaTag != null ? metaTag.attr("content") : "";
