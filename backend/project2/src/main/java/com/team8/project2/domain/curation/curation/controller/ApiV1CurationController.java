@@ -78,6 +78,7 @@ public class ApiV1CurationController {
      * @return 조회된 큐레이션 정보 응답
      */
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public RsData<CurationDetailResDto> getCuration(@PathVariable Long id) {
         Curation curation = curationService.getCuration(id);
         return new RsData<>("200-1", "조회 성공", CurationDetailResDto.fromEntity(curation));
