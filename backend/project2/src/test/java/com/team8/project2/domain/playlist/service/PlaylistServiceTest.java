@@ -183,21 +183,14 @@ class PlaylistServiceTest {
 
     @Test
     @DisplayName("플레이리스트에서 아이템을 삭제할 수 있다.")
-    void deletePlaylistItem_success() {
+    void deletePlaylistItem() {
         // Given
         Long itemIdToDelete = 100L;
 
-        PlaylistItem item1 = PlaylistItem.builder()
-                .itemId(100L)
-                .itemType(PlaylistItem.PlaylistItemType.LINK)
-                .build();
-        PlaylistItem item2 = PlaylistItem.builder()
-                .itemId(101L)
-                .itemType(PlaylistItem.PlaylistItemType.CURATION)
-                .build();
+        PlaylistItem item1 = PlaylistItem.builder().itemId(100L).itemType(PlaylistItem.PlaylistItemType.LINK).build();
+        PlaylistItem item2 = PlaylistItem.builder().itemId(101L).itemType(PlaylistItem.PlaylistItemType.CURATION).build();
 
         samplePlaylist.setItems(new ArrayList<>(Arrays.asList(item1, item2)));
-
         when(playlistRepository.findById(samplePlaylist.getId())).thenReturn(Optional.of(samplePlaylist));
 
         // When
@@ -209,10 +202,9 @@ class PlaylistServiceTest {
         verify(playlistRepository, times(1)).save(samplePlaylist);
     }
 
-
     @Test
     @DisplayName("실패 - 존재하지 않는 아이템은 삭제할 수 없다.")
-    void deletePlaylistItem_itemNotFound() {
+    void deletePlaylistItemNotFound() {
         // Given
         Long itemIdToDelete = 100L;
         samplePlaylist.setItems(new ArrayList<>());
@@ -225,5 +217,32 @@ class PlaylistServiceTest {
             playlistService.deletePlaylistItem(samplePlaylist.getId(), itemIdToDelete);
         });
     }
+
+    @Test
+    @DisplayName("플레이리스트 아이템 순서를 변경할 수 있다.")
+    void updatePlaylistItemOrder() {
+        // Given
+        PlaylistItem item1 = PlaylistItem.builder().id(1L).itemId(100L).displayOrder(0).itemType(PlaylistItem.PlaylistItemType.LINK).build();
+        PlaylistItem item2 = PlaylistItem.builder().id(2L).itemId(101L).displayOrder(1).itemType(PlaylistItem.PlaylistItemType.CURATION).build();
+        PlaylistItem item3 = PlaylistItem.builder().id(3L).itemId(102L).displayOrder(2).itemType(PlaylistItem.PlaylistItemType.LINK).build();
+        samplePlaylist.setItems(new ArrayList<>(Arrays.asList(item1, item2, item3)));
+
+        List<Long> newOrder = Arrays.asList(3L, 1L, 2L);
+
+        when(playlistRepository.findById(1L)).thenReturn(Optional.of(samplePlaylist));
+        when(playlistRepository.save(any(Playlist.class))).thenReturn(samplePlaylist);
+
+        // When
+        PlaylistDto updatedDto = playlistService.updatePlaylistItemOrder(1L, newOrder);
+
+        // Then
+        assertEquals(0, samplePlaylist.getItems().stream().filter(item -> item.getId().equals(3L)).findFirst().get().getDisplayOrder());
+        assertEquals(1, samplePlaylist.getItems().stream().filter(item -> item.getId().equals(1L)).findFirst().get().getDisplayOrder());
+        assertEquals(2, samplePlaylist.getItems().stream().filter(item -> item.getId().equals(2L)).findFirst().get().getDisplayOrder());
+
+        assertNotNull(updatedDto);
+        assertEquals("테스트 플레이리스트", updatedDto.getTitle());
+    }
+
 
 }
