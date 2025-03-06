@@ -4,6 +4,7 @@ import com.team8.project2.domain.member.dto.MemberDto;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.entity.RoleEnum;
 import com.team8.project2.domain.member.service.MemberService;
+import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
 import com.team8.project2.global.exception.ServiceException;
 import jakarta.validation.Valid;
@@ -21,28 +22,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class ApiV1MemberController {
 
     private final MemberService memberService;
+    private final Rq rq;
 
-    public record JoinReqBody(
-            @NotBlank @Length(min = 3) String userId,
-            @NotBlank @Length(min = 3) String username,
+    record JoinReqBody(
+            @NotBlank @Length(min = 3) String memberId,
             @NotBlank @Length(min = 3) String password,
             @NotBlank @Length(min = 3) String email,
             RoleEnum role,
-            String imgUrl,
-            String description
+            String profileImage,
+            String introduce
     ) {}
 
     @PostMapping("/join")
     public RsData<MemberDto> join(@RequestBody @Valid JoinReqBody body) {
-        System.out.println("1");
-        System.out.println(body);
-        memberService.findByUserId(body.userId())
+        memberService.findByMemberId(body.memberId())
                 .ifPresent(member -> {
-                    throw new ServiceException("400","잘못된 아이디");
+                    throw new ServiceException("409-1","사용중인 아이디");
                 });
         //TODO: RoleEnum 초기화 방식 선정
         //TODO: apikey할당 방식 선정
-        Member member = memberService.join(body.userId, body.username, body.password, body.role, body.email, body.imgUrl);
+        //join(String username, String password,RoleEnum role, String email, String profileImage)
+        Member member = memberService.join(body.memberId(), body.password(), body.role, body.email(), body.profileImage(), body.introduce());
 
         return new RsData<>(
                 "201-1",
