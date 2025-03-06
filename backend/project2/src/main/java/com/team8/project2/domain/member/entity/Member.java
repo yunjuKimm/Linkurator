@@ -30,9 +30,10 @@ public class Member {
     @Setter(AccessLevel.PRIVATE)
     private LocalDateTime modifiedDate;
 
-    @Column(nullable = false, unique = true)
-    private String userId;
+
     @Column(length = 100, unique = true)
+    private String memberId;
+    @Column(length = 100, unique = true, nullable = true)
     private String username;
     @Column(nullable = false)
     private String password;
@@ -43,12 +44,12 @@ public class Member {
     @Column(nullable = false)
     @Builder.Default
     private RoleEnum role = RoleEnum.MEMBER;
-    @Column(nullable = false)
-    private String imgUrl;
+    @Column
+    private String profileImage;
     @Column
     private String email;
     @Column
-    private String description;
+    private String introduce;
 
     public boolean isAdmin() {
         return username.equals("admin");

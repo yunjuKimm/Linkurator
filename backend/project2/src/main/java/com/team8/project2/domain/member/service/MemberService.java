@@ -14,28 +14,26 @@ import java.util.Optional;
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    public Member join(String userId, String username, String password,RoleEnum role, String email, String imgUrl) {
-        return join(userId, username, password, role, email, imgUrl, null);
+    public Member join(String memberId, String password, RoleEnum role, String email, String profileImage) {
+        return join(memberId, password, role, email, profileImage, null);
     }
 
-    @Transactional
-    public Member join(String userId, String username, String password, RoleEnum role, String email, String imgUrl, String description) {
+    public Member join(String memberId, String password, RoleEnum role, String email, String profileImage, String introduce) {
 
         //TODO: apikey 할당방식 지정
         //TODO: RoleEnum 확인 이후 주입 로직 필요
         Member member = Member.builder()
-                .userId(userId)
-                .username(username)
-                .apiKey(username)
+                .apiKey(memberId)
                 .password(password)
-                .imgUrl(imgUrl)
+                .profileImage(profileImage)
                 .email(email)
-                .description(description).build();
+                .introduce(introduce).build();
         return memberRepository.save(member);
     }
     public Optional<Member> findByApiKey(String apiKey) { return memberRepository.findByApiKey(apiKey);}
 
-    public Optional<Member> findByUserId(String userId) {
-        return memberRepository.findByUserId(userId);
+    public Optional<Member> findByMemberId(String memberId) {
+        return memberRepository.findByMemberId(memberId);
     }
+
 }
