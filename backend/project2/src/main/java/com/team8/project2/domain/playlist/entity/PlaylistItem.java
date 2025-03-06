@@ -1,5 +1,6 @@
 package com.team8.project2.domain.playlist.entity;
 
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -32,7 +33,8 @@ public class PlaylistItem {
      * 항목의 유형 (예: 음악, 영상 등)
      */
     @Column(nullable = false) // NULL 허용 안 함
-    private String itemType;
+    @Enumerated(EnumType.STRING)
+    private PlaylistItemType itemType;
 
     /**
      * 해당 항목이 속한 플레이리스트 (N:1 관계)
@@ -40,4 +42,16 @@ public class PlaylistItem {
     @ManyToOne
     @JoinColumn(name = "playlist_id", nullable = false) // NULL 허용 안 함 (반드시 Playlist와 연결)
     private Playlist playlist;
+
+    /**
+     * 아이템 순서
+     */
+    @Column(nullable = false)
+    private Integer displayOrder;
+
+    public enum PlaylistItemType {
+        LINK,
+        CURATION
+    }
+
 }
