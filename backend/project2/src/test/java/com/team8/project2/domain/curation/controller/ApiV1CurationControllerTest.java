@@ -115,10 +115,10 @@ public class ApiV1CurationControllerTest {
 			.andExpect(jsonPath("$.code").value("200-1"))
 			.andExpect(jsonPath("$.msg").value("조회 성공"))
 			.andExpect(jsonPath("$.data.title").value("curation test title"))
-			.andExpect(jsonPath("$.data.urls[0].url").value("url1"))
-			.andExpect(jsonPath("$.data.urls[1].url").value("url2"))
-			.andExpect(jsonPath("$.data.tags[0].name").value("tag1"))
-			.andExpect(jsonPath("$.data.tags[1].name").value("tag2"))
+			.andExpect(jsonPath("$.data.urls[0].url").value("https://www.naver.com/"))
+			.andExpect(jsonPath("$.data.urls[1].url").value("https://www.github.com/"))
+			.andExpect(jsonPath("$.data.tags[0].name").value("포털"))
+			.andExpect(jsonPath("$.data.tags[1].name").value("개발"))
 			.andExpect(jsonPath("$.data.comments[0].content").value("comment test content"));
 	}
 

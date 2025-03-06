@@ -46,8 +46,8 @@ public class BaseInitData {
 				Curation curation = curationService.createCuration(
 					"curation test title",
 					"curation test content",
-					List.of("url1", "url2"),
-					List.of("tag1", "tag2")
+					List.of("https://www.naver.com/", "https://www.github.com/"),
+					List.of("포털", "개발")
 				);
 
 				commentService.createComment(
