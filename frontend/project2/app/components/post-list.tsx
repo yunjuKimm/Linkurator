@@ -171,9 +171,12 @@ export default function PostList() {
             <div key={curation.id} className="space-y-4 border-b pb-6">
               <div className="flex items-center space-x-2">
               <p className="text-xs text-gray-500">
-                {Math.floor(new Date(curation.modifiedAt).getTime() / 1000) !== Math.floor(new Date(curation.createdAt).getTime() / 1000)
+                {
+                  `작성된 날짜 : ${formatDate(curation.createdAt)}`
+                /* {Math.floor(new Date(curation.modifiedAt).getTime() / 1000) !== Math.floor(new Date(curation.createdAt).getTime() / 1000)
                   ? `수정된 날짜 : ${formatDate(curation.modifiedAt)}`
-                  : `작성된 날짜 : ${formatDate(curation.createdAt)}`}
+                  : `작성된 날짜 : ${formatDate(curation.createdAt)}`} */
+                  }
               </p>
               </div>
 
