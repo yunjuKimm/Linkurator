@@ -1,11 +1,14 @@
 package com.team8.project2.domain.playlist.entity;
 
+import com.team8.project2.domain.curation.tag.entity.Tag;
 import com.team8.project2.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 플레이리스트(Playlist) 엔티티 클래스입니다.
@@ -62,4 +65,16 @@ public class Playlist {
         if (description != null) this.description = description;
         if (isPublic != null) this.isPublic = isPublic;
     }
+
+
+    /**
+     * 플레이리스트 연관 추천 태그
+     */
+    @ManyToMany
+    @JoinTable(
+            name="PlaylistTag",
+            joinColumns = @JoinColumn(name="playlist_id"),
+            inverseJoinColumns = @JoinColumn(name="tag_id")
+    )
+    private Set<Tag> tags = new HashSet<>();
 }
