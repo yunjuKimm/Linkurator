@@ -6,6 +6,7 @@ import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.service.PlaylistService;
 import com.team8.project2.global.dto.RsData;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,7 +32,7 @@ public class ApiV1PlaylistController {
      * @return 생성된 플레이리스트 정보
      */
     @PostMapping
-    public RsData<PlaylistDto> createPlaylist(@RequestBody PlaylistCreateDto request) {
+    public RsData<PlaylistDto> createPlaylist(@Valid @RequestBody PlaylistCreateDto request) {
         PlaylistDto playlist = playlistService.createPlaylist(request);
         return RsData.success("플레이리스트가 생성되었습니다.", playlist);
     }
@@ -69,7 +70,7 @@ public class ApiV1PlaylistController {
     @PatchMapping("/{id}")
     public RsData<PlaylistDto> updatePlaylist(
             @PathVariable Long id,
-            @RequestBody PlaylistUpdateDto request
+            @Valid @RequestBody PlaylistUpdateDto request
     ) {
         PlaylistDto updatedPlaylist = playlistService.updatePlaylist(id, request);
         return RsData.success("플레이리스트가 수정되었습니다.", updatedPlaylist);
