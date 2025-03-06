@@ -109,4 +109,13 @@ public class ApiV1PlaylistController {
         playlistService.deletePlaylistItem(id, itemId);
         return ResponseEntity.ok(RsData.success("플레이리스트 아이템이 삭제되었습니다.", null));
     }
+
+    /** 플레이리스트 아이템 순서 변경 */
+    @PatchMapping("/{id}/items/order")
+    public ResponseEntity<RsData<PlaylistDto>> updatePlaylistItemOrder(
+            @PathVariable("id") Long id,
+            @RequestBody List<Long> orderedItemIds) {
+        PlaylistDto updatedPlaylist = playlistService.updatePlaylistItemOrder(id, orderedItemIds);
+        return ResponseEntity.ok(RsData.success("플레이리스트 아이템 순서가 변경되었습니다.", updatedPlaylist));
+    }
 }
