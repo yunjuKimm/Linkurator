@@ -35,6 +35,8 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.POST, "/api/v1/curation/**").permitAll()
 				.requestMatchers(HttpMethod.DELETE, "/api/v1/curation/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/link/**").permitAll()
+				.requestMatchers(HttpMethod.GET, "/h2-console/**").permitAll()
+				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
 				.requestMatchers("/api/v1/playlists/**").authenticated()
 
 				// 🔹 h2-console 접근 허용
@@ -45,11 +47,11 @@ public class SecurityConfig {
 				.anyRequest().authenticated()
 			)
 			.headers((headers) -> headers
-					.addHeaderWriter(new XFrameOptionsHeaderWriter(
-							XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN)))
-
+				.addHeaderWriter(new XFrameOptionsHeaderWriter(
+					XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN)))
 			// ✅ CSRF 비활성화 (API 사용을 위해 필수)
 			.csrf(csrf -> csrf.disable());
+
 
 		return http.build();
 	}

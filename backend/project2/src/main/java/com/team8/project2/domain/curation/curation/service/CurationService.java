@@ -17,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 큐레이션 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
+ * 큐레이션 생성, 수정, 삭제, 조회 및 좋아요 기능을 제공합니다.
+ */
 @Service
 @RequiredArgsConstructor
 public class CurationService {
@@ -27,7 +31,14 @@ public class CurationService {
     private final LinkService linkService;
     private final TagService tagService;
 
-    // 글 생성
+    /**
+     * 큐레이션을 생성합니다.
+     * @param title 큐레이션 제목
+     * @param content 큐레이션 내용
+     * @param urls 연결된 링크 목록
+     * @param tags 연결된 태그 목록
+     * @return 생성된 큐레이션 객체
+     */
     @Transactional
     public Curation createCuration(String title, String content, List<String> urls, List<String> tags) {
         Curation curation = Curation.builder()
@@ -35,42 +46,6 @@ public class CurationService {
                 .content(content)
                 .build();
         curationRepository.save(curation);
-
-        // 큐레이션 - 링크 연결
-        List<CurationLink> curationLinks = urls.stream()
-                .map(url -> {
-                    CurationLink curationLink = new CurationLink();
-                    return curationLink.setCurationAndLink(curation, linkService.getLink(url));
-                }).collect(Collectors.toList());
-        for (CurationLink curationLink : curationLinks) {
-            curationLinkRepository.save(curationLink);
-        }
-        curation.setCurationLinks(curationLinks);
-
-        // 큐레이션 - 태그 연결
-        List<CurationTag> curationTags = tags.stream()
-                .map(tag -> {
-                    CurationTag curationTag = new CurationTag();
-                    return curationTag.setCurationAndTag(curation, tagService.getTag(tag));
-                }).collect(Collectors.toList());
-        for (CurationTag curationTag : curationTags) {
-            curationTagRepository.save(curationTag);
-        }
-        curation.setTags(curationTags);
-
-        return curation;
-    }
-
-    // 글 수정
-    @Transactional
-    public Curation updateCuration(Long curationId, String title, String content, List<String> urls, List<String> tags) {
-
-        Curation curation = curationRepository.findById(curationId)
-                .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
-
-        curation.setTitle(title);
-        curation.setContent(content);
-
 
         // 큐레이션 - 링크 연결
         List<CurationLink> curationLinks = urls.stream()
@@ -90,10 +65,51 @@ public class CurationService {
         curationTagRepository.saveAll(curationTags);
         curation.setTags(curationTags);
 
+        return curation;
+    }
+
+    /**
+     * 큐레이션을 수정합니다.
+     * @param curationId 수정할 큐레이션 ID
+     * @param title 새로운 제목
+     * @param content 새로운 내용
+     * @param urls 새로 연결할 링크 목록
+     * @param tags 새로 연결할 태그 목록
+     * @return 수정된 큐레이션 객체
+     */
+    @Transactional
+    public Curation updateCuration(Long curationId, String title, String content, List<String> urls, List<String> tags) {
+        Curation curation = curationRepository.findById(curationId)
+                .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+
+        curation.setTitle(title);
+        curation.setContent(content);
+
+        // 큐레이션 - 링크 연결 업데이트
+        List<CurationLink> curationLinks = urls.stream()
+                .map(url -> {
+                    CurationLink curationLink = new CurationLink();
+                    return curationLink.setCurationAndLink(curation, linkService.getLink(url));
+                }).collect(Collectors.toList());
+        curationLinkRepository.saveAll(curationLinks);
+        curation.setCurationLinks(curationLinks);
+
+        // 큐레이션 - 태그 연결 업데이트
+        List<CurationTag> curationTags = tags.stream()
+                .map(tag -> {
+                    CurationTag curationTag = new CurationTag();
+                    return curationTag.setCurationAndTag(curation, tagService.getTag(tag));
+                }).collect(Collectors.toList());
+        curationTagRepository.saveAll(curationTags);
+        curation.setTags(curationTags);
+
         return curationRepository.save(curation);
     }
 
-    // 글 삭제
+    /**
+     * 큐레이션을 삭제합니다.
+     * @param curationId 삭제할 큐레이션 ID
+     */
     @Transactional
     public void deleteCuration(Long curationId) {
         if (!curationRepository.existsById(curationId)) {
@@ -104,17 +120,32 @@ public class CurationService {
         curationRepository.deleteById(curationId);
     }
 
-    // 글 조회
+    /**
+     * 특정 큐레이션을 조회합니다.
+     * @param curationId 조회할 큐레이션 ID
+     * @return 조회된 큐레이션 객체
+     */
     public Curation getCuration(Long curationId) {
         return curationRepository.findById(curationId)
                 .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
     }
 
+    /**
+     * 큐레이션을 검색합니다.
+     * @param tags 태그 목록 (선택적)
+     * @param title 제목 검색어 (선택적)
+     * @param content 내용 검색어 (선택적)
+     * @param order 정렬 기준
+     * @return 검색된 큐레이션 목록
+     */
     public List<Curation> searchCurations(List<String> tags, String title, String content, SearchOrder order) {
         return curationRepository.searchByFilters(tags, title, content, order.name());
     }
 
-    // 좋아요
+    /**
+     * 큐레이션 좋아요 기능
+     * @param curationId 좋아요를 추가할 큐레이션 ID
+     */
     @Transactional
     public void likeCuration(Long curationId) {
         Curation curation = curationRepository.findById(curationId)
