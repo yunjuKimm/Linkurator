@@ -15,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.List;
 import java.util.Arrays;
@@ -178,6 +179,51 @@ class PlaylistServiceTest {
         // When & Then
         assertThrows(NotFoundException.class, () ->
                 playlistService.addPlaylistItem(1L, newItemId, PlaylistItem.PlaylistItemType.LINK));
+    }
+
+    @Test
+    @DisplayName("플레이리스트에서 아이템을 삭제할 수 있다.")
+    void deletePlaylistItem_success() {
+        // Given
+        Long itemIdToDelete = 100L;
+
+        PlaylistItem item1 = PlaylistItem.builder()
+                .itemId(100L)
+                .itemType(PlaylistItem.PlaylistItemType.LINK)
+                .build();
+        PlaylistItem item2 = PlaylistItem.builder()
+                .itemId(101L)
+                .itemType(PlaylistItem.PlaylistItemType.CURATION)
+                .build();
+
+        samplePlaylist.setItems(new ArrayList<>(Arrays.asList(item1, item2)));
+
+        when(playlistRepository.findById(samplePlaylist.getId())).thenReturn(Optional.of(samplePlaylist));
+
+        // When
+        playlistService.deletePlaylistItem(samplePlaylist.getId(), itemIdToDelete);
+
+        // Then
+        assertFalse(samplePlaylist.getItems().stream()
+                .anyMatch(item -> item.getItemId().equals(itemIdToDelete)));
+        verify(playlistRepository, times(1)).save(samplePlaylist);
+    }
+
+
+    @Test
+    @DisplayName("실패 - 존재하지 않는 아이템은 삭제할 수 없다.")
+    void deletePlaylistItem_itemNotFound() {
+        // Given
+        Long itemIdToDelete = 100L;
+        samplePlaylist.setItems(new ArrayList<>());
+
+        when(playlistRepository.findById(samplePlaylist.getId()))
+                .thenReturn(Optional.of(samplePlaylist));
+
+        // When & Then
+        assertThrows(NotFoundException.class, () -> {
+            playlistService.deletePlaylistItem(samplePlaylist.getId(), itemIdToDelete);
+        });
     }
 
 }
