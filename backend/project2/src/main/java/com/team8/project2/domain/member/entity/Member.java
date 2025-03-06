@@ -36,12 +36,16 @@ public class Member {
     private String username;
     @Column(nullable = false)
     private String password;
-
     @Column(nullable = false)
-    private RoleEnum role;
+    private String apiKey;
+
+    @Enumerated( EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private RoleEnum role = RoleEnum.MEMBER;
     @Column(nullable = false)
     private String imgUrl;
-    @Column(nullable = false)
+    @Column
     private String email;
     @Column
     private String description;
