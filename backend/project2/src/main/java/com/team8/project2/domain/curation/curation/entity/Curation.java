@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.member.entity.Member;
 
 /**
@@ -87,6 +89,12 @@ public class Curation {
      */
     @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY)
     private List<CurationTag> tags = new ArrayList<>();
+
+    /**
+     * 큐레이션에 포함된 댓글 목록 (Comment와 1:N 관계)
+     */
+    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY)
+    private List<Comment> comments = new ArrayList<>();
 
     /**
      * 큐레이션 좋아요 수 증가 메서드

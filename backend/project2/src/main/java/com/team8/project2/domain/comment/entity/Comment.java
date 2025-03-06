@@ -71,5 +71,9 @@ public class Comment {
     @Column(nullable = false)
     @Setter(AccessLevel.PRIVATE)
     private LocalDateTime modifiedAt;
+
+    public String getAuthorName() {
+        return getAuthorName();
+    }
 }
 

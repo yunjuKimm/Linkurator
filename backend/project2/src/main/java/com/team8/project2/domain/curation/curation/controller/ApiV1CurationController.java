@@ -1,5 +1,6 @@
 package com.team8.project2.domain.curation.curation.controller;
 
+import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
@@ -76,9 +77,9 @@ public class ApiV1CurationController {
      * @return 조회된 큐레이션 정보 응답
      */
     @GetMapping("/{id}")
-    public RsData<CurationResDto> getCuration(@PathVariable Long id) {
+    public RsData<CurationDetailResDto> getCuration(@PathVariable Long id) {
         Curation curation = curationService.getCuration(id);
-        return new RsData<>("200-1", "조회 성공", new CurationResDto(curation));
+        return new RsData<>("200-1", "조회 성공", CurationDetailResDto.fromEntity(curation));
     }
 
     /**

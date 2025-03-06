@@ -1,0 +1,92 @@
+package com.team8.project2.domain.curation.curation.dto;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.curation.tag.entity.Tag;
+import com.team8.project2.domain.link.entity.Link;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class CurationDetailResDto {
+
+	/** 큐레이션 제목 */
+	private String title;
+
+	/** 큐레이션 내용 */
+	private String content;
+
+	/** 큐레이션에 포함된 링크 목록 */
+	private List<LinkResDto> urls;
+
+	/** 큐레이션에 포함된 태그 목록 */
+	private List<TagResDto> tags;
+
+	/** 큐레이션에 포함된 댓글 목록 */
+	private List<CommentResDto> comments;
+
+	/**
+	 * 링크 정보를 포함하는 내부 DTO 클래스
+	 */
+	@Getter
+	static class LinkResDto {
+		private String url;
+
+		public LinkResDto(Link link) {
+			this.url = link.getUrl();
+		}
+	}
+
+	/**
+	 * 태그 정보를 포함하는 내부 DTO 클래스
+	 */
+	@Getter
+	static class TagResDto {
+		private String name;
+
+		public TagResDto(Tag tag) {
+			this.name = tag.getName();
+		}
+	}
+
+	@Getter
+	static class CommentResDto {
+		private String authorName;
+		private String content;
+
+		public CommentResDto(Comment comment) {
+			this.authorName = comment.getAuthorName();
+			this.content = comment.getContent();
+		}
+	}
+
+	/**
+	 * 엔티티(Curation) 객체를 DTO(CurationDetailResDto)로 변환합니다.
+	 * @param curation 변환할 큐레이션 엔티티
+	 * @return 변환된 상세 큐레이션 DTO
+	 */
+	public static CurationDetailResDto fromEntity(Curation curation) {
+		return CurationDetailResDto.builder()
+			.title(curation.getTitle())
+			.content(curation.getContent())
+			.urls(curation.getCurationLinks().stream()
+				.map(cl -> new LinkResDto(cl.getLink()))
+				.collect(Collectors.toList()))
+			.tags(curation.getTags().stream()
+				.map(tag -> new TagResDto(tag.getTag()))
+				.collect(Collectors.toList()))
+			.comments(curation.getComments().stream()
+				.map(comment -> new CommentResDto(comment))
+				.collect(Collectors.toList()))
+			.build();
+	}
+}
