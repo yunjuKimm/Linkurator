@@ -3,6 +3,7 @@ package com.team8.project2.domain.curation.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.curation.tag.dto.TagReqDto;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
@@ -35,10 +36,15 @@ public class ApiV1CurationControllerTest {
     @Autowired
     private CurationService curationService; // 실제 서비스 사용
 
+    @Autowired
+    private CurationRepository curationRepository;
+
     private CurationReqDTO curationReqDTO;
 
     @BeforeEach
     void setUp() {
+        curationRepository.deleteAll();
+
         // CurationReqDTO 설정 (링크 포함)
         curationReqDTO = new CurationReqDTO();
         curationReqDTO.setTitle("Test Title");

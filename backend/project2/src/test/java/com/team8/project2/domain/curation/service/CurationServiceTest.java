@@ -83,14 +83,15 @@ class CurationServiceTest {
         when(linkService.getLink(anyString())).thenReturn(link);
         when(tagService.getTag(anyString())).thenReturn(tag);
         when(curationRepository.save(any(Curation.class))).thenReturn(curation);
-        when(curationLinkRepository.save(any(CurationLink.class))).thenReturn(new CurationLink());
+        when(curationLinkRepository.saveAll(ArgumentMatchers.anyList())).thenReturn(List.of(new CurationLink()));
+        when(curationTagRepository.saveAll(ArgumentMatchers.anyList())).thenReturn(List.of(new CurationTag()));
 
         Curation createdCuration = curationService.createCuration("New Title", "New Content", urls, tags);
 
         // Verify interactions
         verify(curationRepository, times(1)).save(any(Curation.class));
-        verify(curationLinkRepository, times(2)).save(any(CurationLink.class));
-        verify(curationTagRepository, times(3)).save(any(CurationTag.class));
+        verify(curationLinkRepository, times(1)).saveAll(ArgumentMatchers.anyList());
+        verify(curationTagRepository, times(1)).saveAll(ArgumentMatchers.anyList());
 
         // Check the result
         assert createdCuration != null;
