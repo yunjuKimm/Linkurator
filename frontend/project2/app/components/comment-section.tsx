@@ -8,13 +8,14 @@ import { Heart, Flag } from "lucide-react";
 
 // 댓글 데이터 타입 정의
 type Comment = {
-  authorId: number;
+  id?: number;
+  authorId?: number;
   authorName: string;
-  authorImgUrl: string;
+  authorImgUrl?: string;
   content: string;
   createdAt: string;
   modifiedAt: string;
-  isLiked: boolean;
+  isLiked?: boolean;
 };
 
 // API에서 받은 데이터 타입
@@ -28,19 +29,28 @@ type CurationData = {
 export default function CommentSection({ postId }: { postId: string }) {
   const [comments, setComments] = useState<Comment[]>([]); // 댓글 상태
   const [newComment, setNewComment] = useState(""); // 새 댓글 상태
+  const [isSubmitting, setIsSubmitting] = useState(false); // 제출 중 상태
+  const [error, setError] = useState<string | null>(null); // 오류 상태
 
   // API에서 커레이션 데이터를 불러오는 함수
   const fetchCurationData = async (id: string) => {
     try {
+      setError(null);
       const res = await fetch(`http://localhost:8080/api/v1/curation/${id}`);
+
+      if (!res.ok) {
+        throw new Error("댓글 데이터를 불러오는 데 실패했습니다.");
+      }
+
       const data = await res.json();
-      if (data.code === "200-1") {
-        setComments(data.data.comments); // 댓글 데이터를 설정
+      if (data.code === "200-1" || data.code === "200-OK") {
+        setComments(data.data.comments || []); // 댓글 데이터를 설정 (없으면 빈 배열)
       } else {
-        console.error("댓글 데이터를 불러오는 데 실패했습니다.");
+        throw new Error(data.msg || "댓글 데이터를 불러오는 데 실패했습니다.");
       }
     } catch (error) {
       console.error("API 호출 중 오류 발생:", error);
+      setError((error as Error).message);
     }
   };
 
@@ -64,34 +74,80 @@ export default function CommentSection({ postId }: { postId: string }) {
     );
   };
 
-  // 새 댓글 작성 기능
-  const handleAddComment = (e: React.FormEvent) => {
+  // 새 댓글 작성 기능 - API 연결
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || isSubmitting) return;
 
-    const newCommentObj: Comment = {
-      authorName: "현재 사용자",
-      content: newComment,
-      isLiked: false,
-      authorId: 0,
-      authorImgUrl: "",
-      createdAt: "",
-      modifiedAt: "",
-    };
+    try {
+      setIsSubmitting(true);
+      setError(null);
 
-    setComments([newCommentObj, ...comments]); // 새 댓글 추가
-    setNewComment(""); // 입력 필드 초기화
+      // API 호출로 댓글 생성
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curations/${postId}/comments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content: newComment,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("댓글 작성에 실패했습니다.");
+      }
+
+      const result = await response.json();
+
+      if (result.code === "200-OK") {
+        // API 응답으로 받은 새 댓글 데이터
+        const newCommentData: Comment = {
+          id: result.data.id,
+          authorName: result.data.authorName,
+          content: result.data.content,
+          createdAt: result.data.createdAt,
+          modifiedAt: result.data.modifiedAt,
+          isLiked: false,
+          authorImgUrl: "/placeholder.svg?height=36&width=36", // 기본 이미지 설정
+        };
+
+        // 댓글 목록 업데이트
+        setComments([newCommentData, ...comments]);
+        setNewComment(""); // 입력 필드 초기화
+      } else {
+        throw new Error(result.msg || "댓글 작성에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("댓글 작성 중 오류 발생:", error);
+      setError((error as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return "유효하지 않은 날짜";
+      }
+
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+
+      return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "날짜 형식 오류";
+    }
   };
 
   return (
@@ -105,67 +161,86 @@ export default function CommentSection({ postId }: { postId: string }) {
           placeholder="댓글을 작성해주세요..."
           className="w-full rounded-md border p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           rows={3}
+          disabled={isSubmitting}
         />
+
+        {error && (
+          <div className="text-red-500 text-sm p-2 bg-red-50 rounded-md">
+            {error}
+          </div>
+        )}
+
         <div className="flex justify-end">
           <button
             type="submit"
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            disabled={!newComment.trim()}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            disabled={!newComment.trim() || isSubmitting}
           >
-            댓글 작성
+            {isSubmitting ? "작성 중..." : "댓글 작성"}
           </button>
         </div>
       </form>
 
       <div className="space-y-4">
-        {comments.map((comment, index) => (
-          <div key={index} className="rounded-lg border p-4">
-            <div className="flex justify-between">
-              <div className="flex items-center space-x-2">
-                <Image
-                  src={comment.authorImgUrl}
-                  alt={comment.authorName}
-                  width={36}
-                  height={36}
-                  className="rounded-full"
-                />
-                <div>
-                  <p className="font-medium">{comment.authorName}</p>
-                  <p className="text-xs text-gray-500">
-                    {Math.floor(
-                      new Date(comment.modifiedAt).getTime() / 1000
-                    ) !==
-                    Math.floor(new Date(comment.createdAt).getTime() / 1000)
-                      ? `수정된 날짜 : ${formatDate(comment.modifiedAt)}`
-                      : `작성된 날짜 : ${formatDate(comment.createdAt)}`}
-                  </p>
+        {comments.length > 0 ? (
+          comments.map((comment, index) => (
+            <div key={comment.id || index} className="rounded-lg border p-4">
+              <div className="flex justify-between">
+                <div className="flex items-center space-x-2">
+                  <Image
+                    src={
+                      comment.authorImgUrl ||
+                      "/placeholder.svg?height=36&width=36"
+                    }
+                    alt={comment.authorName}
+                    width={36}
+                    height={36}
+                    className="rounded-full"
+                  />
+                  <div>
+                    <p className="font-medium">{comment.authorName}</p>
+                    <p className="text-xs text-gray-500">
+                      {comment.createdAt &&
+                      comment.modifiedAt &&
+                      Math.floor(
+                        new Date(comment.modifiedAt).getTime() / 1000
+                      ) !==
+                        Math.floor(new Date(comment.createdAt).getTime() / 1000)
+                        ? `수정된 날짜: ${formatDate(comment.modifiedAt)}`
+                        : `작성된 날짜: ${formatDate(comment.createdAt)}`}
+                    </p>
+                  </div>
                 </div>
+                <button className="text-gray-400 hover:text-gray-500">
+                  <Flag className="h-4 w-4" />
+                </button>
               </div>
-              <button className="text-gray-400 hover:text-gray-500">
-                <Flag className="h-4 w-4" />
-              </button>
-            </div>
 
-            <p className="mt-2 text-sm">{comment.content}</p>
+              <p className="mt-2 text-sm">{comment.content}</p>
 
-            <div className="mt-3 flex items-center space-x-4">
-              <button
-                onClick={() => handleLikeComment(index.toString())}
-                className="flex items-center space-x-1 text-xs text-gray-500 hover:text-gray-700"
-              >
-                <Heart
-                  className={`h-4 w-4 ${
-                    comment.isLiked ? "fill-red-500 text-red-500" : ""
-                  }`}
-                />
-                <span>{comment.isLiked ? 1 : 0}</span>
-              </button>
-              <button className="text-xs text-gray-500 hover:text-gray-700">
-                답글
-              </button>
+              <div className="mt-3 flex items-center space-x-4">
+                <button
+                  onClick={() => handleLikeComment(index.toString())}
+                  className="flex items-center space-x-1 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  <Heart
+                    className={`h-4 w-4 ${
+                      comment.isLiked ? "fill-red-500 text-red-500" : ""
+                    }`}
+                  />
+                  <span>{comment.isLiked ? 1 : 0}</span>
+                </button>
+                <button className="text-xs text-gray-500 hover:text-gray-700">
+                  답글
+                </button>
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            아직 댓글이 없습니다. 첫 번째 댓글을 작성해보세요!
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
