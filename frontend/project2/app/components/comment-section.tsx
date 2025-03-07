@@ -4,7 +4,7 @@ import type React from "react";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Heart, Flag } from "lucide-react";
+import { Heart, Edit, Trash2, X, Check } from "lucide-react";
 
 // 댓글 데이터 타입 정의
 type Comment = {
@@ -31,6 +31,8 @@ export default function CommentSection({ postId }: { postId: string }) {
   const [newComment, setNewComment] = useState(""); // 새 댓글 상태
   const [isSubmitting, setIsSubmitting] = useState(false); // 제출 중 상태
   const [error, setError] = useState<string | null>(null); // 오류 상태
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null); // 수정 중인 댓글 ID
+  const [editContent, setEditContent] = useState(""); // 수정 중인 댓글 내용
 
   // API에서 커레이션 데이터를 불러오는 함수
   const fetchCurationData = async (id: string) => {
@@ -129,6 +131,107 @@ export default function CommentSection({ postId }: { postId: string }) {
     }
   };
 
+  // 댓글 수정 시작
+  const handleEditStart = (comment: Comment) => {
+    if (comment.id) {
+      setEditingCommentId(comment.id);
+      setEditContent(comment.content);
+    }
+  };
+
+  // 댓글 수정 취소
+  const handleEditCancel = () => {
+    setEditingCommentId(null);
+    setEditContent("");
+  };
+
+  // 댓글 수정 저장
+  const handleEditSave = async (commentId: number) => {
+    if (!editContent.trim()) return;
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      // API 호출로 댓글 수정
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curations/${postId}/comments/${commentId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content: editContent,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("댓글 수정에 실패했습니다.");
+      }
+
+      const result = await response.json();
+
+      if (result.code === "200-OK") {
+        // 댓글 목록 업데이트
+        setComments(
+          comments.map((comment) => {
+            if (comment.id === commentId) {
+              return {
+                ...comment,
+                content: editContent,
+                modifiedAt: result.data.modifiedAt || new Date().toISOString(),
+              };
+            }
+            return comment;
+          })
+        );
+
+        // 수정 모드 종료
+        setEditingCommentId(null);
+        setEditContent("");
+      } else {
+        throw new Error(result.msg || "댓글 수정에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("댓글 수정 중 오류 발생:", error);
+      setError((error as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 댓글 삭제
+  const handleDeleteComment = async (commentId: number) => {
+    if (!confirm("정말로 이 댓글을 삭제하시겠습니까?")) return;
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      // API 호출로 댓글 삭제
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curations/${postId}/comments/${commentId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("댓글 삭제에 실패했습니다.");
+      }
+
+      // 댓글 목록에서 삭제된 댓글 제거
+      setComments(comments.filter((comment) => comment.id !== commentId));
+    } catch (error) {
+      console.error("댓글 삭제 중 오류 발생:", error);
+      setError((error as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
     try {
@@ -211,12 +314,59 @@ export default function CommentSection({ postId }: { postId: string }) {
                     </p>
                   </div>
                 </div>
-                <button className="text-gray-400 hover:text-gray-500">
-                  <Flag className="h-4 w-4" />
-                </button>
+
+                {/* 댓글 액션 버튼 */}
+                <div className="flex space-x-1">
+                  {comment.id !== editingCommentId ? (
+                    <>
+                      <button
+                        onClick={() => handleEditStart(comment)}
+                        className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          comment.id && handleDeleteComment(comment.id)
+                        }
+                        className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => comment.id && handleEditSave(comment.id)}
+                        className="p-1 text-green-500 hover:text-green-600 rounded-full hover:bg-gray-100"
+                        disabled={isSubmitting}
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={handleEditCancel}
+                        className="p-1 text-red-500 hover:text-red-600 rounded-full hover:bg-gray-100"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
-              <p className="mt-2 text-sm">{comment.content}</p>
+              {comment.id !== editingCommentId ? (
+                <p className="mt-2 text-sm">{comment.content}</p>
+              ) : (
+                <div className="mt-2">
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="w-full rounded-md border p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    rows={2}
+                    disabled={isSubmitting}
+                  />
+                </div>
+              )}
 
               <div className="mt-3 flex items-center space-x-4">
                 <button

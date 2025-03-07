@@ -9,6 +9,9 @@ import {
   Bookmark,
   Share2,
   ArrowLeft,
+  Edit,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
 import RightSidebar from "@/app/components/right-sidebar";
 import CommentSection from "@/app/components/comment-section";
@@ -42,6 +45,7 @@ export default function PostDetail({ params }: { params: { id: string } }) {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showActionMenu, setShowActionMenu] = useState(false);
 
   // API 데이터 호출
   useEffect(() => {
@@ -113,6 +117,30 @@ export default function PostDetail({ params }: { params: { id: string } }) {
 
     fetchAllLinksMetaData();
   }, [post?.urls]);
+
+  // 큐레이션 삭제 처리
+  const handleDeleteCuration = async () => {
+    if (!confirm("정말로 이 큐레이션을 삭제하시겠습니까?")) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curation/${params.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("큐레이션 삭제에 실패했습니다.");
+      }
+
+      // 삭제 성공 시 홈으로 리다이렉트
+      window.location.href = "/";
+    } catch (error) {
+      console.error("큐레이션 삭제 중 오류 발생:", error);
+      alert("삭제 중 오류가 발생했습니다.");
+    }
+  };
 
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
@@ -187,7 +215,7 @@ export default function PostDetail({ params }: { params: { id: string } }) {
   return (
     <main className="container grid grid-cols-12 gap-6 px-4 py-6">
       <div className="col-span-12 lg:col-span-9">
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between items-center">
           <Link
             href="/"
             className="inline-flex items-center text-sm text-gray-500 hover:text-black"
@@ -195,6 +223,37 @@ export default function PostDetail({ params }: { params: { id: string } }) {
             <ArrowLeft className="mr-2 h-4 w-4" />
             홈으로 돌아가기
           </Link>
+
+          {/* 큐레이션 수정/삭제 버튼 */}
+          <div className="relative">
+            <button
+              onClick={() => setShowActionMenu(!showActionMenu)}
+              className="p-2 rounded-full hover:bg-gray-100"
+            >
+              <MoreVertical className="h-5 w-5 text-gray-500" />
+            </button>
+
+            {showActionMenu && (
+              <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                <div className="py-1" role="menu" aria-orientation="vertical">
+                  <Link
+                    href={`/post/${params.id}/edit`}
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    큐레이션 수정
+                  </Link>
+                  <button
+                    onClick={handleDeleteCuration}
+                    className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    큐레이션 삭제
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <article className="space-y-6">
@@ -226,6 +285,10 @@ export default function PostDetail({ params }: { params: { id: string } }) {
           {/* 링크 카드 섹션 - 여러 URL 지원 */}
           {hasUrls && (
             <div className="my-6 space-y-4">
+              <h2 className="text-xl font-semibold">
+                링크 ({post.urls.length}개)
+              </h2>
+
               {/* 각 URL마다 별도의 카드 생성 */}
               {post.urls.map(({ url }, index) => (
                 <div
