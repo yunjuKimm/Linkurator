@@ -19,6 +19,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CurationDetailResDto {
+	private Long id;
 
 	/** 큐레이션 제목 */
 	private String title;
@@ -74,6 +75,7 @@ public class CurationDetailResDto {
 
 	@Getter
 	static class CommentResDto {
+		private long commentId;
 		private long authorId;
 		private String authorName;
 		private String authorImgUrl;
@@ -82,6 +84,7 @@ public class CurationDetailResDto {
 		private LocalDateTime modifiedAt;
 
 		public CommentResDto(Comment comment) {
+			this.commentId = comment.getId();
 			this.authorId = comment.getAuthorId();
 			this.authorName = comment.getAuthorName();
 			this.authorImgUrl = comment.getAuthorImgUrl();
@@ -98,6 +101,7 @@ public class CurationDetailResDto {
 	 */
 	public static CurationDetailResDto fromEntity(Curation curation) {
 		return CurationDetailResDto.builder()
+			.id(curation.getId())
 			.title(curation.getTitle())
 			.content(curation.getContent())
 			.authorId(curation.getMemberId())
