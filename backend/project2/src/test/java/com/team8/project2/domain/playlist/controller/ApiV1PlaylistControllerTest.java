@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -125,6 +126,29 @@ class ApiV1PlaylistControllerTest {
                 .andExpect(jsonPath("$.msg").value("플레이리스트 아이템 순서가 변경되었습니다."))
                 .andExpect(jsonPath("$.data.id").value(1L))
                 .andExpect(jsonPath("$.data.title").value("테스트 플레이리스트"));
+    }
+
+    @Test
+    @DisplayName("플레이리스트의 추천 목록을 조회할 수 있다.")
+    void getRecommendedPlaylists() throws Exception {
+        // Given
+        Long playlistId = 1L;
+        List<PlaylistDto> recommended = List.of(
+                PlaylistDto.builder().id(2L).title("추천 플레이리스트1").description("설명1").build(),
+                PlaylistDto.builder().id(3L).title("추천 플레이리스트2").description("설명2").build()
+        );
+        when(playlistService.recommendPlaylist(playlistId)).thenReturn(recommended);
+
+        // When & Then
+        mockMvc.perform(get("/api/v1/playlists/{id}/recommendation", playlistId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-OK"))
+                .andExpect(jsonPath("$.msg").value("추천 플레이리스트 목록을 조회하였습니다."))
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].id").value(2))
+                .andExpect(jsonPath("$.data[0].title").value("추천 플레이리스트1"))
+                .andExpect(jsonPath("$.data[1].id").value(3));
     }
 
 }

@@ -8,12 +8,16 @@ import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
+import com.team8.project2.domain.curation.tag.entity.Tag;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -178,4 +182,23 @@ public class PlaylistService {
         playlistRepository.save(playlist);
         return PlaylistDto.fromEntity(playlist);
     }
+
+    /** 플레이리스트 추천 */
+    public List<PlaylistDto> recommendPlaylist(Long playlistId) {
+        Playlist currentPlaylist  = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        Set<Tag> currentTags = currentPlaylist.getTags();
+        if (currentTags == null || currentTags.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Playlist> recommendedPlaylists = playlistRepository.findByTags(currentTags, playlistId);
+
+        return recommendedPlaylists.stream()
+                .map(PlaylistDto::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+
 }
