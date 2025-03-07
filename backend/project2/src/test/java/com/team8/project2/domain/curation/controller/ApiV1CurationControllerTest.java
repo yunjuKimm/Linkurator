@@ -344,8 +344,34 @@ public class ApiV1CurationControllerTest {
         );
 
         for (long l = 0; l < likeCount; l++) {
-            curationService.likeCuration(curation.getId());
+            curationService.likeCuration(curation.getId(), curation.getMember().getId());
         }
         return curation;
     }
+
+    // 좋아요 테스트
+    @Test
+    void likeCuration() throws Exception {
+        // 테스트용 데이터 저장
+        Curation savedCuration = curationService.createCuration(
+                "Test Title",
+                "Test Content",
+                curationReqDTO.getLinkReqDtos().stream()
+                        .map(linkReqDto -> linkReqDto.getUrl())
+                        .collect(Collectors.toUnmodifiableList()),
+                curationReqDTO.getTagReqDtos().stream()
+                        .map(tagReqDto -> tagReqDto.getName())
+                        .collect(Collectors.toUnmodifiableList())
+        );
+
+        Long memberId = 1L; // 테스트용 회원 ID
+
+        mockMvc.perform(post("/api/v1/curation/{id}", savedCuration.getId())
+                        .param("memberId", String.valueOf(memberId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글에 좋아요를 했습니다."))
+                .andExpect(jsonPath("$.data").doesNotExist()); // 응답 데이터가 없음을 확인
+    }
+
 }

@@ -9,11 +9,16 @@ import com.team8.project2.domain.curation.curation.repository.CurationLinkReposi
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.repository.CurationTagRepository;
 import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.curation.like.entity.Like;
+import com.team8.project2.domain.curation.like.repository.LikeRepository;
 import com.team8.project2.domain.curation.tag.entity.Tag;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.service.LinkService;
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -41,6 +47,12 @@ class CurationServiceTest {
 
     @Mock
     private CurationTagRepository curationTagRepository;
+
+    @Mock
+    private MemberRepository memberRepository;
+
+    @Mock
+    private LikeRepository likeRepository;
 
     @Mock
     private LinkService linkService;
@@ -206,4 +218,92 @@ class CurationServiceTest {
         assert foundCurations != null;
         assert foundCurations.size() == 1;
     }
+
+    @Test
+    @DisplayName("큐레이션 좋아요 기능을 테스트합니다.")
+    void likeCuration() {
+        // Mocking repository to return a Curation
+        when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
+
+        // Mocking repository to return a Member
+        when(memberRepository.findById(anyLong())).thenReturn(Optional.of(new Member()));
+
+        // Mocking repository to return an empty Optional
+        when(likeRepository.findByCurationAndMember(any(Curation.class), any(Member.class))).thenReturn(Optional.empty());
+
+        // Call the service method
+        curationService.likeCuration(1L, 1L);
+
+        // Verify the interactions
+        verify(curationRepository, times(1)).findById(anyLong());
+        verify(memberRepository, times(1)).findById(anyLong());
+        verify(likeRepository, times(1)).findByCurationAndMember(any(Curation.class), any(Member.class));
+        verify(likeRepository, times(1)).save(any(Like.class));
+    }
+
+    @Test
+    @DisplayName("큐레이션 좋아요를 한 번 더 누르면 취소되고 카운트가 감소해야 합니다.")
+    void unlikeCuration() {
+        // Mocking repository to return a Curation
+        when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
+
+        // Mocking repository to return a Member
+        Member member = new Member();
+        when(memberRepository.findById(anyLong())).thenReturn(Optional.of(member));
+
+        // Mocking repository to return an existing Like (좋아요를 이미 누른 상태)
+        Like existingLike = new Like().setLike(curation, member);
+        when(likeRepository.findByCurationAndMember(any(Curation.class), any(Member.class)))
+                .thenReturn(Optional.of(existingLike));
+
+        // Call the service method (좋아요 취소)
+        curationService.likeCuration(1L, 1L);
+
+        // Verify the interactions
+        verify(likeRepository, times(1)).delete(any(Like.class));
+        verify(likeRepository, never()).save(any(Like.class)); // 새로운 좋아요가 저장되지 않아야 함
+        verify(curationRepository, times(1)).findById(anyLong());
+        verify(memberRepository, times(1)).findById(anyLong());
+        verify(likeRepository, times(1)).findByCurationAndMember(any(Curation.class), any(Member.class));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 큐레이션에 좋아요를 누르면 예외가 발생해야 합니다.")
+    void likeNonExistentCuration() {
+        // Mocking repository to return empty Optional (큐레이션 없음)
+        when(curationRepository.findById(anyLong())).thenReturn(Optional.empty());
+
+        // 예외 발생 검증
+        assertThatThrownBy(() -> curationService.likeCuration(1L, 1L))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("해당 큐레이션을 찾을 수 없습니다.");
+
+        // Verify interactions (likeRepository는 호출되지 않아야 함)
+        verify(curationRepository, times(1)).findById(anyLong());
+        verify(memberRepository, never()).findById(anyLong());
+        verify(likeRepository, never()).findByCurationAndMember(any(Curation.class), any(Member.class));
+        verify(likeRepository, never()).save(any(Like.class));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 멤버가 좋아요를 누르면 예외가 발생해야 합니다.")
+    void likeByNonExistentMember() {
+        // Mocking repository to return a valid Curation
+        when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
+
+        // Mocking repository to return empty Optional (멤버 없음)
+        when(memberRepository.findById(anyLong())).thenReturn(Optional.empty());
+
+        // 예외 발생 검증
+        assertThatThrownBy(() -> curationService.likeCuration(1L, 1L))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("해당 멤버를 찾을 수 없습니다.");
+
+        // Verify interactions (likeRepository는 호출되지 않아야 함)
+        verify(curationRepository, times(1)).findById(anyLong());
+        verify(memberRepository, times(1)).findById(anyLong());
+        verify(likeRepository, never()).findByCurationAndMember(any(Curation.class), any(Member.class));
+        verify(likeRepository, never()).save(any(Like.class));
+    }
+
 }
