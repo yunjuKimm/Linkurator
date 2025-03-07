@@ -33,7 +33,9 @@ public class ApiV1MemberControllerTest {
 
     @Autowired
     private MemberService memberService;
-
+    private ResultActions joinRequest(String memberId, String password, String email) throws Exception{
+        return joinRequest(memberId,password,email,null,null,null);
+    }
     private ResultActions joinRequest(String memberId, String password, String email, String role, String profileImage, String introduce) throws Exception {
         return mvc
                 .perform(
@@ -81,5 +83,29 @@ public class ApiV1MemberControllerTest {
                 .andExpect(jsonPath("$.msg").value("회원 가입이 완료되었습니다."));
 
         //checkMember(resultActions, member);
+    }
+
+    @Test
+    @DisplayName("회원 가입2 - username이 이미 존재하는 케이스")
+    void join2() throws Exception {
+
+        String memberId = "user123";
+        String password = "securePass123";
+        String email = "user123@example.com";
+        String role = "MEMBER"; // RoleEnum이 문자열로 변환됨
+        String profileImage = "https://example.com/profile.jpg";
+        String introduce = "안녕하세요! 저는 새로운 회원입니다.";
+
+        // 회원 가입 요청
+        ResultActions resultActions = joinRequest(memberId, password,email,role,profileImage,introduce);
+        // 같은 memberId를 통한 회원 가입 재요청
+        ResultActions resultActions2 = joinRequest(memberId, password,email,role,profileImage,introduce);
+        resultActions2
+                .andExpect(status().isConflict())
+                .andExpect(handler().handlerType(ApiV1MemberController.class))
+                .andExpect(handler().methodName("join"))
+                .andExpect(jsonPath("$.code").value("409-1"))
+                .andExpect(jsonPath("$.msg").value("사용중인 아이디"));
+
     }
 }
