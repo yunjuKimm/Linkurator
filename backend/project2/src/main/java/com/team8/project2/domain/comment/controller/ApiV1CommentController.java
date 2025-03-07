@@ -44,7 +44,12 @@ public class ApiV1CommentController {
 		return RsData.success(comments);
 	}
 
-	// 댓글 수정
+	/**
+	 * 특정 댓글을 수정합니다.
+	 * @param commentId 수정할 댓글 ID
+	 * @param commentDto 댓글 수정 요청 데이터
+	 * @return 수정된 댓글
+	 */
 	@PutMapping("/{id}")
 	public RsData<CommentDto> updateComment(@PathVariable(name = "id") Long commentId, @RequestBody CommentDto commentDto) {
 		CommentDto updatedComment = commentService.updateComment(commentId, commentDto);

@@ -6,9 +6,10 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Heart, Edit, Trash2, X, Check } from "lucide-react";
 
-// 댓글 데이터 타입 정의
+// 댓글 데이터 타입 정의를 API 응답 구조에 맞게 수정
 type Comment = {
   id?: number;
+  commentId?: number; // API 응답에서는 commentId로 제공됨
   authorId?: number;
   authorName: string;
   authorImgUrl?: string;
@@ -34,7 +35,7 @@ export default function CommentSection({ postId }: { postId: string }) {
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null); // 수정 중인 댓글 ID
   const [editContent, setEditContent] = useState(""); // 수정 중인 댓글 내용
 
-  // API에서 커레이션 데이터를 불러오는 함수
+  // API에서 커레이션 데이터를 불러오는 함수 수정
   const fetchCurationData = async (id: string) => {
     try {
       setError(null);
@@ -46,7 +47,13 @@ export default function CommentSection({ postId }: { postId: string }) {
 
       const data = await res.json();
       if (data.code === "200-1" || data.code === "200-OK") {
-        setComments(data.data.comments || []); // 댓글 데이터를 설정 (없으면 빈 배열)
+        // API 응답에서 commentId를 사용하므로 이를 처리
+        const commentsWithId =
+          data.data.comments?.map((comment: any) => ({
+            ...comment,
+            id: comment.commentId, // id 필드를 추가하여 일관성 유지
+          })) || [];
+        setComments(commentsWithId);
       } else {
         throw new Error(data.msg || "댓글 데이터를 불러오는 데 실패했습니다.");
       }
@@ -109,6 +116,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         // API 응답으로 받은 새 댓글 데이터
         const newCommentData: Comment = {
           id: result.data.id,
+          commentId: result.data.id,
           authorName: result.data.authorName,
           content: result.data.content,
           createdAt: result.data.createdAt,
@@ -145,7 +153,7 @@ export default function CommentSection({ postId }: { postId: string }) {
     setEditContent("");
   };
 
-  // 댓글 수정 저장
+  // 댓글 수정 저장 함수 수정
   const handleEditSave = async (commentId: number) => {
     if (!editContent.trim()) return;
 
@@ -177,7 +185,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         // 댓글 목록 업데이트
         setComments(
           comments.map((comment) => {
-            if (comment.id === commentId) {
+            if (comment.id === commentId || comment.commentId === commentId) {
               return {
                 ...comment,
                 content: editContent,
@@ -202,7 +210,7 @@ export default function CommentSection({ postId }: { postId: string }) {
     }
   };
 
-  // 댓글 삭제
+  // 댓글 삭제 함수 수정
   const handleDeleteComment = async (commentId: number) => {
     if (!confirm("정말로 이 댓글을 삭제하시겠습니까?")) return;
 
@@ -222,8 +230,19 @@ export default function CommentSection({ postId }: { postId: string }) {
         throw new Error("댓글 삭제에 실패했습니다.");
       }
 
-      // 댓글 목록에서 삭제된 댓글 제거
-      setComments(comments.filter((comment) => comment.id !== commentId));
+      const result = await response.json();
+
+      if (result.code === "200-1") {
+        // 댓글 목록에서 삭제된 댓글 제거
+        setComments(
+          comments.filter(
+            (comment) =>
+              comment.id !== commentId && comment.commentId !== commentId
+          )
+        );
+      } else {
+        throw new Error(result.msg || "댓글 삭제에 실패했습니다.");
+      }
     } catch (error) {
       console.error("댓글 삭제 중 오류 발생:", error);
       setError((error as Error).message);
@@ -287,7 +306,10 @@ export default function CommentSection({ postId }: { postId: string }) {
       <div className="space-y-4">
         {comments.length > 0 ? (
           comments.map((comment, index) => (
-            <div key={comment.id || index} className="rounded-lg border p-4">
+            <div
+              key={comment.commentId || comment.id || index}
+              className="rounded-lg border p-4"
+            >
               <div className="flex justify-between">
                 <div className="flex items-center space-x-2">
                   <Image
@@ -317,7 +339,8 @@ export default function CommentSection({ postId }: { postId: string }) {
 
                 {/* 댓글 액션 버튼 */}
                 <div className="flex space-x-1">
-                  {comment.id !== editingCommentId ? (
+                  {comment.id !== editingCommentId &&
+                  comment.commentId !== editingCommentId ? (
                     <>
                       <button
                         onClick={() => handleEditStart(comment)}
@@ -327,7 +350,9 @@ export default function CommentSection({ postId }: { postId: string }) {
                       </button>
                       <button
                         onClick={() =>
-                          comment.id && handleDeleteComment(comment.id)
+                          handleDeleteComment(
+                            comment.commentId || comment.id || 0
+                          )
                         }
                         className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100"
                       >
@@ -337,7 +362,9 @@ export default function CommentSection({ postId }: { postId: string }) {
                   ) : (
                     <>
                       <button
-                        onClick={() => comment.id && handleEditSave(comment.id)}
+                        onClick={() =>
+                          handleEditSave(comment.commentId || comment.id || 0)
+                        }
                         className="p-1 text-green-500 hover:text-green-600 rounded-full hover:bg-gray-100"
                         disabled={isSubmitting}
                       >
@@ -354,7 +381,8 @@ export default function CommentSection({ postId }: { postId: string }) {
                 </div>
               </div>
 
-              {comment.id !== editingCommentId ? (
+              {comment.id !== editingCommentId &&
+              comment.commentId !== editingCommentId ? (
                 <p className="mt-2 text-sm">{comment.content}</p>
               ) : (
                 <div className="mt-2">
