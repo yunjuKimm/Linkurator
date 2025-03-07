@@ -1,5 +1,6 @@
 package com.team8.project2.domain.curation.curation.dto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +35,12 @@ public class CurationDetailResDto {
 	/** 큐레이션에 포함된 댓글 목록 */
 	private List<CommentResDto> comments;
 
+	/** 큐레이션 작성 시각 */
+	private LocalDateTime createdAt;
+
+	/** 마지막 큐레이션 변경 시각 */
+	private LocalDateTime modifiedAt;
+
 	/**
 	 * 링크 정보를 포함하는 내부 DTO 클래스
 	 */
@@ -62,10 +69,14 @@ public class CurationDetailResDto {
 	static class CommentResDto {
 		private String authorName;
 		private String content;
+		private LocalDateTime createdAt;
+		private LocalDateTime modifiedAt;
 
 		public CommentResDto(Comment comment) {
 			this.authorName = comment.getAuthorName();
 			this.content = comment.getContent();
+			this.createdAt = comment.getCreatedAt();
+			this.modifiedAt = comment.getModifiedAt();
 		}
 	}
 
@@ -87,6 +98,8 @@ public class CurationDetailResDto {
 			.comments(curation.getComments().stream()
 				.map(comment -> new CommentResDto(comment))
 				.collect(Collectors.toList()))
+			.createdAt(curation.getCreatedAt())
+			.modifiedAt(curation.getModifiedAt())
 			.build();
 	}
 }
