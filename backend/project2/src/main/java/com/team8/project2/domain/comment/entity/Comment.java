@@ -71,5 +71,21 @@ public class Comment {
     @Column(nullable = false)
     @Setter(AccessLevel.PRIVATE)
     private LocalDateTime modifiedAt;
+
+    public String getAuthorName() {
+        return author.getUsername();
+    }
+
+    public long getAuthorId() {
+        return author.getId();
+    }
+
+    public String getAuthorImgUrl() {
+        return author.getProfileImage();
+    }
+
+    public void updateContent(String content) {
+        this.content = content;
+    }
 }
 

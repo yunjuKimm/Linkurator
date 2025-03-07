@@ -46,7 +46,8 @@ class ApiV1CommentControllerTest {
 			.andExpect(jsonPath("$.data.authorName").value("username"))
 			.andExpect(jsonPath("$.data.content").value("content example"));
 
-		assertThat(commentService.getCommentsByCurationId(1L)).hasSize(1);
+		// BaseInitData에서 추가된 샘플 데이터를 포함해 2개
+		assertThat(commentService.getCommentsByCurationId(1L)).hasSize(2);
 	}
 
 	@Test
@@ -60,7 +61,7 @@ class ApiV1CommentControllerTest {
 			.andExpect(jsonPath("$.msg").value("Success"))
 			.andExpect(jsonPath("$.data[0].id").value("1"))
 			.andExpect(jsonPath("$.data[0].authorName").value("username"))
-			.andExpect(jsonPath("$.data[0].content").value("content example"));
+			.andExpect(jsonPath("$.data[0].content").value("comment test content"));
 	}
 
 	private CommentDto createCommentAtCuration(Long curationId) {
