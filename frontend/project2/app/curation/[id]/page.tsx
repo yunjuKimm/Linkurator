@@ -17,9 +17,10 @@ import CommentSection from "@/app/components/comment-section";
 interface CurationData {
   title: string;
   content: string;
-  author: string;
+  authorName: string;
   authorImage: string;
-  postedAt: string;
+  createdAt: string;
+  modifiedAt: string;
   urls: { url: string }[];
   tags: { name: string }[];
   likes: number;
@@ -81,6 +82,17 @@ export default function PostDetail({ params }: { params: { id: string } }) {
     return <div>Loading...</div>;
   }
 
+  // 날짜 형식화 함수
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
+  };
+
   return (
     <main className="container grid grid-cols-12 gap-6 px-4 py-6">
       <div className="col-span-9">
@@ -99,21 +111,25 @@ export default function PostDetail({ params }: { params: { id: string } }) {
             <div className="flex items-center space-x-2">
               <Image
                 src={post.authorImage || "/placeholder.svg"}
-                alt={post.author}
+                alt={post.authorName}
                 width={40}
                 height={40}
                 className="rounded-full"
               />
               <div>
-                <p className="font-medium">{post.author}</p>
-                <p className="text-xs text-gray-500">{post.postedAt}</p>
+                <p className="font-medium">{post.authorName}</p>
+                <p className="text-xs text-gray-500">
+                  {Math.floor(new Date(post.modifiedAt).getTime() / 1000) !==
+                  Math.floor(new Date(post.createdAt).getTime() / 1000)
+                    ? `수정된 날짜 : ${formatDate(post.modifiedAt)}`
+                    : `작성된 날짜 : ${formatDate(post.createdAt)}`}
+                </p>
               </div>
             </div>
             <button className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
               팔로우
             </button>
           </div>
-
           <h1 className="text-3xl font-bold">{post.title}</h1>
 
           <div className="my-6 rounded-lg border shadow-sm overflow-hidden">
@@ -199,13 +215,13 @@ export default function PostDetail({ params }: { params: { id: string } }) {
           <div className="flex items-center space-x-3">
             <Image
               src={post.authorImage || "/placeholder.svg"}
-              alt={post.author}
+              alt={post.authorName}
               width={48}
               height={48}
               className="rounded-full"
             />
             <div>
-              <p className="font-medium">{post.author}</p>
+              <p className="font-medium">{post.authorName}</p>
               <p className="text-xs text-gray-500">15개의 글 작성</p>
             </div>
           </div>
