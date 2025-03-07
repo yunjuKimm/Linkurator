@@ -83,5 +83,9 @@ public class Comment {
     public String getAuthorImgUrl() {
         return author.getImgUrl();
     }
+
+    public void updateContent(String content) {
+        this.content = content;
+    }
 }
 
