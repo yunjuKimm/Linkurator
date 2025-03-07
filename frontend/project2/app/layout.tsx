@@ -3,12 +3,16 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "./components/header";
+import { ThemeProvider } from "./components/theme-context";
+import Footer from "./components/footer";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "개발자 커뮤니티",
-  description: "개발자를 위한 커뮤니티 플랫폼",
+  description: "함께 성장하는 개발자 커뮤니티입니다.",
+  keywords: ["개발자", "커뮤니티", "질문답변", "스터디"],
 };
 
 export default function RootLayout({
@@ -19,8 +23,14 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={inter.className}>
-        <Header />
-        {children}
+        <ThemeProvider>
+          <Header />
+          <main className="container mx-auto px-4 max-w-screen-xl">
+            {children}
+          </main>
+          <Footer />
+          <Toaster position="bottom-right" richColors />
+        </ThemeProvider>
       </body>
     </html>
   );
