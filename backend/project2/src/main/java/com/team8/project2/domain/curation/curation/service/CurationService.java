@@ -7,9 +7,14 @@ import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.repository.CurationLinkRepository;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.repository.CurationTagRepository;
+import com.team8.project2.domain.curation.like.entity.Like;
+import com.team8.project2.domain.curation.like.repository.LikeRepository;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.domain.link.service.LinkService;
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +33,8 @@ public class CurationService {
     private final CurationRepository curationRepository;
     private final CurationLinkRepository curationLinkRepository;
     private final CurationTagRepository curationTagRepository;
+    private final MemberRepository memberRepository;
+    private final LikeRepository likeRepository;
     private final LinkService linkService;
     private final TagService tagService;
 
@@ -147,10 +154,25 @@ public class CurationService {
      * @param curationId 좋아요를 추가할 큐레이션 ID
      */
     @Transactional
-    public void likeCuration(Long curationId) {
+    public void likeCuration(Long curationId, Long memberId) {
         Curation curation = curationRepository.findById(curationId)
-                .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
-        curation.like();
-        curationRepository.save(curation);
+                .orElseThrow(() -> new EntityNotFoundException("해당 큐레이션을 찾을 수 없습니다."));
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 멤버를 찾을 수 없습니다."));
+
+        likeRepository.findByCurationAndMember(curation, member).ifPresentOrElse(
+                // 이미 좋아요를 눌렀다면 삭제
+                like -> {
+                    likeRepository.delete(like);
+                    curation.setLikeCount(curation.getLikeCount() - 1);
+                },
+                // 좋아요를 누르지 않았다면 추가
+                () -> {
+                    Like newLike = new Like().setLike(curation, member);
+                    likeRepository.save(newLike);
+                    curation.setLikeCount(curation.getLikeCount() + 1);
+                }
+        );
     }
 }

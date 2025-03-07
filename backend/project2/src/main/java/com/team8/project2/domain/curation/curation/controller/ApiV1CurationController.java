@@ -112,8 +112,8 @@ public class ApiV1CurationController {
      * @return 좋아요 성공 응답
      */
     @PostMapping("/{id}")
-    public RsData<Void> likeCuration(@PathVariable Long id) {
-        curationService.likeCuration(id);
+    public RsData<Void> likeCuration(@PathVariable Long id, @RequestParam Long memberId) {
+        curationService.likeCuration(id, memberId);
         return new RsData<>("200-1", "글에 좋아요를 했습니다.", null);
     }
 }
