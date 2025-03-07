@@ -189,7 +189,7 @@ export default function PostList() {
       order: sortOrder,  // 정렬 기준도 함께 보내기
     };
     fetchCurations(params);
-  }, [selectedTags, title, content, sortOrder]);
+  }, [selectedTags]);
 
   const toggleTagFilter = (tag: string) => {
     setSelectedTags((prev) =>
@@ -222,7 +222,7 @@ export default function PostList() {
               <label className="block text-sm font-medium text-gray-700">태그</label>
               <input
                 type="text"
-                value={tags.join(", ")}
+                value={selectedTags.join(", ")}
                 onChange={(e) => setTags(e.target.value.split(",").map((tag) => tag.trim()))}
                 className="mt-1 p-2 w-full border rounded-md"
                 placeholder="태그 입력 (쉼표로 구분)"
