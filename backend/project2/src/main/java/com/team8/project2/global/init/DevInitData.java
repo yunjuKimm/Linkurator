@@ -26,7 +26,7 @@ public class DevInitData {
         return args -> {
             String apiDocsUrl = "http://localhost:8080/v3/api-docs/apiV1";
             String apiJsonPath = "../apiV1.json";
-            String frontendSchemaPath = "../frontend/src/lib/backend/apiV1/schema.d.ts";
+            String frontendSchemaPath = "../../frontend/project2/libs/backend/apiV1/schema.d.ts";
 
             // JSON 생성
             genApiJsonFile(apiDocsUrl, apiJsonPath);
