@@ -86,6 +86,9 @@ export default function PostList() {
 
   // 필터링 조건을 기반으로 API 호출
   const applyFilter = () => {
+
+    setSelectedTags(tags); // 입력한 tags를 selectedTags에 동기화
+
     const params: CurationRequestParams = {
       tags: selectedTags,
       title,
@@ -192,10 +195,13 @@ export default function PostList() {
   }, [selectedTags]);
 
   const toggleTagFilter = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
+  setSelectedTags((prev) => {
+    if (prev.includes(tag)) {
+      return prev.filter((t) => t !== tag); // 이미 선택된 태그가 있으면 제거
+    }
+    return [...prev, tag]; // 선택되지 않은 태그가 있으면 추가
+  });
+};
 
   useEffect(() => {
     fetchCurations({}); // 페이지 로딩 시 한번 API 호출
@@ -222,8 +228,15 @@ export default function PostList() {
               <label className="block text-sm font-medium text-gray-700">태그</label>
               <input
                 type="text"
-                value={selectedTags.join(", ")}
-                onChange={(e) => setTags(e.target.value.split(",").map((tag) => tag.trim()))}
+                defaultValue={selectedTags.join(", ")}
+                onChange={(e) => {
+                  // 입력값을 스페이스바가 포함되더라도 정상적으로 처리하도록 수정
+                  const inputTags = e.target.value
+                    .split(",")
+                    .map((tag) => tag.trim())
+                    .filter((tag) => tag !== ""); // 빈 태그는 제외
+                  setTags(inputTags); // tags 상태 업데이트
+                }}
                 className="mt-1 p-2 w-full border rounded-md"
                 placeholder="태그 입력 (쉼표로 구분)"
               />
