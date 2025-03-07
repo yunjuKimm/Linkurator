@@ -156,4 +156,17 @@ public class ApiV1PlaylistController {
                 playlistService.updatePlaylistItemOrder(id, orderedItemIds);
         return RsData.success("플레이리스트 아이템 순서가 변경되었습니다.", updatedPlaylist);
     }
+
+    /**
+     * 추천 플레이리스트 목록을 조회합니다.
+     *
+     * @param id 추천 기준이 되는 플레이리스트 ID
+     * @return 추천 플레이리스트 목록
+     */
+
+    @GetMapping("/{id}/recommendation")
+    public RsData<List<PlaylistDto>> getRecommendedPlaylists(@PathVariable Long id) {
+        List<PlaylistDto> recommended  = playlistService.recommendPlaylist(id);
+        return RsData.success("추천 플레이리스트 목록을 조회하였습니다.", recommended );
+    }
 }
