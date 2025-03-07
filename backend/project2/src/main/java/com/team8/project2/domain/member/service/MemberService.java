@@ -18,11 +18,16 @@ public class MemberService {
         return join(memberId, password, role, email, profileImage, null);
     }
 
+    @Transactional
     public Member join(String memberId, String password, RoleEnum role, String email, String profileImage, String introduce) {
 
         //TODO: apikey 할당방식 지정
         //TODO: RoleEnum 확인 이후 주입 로직 필요
+        if(role==null){
+            role=RoleEnum.MEMBER;
+        }
         Member member = Member.builder()
+                .memberId(memberId)
                 .apiKey(memberId)
                 .password(password)
                 .profileImage(profileImage)
@@ -30,6 +35,12 @@ public class MemberService {
                 .introduce(introduce).build();
         return memberRepository.save(member);
     }
+
+    @Transactional
+    public Member join(Member member) {
+        return memberRepository.save(member);
+    }
+
     public Optional<Member> findByApiKey(String apiKey) { return memberRepository.findByApiKey(apiKey);}
 
     public Optional<Member> findByMemberId(String memberId) {

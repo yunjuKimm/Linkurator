@@ -8,6 +8,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -51,7 +52,15 @@ public class Member {
     @Column
     private String introduce;
 
-    public boolean isAdmin() {
-        return username.equals("admin");
+    public boolean isAdmin() {return this.role == RoleEnum.ADMIN;}
+    public boolean isMember() {
+        return this.role == RoleEnum.MEMBER;
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (this.apiKey == null) {
+            this.apiKey = UUID.randomUUID().toString();  // 기본값 자동 생성
+        }
     }
 }
