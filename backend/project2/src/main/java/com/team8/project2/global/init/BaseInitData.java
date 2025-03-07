@@ -2,7 +2,6 @@ package com.team8.project2.global.init;
 
 import java.util.List;
 
-import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,11 +34,12 @@ public class BaseInitData {
 				Member member = Member.builder()
 					.email("team8@gmail.com")
 					.role(RoleEnum.MEMBER)
-					.userId("userid")
+					.apiKey("memberId")
+					.memberId("memberId")
 					.username("username")
 					.password("password")
-					.imgUrl("http://localhost:8080/images/team8-logo.png")
-					.description("test")
+					.profileImage("http://localhost:8080/images/team8-logo.png")
+					.introduce("test")
 					.build();
 				memberRepository.save(member);
 

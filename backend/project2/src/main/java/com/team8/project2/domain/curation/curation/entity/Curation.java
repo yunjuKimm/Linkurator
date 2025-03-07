@@ -112,6 +112,6 @@ public class Curation {
     }
 
     public String getMemberImgUrl() {
-        return member.getImgUrl();
+        return member.getProfileImage();
     }
 }

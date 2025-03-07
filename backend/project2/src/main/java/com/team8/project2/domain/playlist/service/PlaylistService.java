@@ -30,11 +30,14 @@ public class PlaylistService {
 
     /**
      * 새로운 플레이리스트를 생성합니다.
+     *
      * @param request 플레이리스트 생성 요청 데이터
      * @return 생성된 플레이리스트 DTO
      */
     public PlaylistDto createPlaylist(PlaylistCreateDto request) {
-        validatePlaylistData(request.getTitle(), request.getDescription());
+        // ✅ Bean Validation이 Controller 레벨에서 이미 수행되므로,
+        // 아래 validatePlaylistData 호출을 제거합니다.
+        // validatePlaylistData(request.getTitle(), request.getDescription()); // 삭제됨
 
         Playlist playlist = Playlist.builder()
                 .title(request.getTitle())
@@ -47,6 +50,7 @@ public class PlaylistService {
 
     /**
      * 특정 플레이리스트를 조회합니다.
+     *
      * @param id 조회할 플레이리스트 ID
      * @return 조회된 플레이리스트 DTO
      */
@@ -58,13 +62,13 @@ public class PlaylistService {
 
     /**
      * 모든 플레이리스트를 조회합니다.
+     *
      * @return 플레이리스트 목록 DTO 리스트
+     * 예외 대신 빈 리스트 반환
      */
     public List<PlaylistDto> getAllPlaylists() {
         List<Playlist> playlists = playlistRepository.findAll();
-        if (playlists.isEmpty()) {
-            throw new NotFoundException("등록된 플레이리스트가 없습니다.");
-        }
+
         return playlists.stream()
                 .map(PlaylistDto::fromEntity)
                 .collect(Collectors.toList());
@@ -72,6 +76,7 @@ public class PlaylistService {
 
     /**
      * 기존 플레이리스트를 수정합니다.
+     *
      * @param id 수정할 플레이리스트 ID
      * @param request 수정할 데이터
      * @return 수정된 플레이리스트 DTO
@@ -90,6 +95,7 @@ public class PlaylistService {
 
     /**
      * 플레이리스트를 삭제합니다.
+     *
      * @param id 삭제할 플레이리스트 ID
      */
     public void deletePlaylist(Long id) {
@@ -101,17 +107,19 @@ public class PlaylistService {
 
     /**
      * 플레이리스트 제목과 설명의 유효성을 검사합니다.
+     *
      * @param title 제목
      * @param description 설명
      */
-    private void validatePlaylistData(String title, String description) {
-        if (title == null || title.trim().isEmpty()) {
-            throw new BadRequestException("플레이리스트 제목은 필수 입력 사항입니다.");
-        }
-        if (description == null || description.trim().isEmpty()) {
-            throw new BadRequestException("플레이리스트 설명은 필수 입력 사항입니다.");
-        }
-    }
+    // ✅ 삭제: Bean Validation 적용으로 인해 해당 검증 메서드가 더 이상 필요하지 않습니다.
+//    private void validatePlaylistData(String title, String description) {
+//        if (title == null || title.trim().isEmpty()) {
+//            throw new BadRequestException("플레이리스트 제목은 필수 입력 사항입니다.");
+//        }
+//        if (description == null || description.trim().isEmpty()) {
+//            throw new BadRequestException("플레이리스트 설명은 필수 입력 사항입니다.");
+//        }
+//    }
 
     /** 플레이리스트 아이템 추가 */
     public PlaylistDto addPlaylistItem(Long playlistId, Long itemId, PlaylistItem.PlaylistItemType itemType) {
@@ -170,5 +178,4 @@ public class PlaylistService {
         playlistRepository.save(playlist);
         return PlaylistDto.fromEntity(playlist);
     }
-
 }

@@ -30,6 +30,8 @@ public class SecurityConfig {
 
 				// 🔹 특정 API 엔드포인트에 대한 인증 예외
 				.requestMatchers(HttpMethod.GET, "/api/v1/playlists", "/api/v1/playlists/{id}").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/v1/members", "/api/v1/members/{id}").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/v1/members", "/api/v1/members/{id}").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/v1/curation/**").permitAll()
 				.requestMatchers(HttpMethod.PUT, "/api/v1/curation/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/curation/**").permitAll()

@@ -6,23 +6,31 @@ import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+@OpenAPIDefinition(
+        info = @Info(
+                title = "Project2 API 문서",
+                version = "v1",
+                description = "팀8의 프로젝트 API 문서입니다."
+        )
+)
 @Configuration
-@OpenAPIDefinition(info = @Info(title = "Project2 API 문서", version = "v1", description = "팀8의 프로젝트 API 문서입니다."))
 public class SpringDocsConfig {
 
+    // API V1 그룹 (명확한 URL prefix 설정)
     @Bean
-    public GroupedOpenApi groupApiV1() {
+    public GroupedOpenApi apiV1Group() {
         return GroupedOpenApi.builder()
-                .group("api-v1")
-                .pathsToMatch("/api/v1/**") // /api/v1/** 패턴의 경로만 문서화
+                .group("apiV1")
+                .pathsToMatch("/api/v1/**")
                 .build();
     }
 
+    // 컨트롤러 그룹 (API 관련 문서 제외)
     @Bean
-    public GroupedOpenApi groupController() {
+    public GroupedOpenApi controllerGroup() {
         return GroupedOpenApi.builder()
                 .group("controller")
-                .pathsToExclude("/api/**") // /api/** 패턴 제외
+                .pathsToExclude("/api/**")
                 .build();
     }
 }

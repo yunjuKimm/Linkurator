@@ -1,12 +1,11 @@
 package com.team8.project2.domain.curation.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
-import com.team8.project2.domain.curation.curation.entity.Curation;
-import com.team8.project2.domain.curation.curation.repository.CurationRepository;
-import com.team8.project2.domain.curation.curation.service.CurationService;
-import com.team8.project2.domain.curation.tag.dto.TagReqDto;
-import com.team8.project2.domain.link.dto.LinkReqDTO;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,13 +16,13 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
+import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.repository.CurationRepository;
+import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.curation.tag.dto.TagReqDto;
+import com.team8.project2.domain.link.dto.LinkReqDTO;
 
 @Transactional
 @ActiveProfiles("test")
@@ -38,6 +37,8 @@ public class ApiV1CurationControllerTest {
 	private CurationService curationService; // 실제 서비스 사용
 
 	private CurationReqDTO curationReqDTO;
+	@Autowired
+	private CurationRepository curationRepository;
 
 	@BeforeEach
 	void setUp() {
@@ -290,38 +291,62 @@ public class ApiV1CurationControllerTest {
 			.andExpect(jsonPath("$.data[3].content").value("content3"));
 	}
 
-	// 좋아요순으로 글 조회
-	@Test
-	void findCurationByLikeCount() throws Exception {
-		createCurationWithTitleAndContentAndLikeCount("title1", "content1", 4L);
-		createCurationWithTitleAndContentAndLikeCount("title2", "content2", 10L);
-		createCurationWithTitleAndContentAndLikeCount("title3", "content3", 2L);
+    // 좋아요순으로 글 조회
+    @Test
+    void findCurationByLikeCount() throws Exception {
+        createCurationWithTitleAndContentAndLikeCount("title1", "content1", 4L);
+        createCurationWithTitleAndContentAndLikeCount("title2", "content2", 10L);
+        createCurationWithTitleAndContentAndLikeCount("title3", "content3", 2L);
 
-		mockMvc.perform(get("/api/v1/curation")
-				.param("order", "LIKECOUNT"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.code").value("200-1"))
-			.andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
-			.andExpect(jsonPath("$.data[0].content").value("content2"))
-			.andExpect(jsonPath("$.data[1].content").value("content1"))
-			.andExpect(jsonPath("$.data[2].content").value("content3"));
-	}
+        mockMvc.perform(get("/api/v1/curation")
+                        .param("order", "LIKECOUNT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글이 검색되었습니다."))
+                .andExpect(jsonPath("$.data[0].content").value("content2"))
+                .andExpect(jsonPath("$.data[1].content").value("content1"))
+                .andExpect(jsonPath("$.data[2].content").value("content3"));
+    }
 
-	private Curation createCurationWithTitleAndContentAndLikeCount(String title, String content, Long likeCount) {
-		Curation curation = curationService.createCuration(
-			title,
-			content,
-			curationReqDTO.getLinkReqDtos().stream()
-				.map(linkReqDto -> linkReqDto.getUrl())
-				.collect(Collectors.toList()),
-			curationReqDTO.getTagReqDtos().stream()
-				.map(tagReqDto -> tagReqDto.getName())
-				.collect(Collectors.toList())
-		);
+    private Curation createCurationWithTitleAndContentAndLikeCount(String title, String content, Long likeCount) {
+        Curation curation = curationService.createCuration(
+                title,
+                content,
+                curationReqDTO.getLinkReqDtos().stream()
+                        .map(linkReqDto -> linkReqDto.getUrl())
+                        .collect(Collectors.toList()),
+                curationReqDTO.getTagReqDtos().stream()
+                        .map(tagReqDto -> tagReqDto.getName())
+                        .collect(Collectors.toList())
+        );
 
-		for (long l = 0; l < likeCount; l++) {
-			curationService.likeCuration(curation.getId());
-		}
-		return curation;
-	}
+		curation.setLikeCount(likeCount);
+		curationRepository.save(curation);
+        return curation;
+    }
+
+    // 좋아요 테스트
+    @Test
+    void likeCuration() throws Exception {
+        // 테스트용 데이터 저장
+        Curation savedCuration = curationService.createCuration(
+                "Test Title",
+                "Test Content",
+                curationReqDTO.getLinkReqDtos().stream()
+                        .map(linkReqDto -> linkReqDto.getUrl())
+                        .collect(Collectors.toUnmodifiableList()),
+                curationReqDTO.getTagReqDtos().stream()
+                        .map(tagReqDto -> tagReqDto.getName())
+                        .collect(Collectors.toUnmodifiableList())
+        );
+
+        Long memberId = 1L; // 테스트용 회원 ID
+
+        mockMvc.perform(post("/api/v1/curation/{id}", savedCuration.getId())
+                        .param("memberId", String.valueOf(memberId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("글에 좋아요를 했습니다."))
+                .andExpect(jsonPath("$.data").doesNotExist()); // 응답 데이터가 없음을 확인
+    }
 }

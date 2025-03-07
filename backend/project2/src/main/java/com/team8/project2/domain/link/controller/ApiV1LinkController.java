@@ -54,7 +54,11 @@ public class ApiV1LinkController {
         return new RsData<>("204-1", "링크가 성공적으로 삭제되었습니다.");
     }
 
-    // 메타 데이터 추출 API
+    /**
+     * 링크 URL을 입력받아 해당 링크의 메타 데이터를 추출합니다.
+     * @param linkDTO 링크 URL
+     * @return 링크 메타 데이터 응답
+     */
     @PostMapping("/preview")
     public RsData<LinkResDTO> getLinkPreview(@RequestBody @Valid LinkReqDTO linkDTO)  {
         System.out.println("linkDTO.getUrl() = " + linkDTO.getUrl());
