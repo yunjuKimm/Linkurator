@@ -37,7 +37,9 @@ interface LinkMetaData {
 
 export default function PostDetail({ params }: { params: { id: string } }) {
   const [post, setPost] = useState<CurationData | null>(null);
-  const [linkMetaData, setLinkMetaData] = useState<LinkMetaData | null>(null);
+  const [linksMetaData, setLinksMetaData] = useState<Map<string, LinkMetaData>>(
+    new Map()
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,34 +71,47 @@ export default function PostDetail({ params }: { params: { id: string } }) {
     fetchData();
   }, [params.id]);
 
-  // 링크 메타데이터 가져오기
+  // 모든 링크의 메타데이터 가져오기
   useEffect(() => {
-    if (!post?.urls?.[0]?.url) return;
+    if (!post?.urls?.length) return;
 
-    async function fetchLinkMetaData() {
-      try {
-        const response = await fetch(
-          `http://localhost:8080/api/v1/link/preview`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: post.urls[0].url }),
+    // 각 URL에 대한 메타데이터 가져오기
+    async function fetchAllLinksMetaData() {
+      const newLinksMetaData = new Map<string, LinkMetaData>();
+
+      // 모든 URL에 대해 병렬로 메타데이터 가져오기
+      await Promise.all(
+        post.urls.map(async ({ url }) => {
+          try {
+            const response = await fetch(
+              `http://localhost:8080/api/v1/link/preview`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url }),
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error(
+                `링크 메타데이터를 가져오는 데 실패했습니다: ${url}`
+              );
+            }
+
+            const data = await response.json();
+            if (data.data) {
+              newLinksMetaData.set(url, data.data);
+            }
+          } catch (error) {
+            console.error(`Error fetching metadata for ${url}:`, error);
           }
-        );
+        })
+      );
 
-        if (!response.ok) {
-          throw new Error("링크 메타데이터를 가져오는 데 실패했습니다.");
-        }
-
-        const data = await response.json();
-        setLinkMetaData(data.data);
-      } catch (error) {
-        console.error("Error fetching link metadata:", error);
-        setLinkMetaData(null);
-      }
+      setLinksMetaData(newLinksMetaData);
     }
 
-    fetchLinkMetaData();
+    fetchAllLinksMetaData();
   }, [post?.urls]);
 
   // 날짜 형식화 함수
@@ -117,6 +132,16 @@ export default function PostDetail({ params }: { params: { id: string } }) {
     } catch (error) {
       console.error("Date formatting error:", error);
       return "날짜 형식 오류";
+    }
+  };
+
+  // URL에서 도메인 추출 함수
+  const extractDomain = (url: string) => {
+    try {
+      return new URL(url).hostname;
+    } catch (error) {
+      console.error("URL parsing error:", error);
+      return url;
     }
   };
 
@@ -155,6 +180,9 @@ export default function PostDetail({ params }: { params: { id: string } }) {
   const isModified =
     Math.floor(new Date(post.modifiedAt).getTime() / 1000) !==
     Math.floor(new Date(post.createdAt).getTime() / 1000);
+
+  // URL 배열이 있는지 확인
+  const hasUrls = post.urls && post.urls.length > 0;
 
   return (
     <main className="container grid grid-cols-12 gap-6 px-4 py-6">
@@ -195,47 +223,65 @@ export default function PostDetail({ params }: { params: { id: string } }) {
 
           <h1 className="text-3xl font-bold">{post.title}</h1>
 
-          {/* 링크 카드 */}
-          {post.urls?.[0]?.url && (
-            <div className="my-6 rounded-lg border shadow-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center">
-                  <div className="mr-0 sm:mr-4 mb-4 sm:mb-0 flex-shrink-0">
-                    <Image
-                      src={
-                        linkMetaData?.image ||
-                        "/placeholder.svg?height=80&width=80"
-                      }
-                      alt="링크 썸네일"
-                      width={80}
-                      height={80}
-                      className="rounded-md object-cover"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                      {linkMetaData?.title || "링크 제목을 불러오는 중..."}
-                    </h2>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                      {linkMetaData?.description || post.content}
-                    </p>
-                    <div className="flex items-center text-sm">
-                      <span className="text-blue-600 truncate max-w-[200px]">
-                        {new URL(post.urls[0].url).hostname}
-                      </span>
-                      <span className="mx-2 text-gray-300">|</span>
-                      <a
-                        href={post.urls[0].url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        바로가기
-                      </a>
+          {/* 링크 카드 섹션 - 여러 URL 지원 */}
+          {hasUrls && (
+            <div className="my-6 space-y-4">
+              {/* 각 URL마다 별도의 카드 생성 */}
+              {post.urls.map(({ url }, index) => (
+                <div
+                  key={`${url}-${index}`}
+                  className="rounded-lg border shadow-sm overflow-hidden"
+                >
+                  <div
+                    className={`bg-gradient-to-r ${
+                      index % 3 === 0
+                        ? "from-blue-50 to-indigo-50"
+                        : index % 3 === 1
+                        ? "from-green-50 to-teal-50"
+                        : "from-purple-50 to-pink-50"
+                    } p-6`}
+                  >
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center">
+                      <div className="mr-0 sm:mr-4 mb-4 sm:mb-0 flex-shrink-0">
+                        <Image
+                          src={
+                            linksMetaData.get(url)?.image ||
+                            "/placeholder.svg?height=80&width=80"
+                          }
+                          alt="링크 썸네일"
+                          width={80}
+                          height={80}
+                          className="rounded-md object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-1">
+                          {linksMetaData.get(url)?.title ||
+                            "링크 제목을 불러오는 중..."}
+                        </h2>
+                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                          {linksMetaData.get(url)?.description ||
+                            "설명을 불러오는 중..."}
+                        </p>
+                        <div className="flex items-center text-sm">
+                          <span className="text-blue-600 truncate max-w-[200px]">
+                            {extractDomain(url)}
+                          </span>
+                          <span className="mx-2 text-gray-300">|</span>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            바로가기
+                          </a>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
           )}
 
