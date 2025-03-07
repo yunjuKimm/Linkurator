@@ -14,8 +14,10 @@ import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
+
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,112 +32,117 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CurationService {
 
-    private final CurationRepository curationRepository;
-    private final CurationLinkRepository curationLinkRepository;
-    private final CurationTagRepository curationTagRepository;
-    private final MemberRepository memberRepository;
+	private final CurationRepository curationRepository;
+	private final CurationLinkRepository curationLinkRepository;
+	private final CurationTagRepository curationTagRepository;
+	private final LinkService linkService;
+	private final TagService tagService;
+	private final MemberRepository memberRepository;
     private final LikeRepository likeRepository;
-    private final LinkService linkService;
-    private final TagService tagService;
 
-    /**
-     * 큐레이션을 생성합니다.
-     * @param title 큐레이션 제목
-     * @param content 큐레이션 내용
-     * @param urls 연결된 링크 목록
-     * @param tags 연결된 태그 목록
-     * @return 생성된 큐레이션 객체
-     */
-    @Transactional
-    public Curation createCuration(String title, String content, List<String> urls, List<String> tags) {
-        Curation curation = Curation.builder()
-                .title(title)
-                .content(content)
-                .build();
-        curationRepository.save(curation);
+	/**
+	 * 큐레이션을 생성합니다.
+	 * @param title 큐레이션 제목
+	 * @param content 큐레이션 내용
+	 * @param urls 연결된 링크 목록
+	 * @param tags 연결된 태그 목록
+	 * @return 생성된 큐레이션 객체
+	 */
+	@Transactional
+	public Curation createCuration(String title, String content, List<String> urls, List<String> tags) {
+		// 인증 미구현으로 샘플 데이터의 Member 사용
+		Member member = memberRepository.findById(1L).get();
 
-        // 큐레이션 - 링크 연결
-        List<CurationLink> curationLinks = urls.stream()
-                .map(url -> {
-                    CurationLink curationLink = new CurationLink();
-                    return curationLink.setCurationAndLink(curation, linkService.getLink(url));
-                }).collect(Collectors.toList());
-        curationLinkRepository.saveAll(curationLinks);
-        curation.setCurationLinks(curationLinks);
+		Curation curation = Curation.builder()
+			.member(member)
+			.title(title)
+			.content(content)
+			.build();
+		curationRepository.save(curation);
 
-        // 큐레이션 - 태그 연결
-        List<CurationTag> curationTags = tags.stream()
-                .map(tag -> {
-                    CurationTag curationTag = new CurationTag();
-                    return curationTag.setCurationAndTag(curation, tagService.getTag(tag));
-                }).collect(Collectors.toList());
-        curationTagRepository.saveAll(curationTags);
-        curation.setTags(curationTags);
+		// 큐레이션 - 링크 연결
+		List<CurationLink> curationLinks = urls.stream()
+			.map(url -> {
+				CurationLink curationLink = new CurationLink();
+				return curationLink.setCurationAndLink(curation, linkService.getLink(url));
+			}).collect(Collectors.toList());
+		curationLinkRepository.saveAll(curationLinks);
+		curation.setCurationLinks(curationLinks);
 
-        return curation;
-    }
+		// 큐레이션 - 태그 연결
+		List<CurationTag> curationTags = tags.stream()
+			.map(tag -> {
+				CurationTag curationTag = new CurationTag();
+				return curationTag.setCurationAndTag(curation, tagService.getTag(tag));
+			}).collect(Collectors.toList());
+		curationTagRepository.saveAll(curationTags);
+		curation.setTags(curationTags);
 
-    /**
-     * 큐레이션을 수정합니다.
-     * @param curationId 수정할 큐레이션 ID
-     * @param title 새로운 제목
-     * @param content 새로운 내용
-     * @param urls 새로 연결할 링크 목록
-     * @param tags 새로 연결할 태그 목록
-     * @return 수정된 큐레이션 객체
-     */
-    @Transactional
-    public Curation updateCuration(Long curationId, String title, String content, List<String> urls, List<String> tags) {
-        Curation curation = curationRepository.findById(curationId)
-                .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+		return curation;
+	}
 
-        curation.setTitle(title);
-        curation.setContent(content);
+	/**
+	 * 큐레이션을 수정합니다.
+	 * @param curationId 수정할 큐레이션 ID
+	 * @param title 새로운 제목
+	 * @param content 새로운 내용
+	 * @param urls 새로 연결할 링크 목록
+	 * @param tags 새로 연결할 태그 목록
+	 * @return 수정된 큐레이션 객체
+	 */
+	@Transactional
+	public Curation updateCuration(Long curationId, String title, String content, List<String> urls,
+		List<String> tags) {
+		Curation curation = curationRepository.findById(curationId)
+			.orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
 
-        // 큐레이션 - 링크 연결 업데이트
-        List<CurationLink> curationLinks = urls.stream()
-                .map(url -> {
-                    CurationLink curationLink = new CurationLink();
-                    return curationLink.setCurationAndLink(curation, linkService.getLink(url));
-                }).collect(Collectors.toList());
-        curationLinkRepository.saveAll(curationLinks);
-        curation.setCurationLinks(curationLinks);
+		curation.setTitle(title);
+		curation.setContent(content);
 
-        // 큐레이션 - 태그 연결 업데이트
-        List<CurationTag> curationTags = tags.stream()
-                .map(tag -> {
-                    CurationTag curationTag = new CurationTag();
-                    return curationTag.setCurationAndTag(curation, tagService.getTag(tag));
-                }).collect(Collectors.toList());
-        curationTagRepository.saveAll(curationTags);
-        curation.setTags(curationTags);
+		// 큐레이션 - 링크 연결 업데이트
+		List<CurationLink> curationLinks = urls.stream()
+			.map(url -> {
+				CurationLink curationLink = new CurationLink();
+				return curationLink.setCurationAndLink(curation, linkService.getLink(url));
+			}).collect(Collectors.toList());
+		curationLinkRepository.saveAll(curationLinks);
+		curation.setCurationLinks(curationLinks);
 
-        return curationRepository.save(curation);
-    }
+		// 큐레이션 - 태그 연결 업데이트
+		List<CurationTag> curationTags = tags.stream()
+			.map(tag -> {
+				CurationTag curationTag = new CurationTag();
+				return curationTag.setCurationAndTag(curation, tagService.getTag(tag));
+			}).collect(Collectors.toList());
+		curationTagRepository.saveAll(curationTags);
+		curation.setTags(curationTags);
 
-    /**
-     * 큐레이션을 삭제합니다.
-     * @param curationId 삭제할 큐레이션 ID
-     */
-    @Transactional
-    public void deleteCuration(Long curationId) {
-        if (!curationRepository.existsById(curationId)) {
-            throw new ServiceException("404-1", "해당 글을 찾을 수 없습니다.");
-        }
-        curationLinkRepository.deleteByCurationId(curationId);
-        curationTagRepository.deleteByCurationId(curationId);
-        curationRepository.deleteById(curationId);
-    }
+		return curationRepository.save(curation);
+	}
 
-    /**
-     * 특정 큐레이션을 조회합니다.
-     * @param curationId 조회할 큐레이션 ID
-     * @return 조회된 큐레이션 객체
-     */
-    public Curation getCuration(Long curationId) {
-        return curationRepository.findById(curationId)
-                .orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
-    }
+	/**
+	 * 큐레이션을 삭제합니다.
+	 * @param curationId 삭제할 큐레이션 ID
+	 */
+	@Transactional
+	public void deleteCuration(Long curationId) {
+		if (!curationRepository.existsById(curationId)) {
+			throw new ServiceException("404-1", "해당 글을 찾을 수 없습니다.");
+		}
+		curationLinkRepository.deleteByCurationId(curationId);
+		curationTagRepository.deleteByCurationId(curationId);
+		curationRepository.deleteById(curationId);
+	}
+
+	/**
+	 * 특정 큐레이션을 조회합니다.
+	 * @param curationId 조회할 큐레이션 ID
+	 * @return 조회된 큐레이션 객체
+	 */
+	public Curation getCuration(Long curationId) {
+		return curationRepository.findById(curationId)
+			.orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+	}
 
     /**
      * 큐레이션을 검색합니다.

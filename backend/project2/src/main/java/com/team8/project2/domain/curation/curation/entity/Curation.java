@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.member.entity.Member;
 
 /**
@@ -79,19 +81,37 @@ public class Curation {
     /**
      * 큐레이션에 포함된 링크 목록 (CurationLink와 1:N 관계)
      */
-    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true)
     private List<CurationLink> curationLinks = new ArrayList<>();
 
     /**
      * 큐레이션에 포함된 태그 목록 (CurationTag와 1:N 관계)
      */
-    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true)
     private List<CurationTag> tags = new ArrayList<>();
+
+    /**
+     * 큐레이션에 포함된 댓글 목록 (Comment와 1:N 관계)
+     */
+    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<Comment> comments = new ArrayList<>();
 
     /**
      * 큐레이션 좋아요 수 증가 메서드
      */
     public void like() {
         this.likeCount++;
+    }
+
+    public String getMemberName() {
+        return member.getUsername();
+    }
+
+    public long getMemberId() {
+        return member.getId();
+    }
+
+    public String getMemberImgUrl() {
+        return member.getProfileImage();
     }
 }
