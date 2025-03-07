@@ -25,11 +25,12 @@ public class BaseInitData {
 				Member member = Member.builder()
 					.email("team8@gmail.com")
 					.role(RoleEnum.MEMBER)
-					.userId("userid")
+					.apiKey("memberId")
+					.memberId("memberId")
 					.username("username")
 					.password("password")
-					.imgUrl("imgurl")
-					.description("test")
+					.profileImage("imgurl")
+					.introduce("test")
 					.build();
 				memberRepository.save(member);
 
@@ -42,5 +43,7 @@ public class BaseInitData {
 			}
 		};
 	}
+
+
 
 }
