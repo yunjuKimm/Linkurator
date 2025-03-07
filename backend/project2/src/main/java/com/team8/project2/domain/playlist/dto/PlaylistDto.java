@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +36,8 @@ public class PlaylistDto {
      */
     private List<PlaylistItemDto> items;
 
+    private Set<String> tags;
+
     /**
      * 플레이리스트 엔티티를 DTO로 변환합니다.
      * @param playlist 변환할 플레이리스트 엔티티
@@ -48,6 +51,10 @@ public class PlaylistDto {
                 .items(playlist.getItems().stream()
                         .map(PlaylistItemDto::fromEntity)
                         .collect(Collectors.toList()))
+                .tags(playlist.getTags().stream()
+                        .map(tag -> tag.getName())
+                        .collect(Collectors.toSet()))
                 .build();
     }
+
 }
