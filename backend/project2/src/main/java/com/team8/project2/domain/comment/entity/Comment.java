@@ -75,5 +75,13 @@ public class Comment {
     public String getAuthorName() {
         return author.getUsername();
     }
+
+    public long getAuthorId() {
+        return author.getId();
+    }
+
+    public String getAuthorImgUrl() {
+        return author.getImgUrl();
+    }
 }
 

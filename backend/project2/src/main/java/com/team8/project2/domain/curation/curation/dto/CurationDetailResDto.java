@@ -26,6 +26,13 @@ public class CurationDetailResDto {
 	/** 큐레이션 내용 */
 	private String content;
 
+	/** 큐레이션 작성자 */
+	private long authorId;
+
+	private String authorName;
+
+	private String authorImgUrl;
+
 	/** 큐레이션에 포함된 링크 목록 */
 	private List<LinkResDto> urls;
 
@@ -67,13 +74,17 @@ public class CurationDetailResDto {
 
 	@Getter
 	static class CommentResDto {
+		private long authorId;
 		private String authorName;
+		private String authorImgUrl;
 		private String content;
 		private LocalDateTime createdAt;
 		private LocalDateTime modifiedAt;
 
 		public CommentResDto(Comment comment) {
+			this.authorId = comment.getAuthorId();
 			this.authorName = comment.getAuthorName();
+			this.authorImgUrl = comment.getAuthorImgUrl();
 			this.content = comment.getContent();
 			this.createdAt = comment.getCreatedAt();
 			this.modifiedAt = comment.getModifiedAt();
@@ -89,6 +100,9 @@ public class CurationDetailResDto {
 		return CurationDetailResDto.builder()
 			.title(curation.getTitle())
 			.content(curation.getContent())
+			.authorId(curation.getMemberId())
+			.authorName(curation.getMemberName())
+			.authorImgUrl(curation.getMemberImgUrl())
 			.urls(curation.getCurationLinks().stream()
 				.map(cl -> new LinkResDto(cl.getLink()))
 				.collect(Collectors.toList()))

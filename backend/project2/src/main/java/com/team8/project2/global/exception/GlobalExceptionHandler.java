@@ -65,12 +65,12 @@ public class GlobalExceptionHandler {
 				.body(new RsData<>("404-1", e.getMessage()));
 	}
 
-	/** 500 - Internal Server Error */
-	@ResponseStatus
-	@ExceptionHandler(Exception.class)
-	public ResponseEntity<RsData<Empty>> handleGlobalException(Exception e) {
-		return ResponseEntity
-				.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(new RsData<>("500-1", "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요."));
-	}
+	// /** 500 - Internal Server Error */
+	// @ResponseStatus
+	// @ExceptionHandler(Exception.class)
+	// public ResponseEntity<RsData<Empty>> handleGlobalException(Exception e) {
+	// 	return ResponseEntity
+	// 			.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	// 			.body(new RsData<>("500-1", "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요."));
+	// }
 }

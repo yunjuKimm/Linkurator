@@ -102,4 +102,16 @@ public class Curation {
     public void like() {
         this.likeCount++;
     }
+
+    public String getMemberName() {
+        return member.getUsername();
+    }
+
+    public long getMemberId() {
+        return member.getId();
+    }
+
+    public String getMemberImgUrl() {
+        return member.getImgUrl();
+    }
 }

@@ -38,7 +38,7 @@ public class BaseInitData {
 					.userId("userid")
 					.username("username")
 					.password("password")
-					.imgUrl("imgurl")
+					.imgUrl("http://localhost:8080/images/team8-logo.png")
 					.description("test")
 					.build();
 				memberRepository.save(member);

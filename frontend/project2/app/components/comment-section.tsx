@@ -8,8 +8,12 @@ import { Heart, Flag } from "lucide-react";
 
 // 댓글 데이터 타입 정의
 type Comment = {
+  authorId: number;
   authorName: string;
+  authorImgUrl: string;
   content: string;
+  createdAt: string;
+  modifiedAt: string;
   isLiked: boolean;
 };
 
@@ -45,7 +49,7 @@ export default function CommentSection({ postId }: { postId: string }) {
     fetchCurationData(postId); // 주어진 postId로 커레이션 데이터를 가져옵니다.
   }, [postId]);
 
-  // 댓글 좋아요 기능
+  // 댓글 좋아요 기능 (미구현)
   const handleLikeComment = (commentId: string) => {
     setComments(
       comments.map((comment, index) => {
@@ -69,6 +73,10 @@ export default function CommentSection({ postId }: { postId: string }) {
       authorName: "현재 사용자",
       content: newComment,
       isLiked: false,
+      authorId: 0,
+      authorImgUrl: "",
+      createdAt: "",
+      modifiedAt: "",
     };
 
     setComments([newCommentObj, ...comments]); // 새 댓글 추가
@@ -104,7 +112,7 @@ export default function CommentSection({ postId }: { postId: string }) {
             <div className="flex justify-between">
               <div className="flex items-center space-x-2">
                 <Image
-                  src="/placeholder.svg"
+                  src={comment.authorImgUrl}
                   alt={comment.authorName}
                   width={36}
                   height={36}
@@ -112,7 +120,7 @@ export default function CommentSection({ postId }: { postId: string }) {
                 />
                 <div>
                   <p className="font-medium">{comment.authorName}</p>
-                  <p className="text-xs text-gray-500">방금 전</p>
+                  <p className="text-xs text-gray-500">{comment.createdAt}</p>
                 </div>
               </div>
               <button className="text-gray-400 hover:text-gray-500">
