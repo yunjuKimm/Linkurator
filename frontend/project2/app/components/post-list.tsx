@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react";
+import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
+
 
 // Curation 데이터 인터페이스 정의
 interface Curation {
@@ -40,6 +42,7 @@ export default function PostList() {
   const [linkMetaDataList, setLinkMetaDataList] = useState<{ [key: number]: LinkMetaData[] }>({}); // 각 큐레이션에 대한 메타 데이터 상태 (배열로 수정)
   const [filterModalOpen, setFilterModalOpen] = useState(false); // 필터 모달 상태
   const [tags, setTags] = useState<string[]>([]); // 선택된 태그 상태
+  const [selectedTags, setSelectedTags] = useState<string[]>([]); // 필터링된 태그 상태
   const [title, setTitle] = useState<string>(""); // 제목 필터링
   const [content, setContent] = useState<string>(""); // 내용 필터링
 
@@ -83,8 +86,11 @@ export default function PostList() {
 
   // 필터링 조건을 기반으로 API 호출
   const applyFilter = () => {
+
+    setSelectedTags(tags); // 입력한 tags를 selectedTags에 동기화
+
     const params: CurationRequestParams = {
-      tags,
+      tags: selectedTags,
       title,
       content,
       order: sortOrder,  // 정렬 기준도 함께 보내기
@@ -138,7 +144,13 @@ export default function PostList() {
       }
 
       // 좋아요를 추가한 후, 데이터를 다시 불러와서 화면 갱신
-      fetchCurations({});
+      const params: CurationRequestParams = {
+        tags: selectedTags,
+        title,
+        content,
+        order: sortOrder,  // 정렬 기준도 함께 보내기
+      };
+      fetchCurations(params);
     } catch (error) {
       console.error("Error liking the post:", error);
     }
@@ -173,6 +185,25 @@ export default function PostList() {
   };
 
   useEffect(() => {
+    const params: CurationRequestParams = {
+      tags: selectedTags,
+      title,
+      content,
+      order: sortOrder,  // 정렬 기준도 함께 보내기
+    };
+    fetchCurations(params);
+  }, [selectedTags]);
+
+  const toggleTagFilter = (tag: string) => {
+  setSelectedTags((prev) => {
+    if (prev.includes(tag)) {
+      return prev.filter((t) => t !== tag); // 이미 선택된 태그가 있으면 제거
+    }
+    return [...prev, tag]; // 선택되지 않은 태그가 있으면 추가
+  });
+};
+
+  useEffect(() => {
     fetchCurations({}); // 페이지 로딩 시 한번 API 호출
   }, []); // 빈 배열을 의존성으로 두어 처음 한 번만 호출되게 설정
 
@@ -197,8 +228,15 @@ export default function PostList() {
               <label className="block text-sm font-medium text-gray-700">태그</label>
               <input
                 type="text"
-                value={tags.join(", ")}
-                onChange={(e) => setTags(e.target.value.split(",").map((tag) => tag.trim()))}
+                defaultValue={selectedTags.join(", ")}
+                onChange={(e) => {
+                  // 입력값을 스페이스바가 포함되더라도 정상적으로 처리하도록 수정
+                  const inputTags = e.target.value
+                    .split(",")
+                    .map((tag) => tag.trim())
+                    .filter((tag) => tag !== ""); // 빈 태그는 제외
+                  setTags(inputTags); // tags 상태 업데이트
+                }}
                 className="mt-1 p-2 w-full border rounded-md"
                 placeholder="태그 입력 (쉼표로 구분)"
               />
@@ -254,9 +292,11 @@ export default function PostList() {
       )}
 
       {/* 로딩 상태 표시 */}
-      {loading ? <p>데이터를 불러오는 중...</p> : null}
-
-      {/* 게시글 목록 */}
+      {loading ? (
+        <div className="flex justify-center items-center py-10">
+          <ClipLoader size={50} color="#3498db" />
+        </div>
+      ) : /* 게시글 목록 */
       <div className="space-y-6 pt-4">
         {curations.length === 0 ? (
           <p>글이 없습니다.</p>
@@ -286,6 +326,21 @@ export default function PostList() {
                     : curation.content}
                 </p>
                 <button className="mt-2 text-sm font-medium text-blue-600">더보기</button>
+              </div>
+
+              {/* 태그 표시 */}
+              <div className="flex space-x-2 mt-2">
+                {curation.tags.map((tag) => (
+                  <span
+                    key={tag.name}
+                    className={`px-3 py-1 text-sm font-medium rounded-full cursor-pointer ${
+                      selectedTags.includes(tag.name) ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600"
+                    }`}
+                    onClick={() => toggleTagFilter(tag.name)}
+                  >
+                    {tag.name}
+                  </span>
+                ))}
               </div>
 
               {/* 메타 데이터 카드 */}
@@ -335,7 +390,9 @@ export default function PostList() {
             </div>
           ))
         )}
-      </div>
+      </div>}
+
+      
     </>
   );
 }
