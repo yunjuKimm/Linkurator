@@ -109,6 +109,7 @@ public class ApiV1CurationController {
     /**
      * 특정 큐레이션에 좋아요를 추가합니다.
      * @param id 큐레이션 ID
+     * @param memberId 좋아요를 누른 회원 ID
      * @return 좋아요 성공 응답
      */
     @PostMapping("/{id}")

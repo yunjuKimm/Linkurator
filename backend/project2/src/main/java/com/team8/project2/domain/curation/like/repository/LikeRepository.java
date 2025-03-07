@@ -8,6 +8,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
+/**
+ * 큐레이션 좋아요(Like) 엔티티의 데이터 접근을 담당하는 리포지토리 인터페이스입니다.
+ */
+
 public interface LikeRepository extends JpaRepository<Like, LikeId> {
+    /**
+     * 특정 큐레이션과 특정 회원에 대한 좋아요 정보를 조회합니다.
+     * @param curation 좋아요를 조회할 큐레이션
+     * @param member 좋아요를 조회할 회원
+     * @return 좋아요 정보
+     */
     Optional<Like> findByCurationAndMember(Curation curation, Member member);
 }
