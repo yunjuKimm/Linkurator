@@ -146,7 +146,13 @@ public class CurationService {
      * @return 검색된 큐레이션 목록
      */
     public List<Curation> searchCurations(List<String> tags, String title, String content, SearchOrder order) {
-        return curationRepository.searchByFilters(tags, title, content, order.name());
+        if (tags == null || tags.isEmpty()) {
+            // 태그가 없을 경우 필터 없이 검색
+            return curationRepository.searchByFiltersWithoutTags(tags, title, content, order.name());
+        } else {
+            // 태그가 있을 경우 태그 필터 적용
+            return curationRepository.searchByFilters(tags, tags.size(), title, content, order.name());
+        }
     }
 
     /**
