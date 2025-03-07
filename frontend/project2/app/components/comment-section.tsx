@@ -83,6 +83,17 @@ export default function CommentSection({ postId }: { postId: string }) {
     setNewComment(""); // 입력 필드 초기화
   };
 
+  // 날짜 형식화 함수
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold">댓글 {comments.length}개</h2>
@@ -120,7 +131,14 @@ export default function CommentSection({ postId }: { postId: string }) {
                 />
                 <div>
                   <p className="font-medium">{comment.authorName}</p>
-                  <p className="text-xs text-gray-500">{comment.createdAt}</p>
+                  <p className="text-xs text-gray-500">
+                    {Math.floor(
+                      new Date(comment.modifiedAt).getTime() / 1000
+                    ) !==
+                    Math.floor(new Date(comment.createdAt).getTime() / 1000)
+                      ? `수정된 날짜 : ${formatDate(comment.modifiedAt)}`
+                      : `작성된 날짜 : ${formatDate(comment.createdAt)}`}
+                  </p>
                 </div>
               </div>
               <button className="text-gray-400 hover:text-gray-500">
