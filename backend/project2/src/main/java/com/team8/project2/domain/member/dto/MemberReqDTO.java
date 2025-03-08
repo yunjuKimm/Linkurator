@@ -1,17 +1,18 @@
 package com.team8.project2.domain.member.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.entity.RoleEnum;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
+import lombok.*;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class MemberReqDTO {
 
     @NotBlank(message = "회원 ID는 필수 입력값입니다.")
@@ -41,6 +42,19 @@ public class MemberReqDTO {
     @JsonProperty("role")
     @Builder.Default
     private RoleEnum role = RoleEnum.MEMBER;
+
+    @JsonCreator
+    public void setRole(String role) {
+        if (role == null || role.isBlank()) {
+            this.role = RoleEnum.MEMBER; // 기본값 설정
+        } else {
+            try {
+                this.role = RoleEnum.valueOf(role.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("지원되지 않는 역할입니다: " + role);
+            }
+        }
+    }
 
     public Member toEntity() {
         return Member.builder()

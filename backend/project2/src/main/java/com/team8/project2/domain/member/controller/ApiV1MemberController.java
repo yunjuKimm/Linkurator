@@ -26,6 +26,7 @@ public class ApiV1MemberController {
 
     @PostMapping("/join")
     public RsData<MemberResDTO> join(@RequestBody @Valid MemberReqDTO body) {
+        System.out.println("null Role"+body.getRole().getClass().toString());
         memberService.findByMemberId(body.getMemberId())
                 .ifPresent(member -> {
                     throw new ServiceException("409-1","사용중인 아이디");
@@ -45,7 +46,6 @@ public class ApiV1MemberController {
     record LoginResBody(MemberResDTO item, String apiKey) {}
     @PostMapping("/login")
     public RsData<LoginResBody> login(@RequestBody @Valid MemberReqDTO reqBody) {
-
         Member member = memberService.findByMemberId(reqBody.getMemberId()).orElseThrow(
                 () -> new ServiceException("401-1", "잘못된 아이디입니다.")
         );

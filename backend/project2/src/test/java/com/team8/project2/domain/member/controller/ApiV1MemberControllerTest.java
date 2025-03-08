@@ -1,7 +1,14 @@
 package com.team8.project2.domain.member.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
+import com.team8.project2.domain.curation.tag.dto.TagReqDto;
+import com.team8.project2.domain.link.dto.LinkReqDTO;
+import com.team8.project2.domain.member.dto.MemberReqDTO;
 import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.member.service.MemberService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,12 +18,15 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -33,6 +43,28 @@ public class ApiV1MemberControllerTest {
 
     @Autowired
     private MemberService memberService;
+
+    @Autowired
+    private MemberRepository memberRepository;
+
+    private MemberReqDTO memberReqDTO;
+
+    @BeforeEach
+    void setUp() {
+        memberRepository.deleteAll();
+
+        // MemberReqDTO 설정 (링크 포함)
+        memberReqDTO = new MemberReqDTO();
+        memberReqDTO.setMemberId("member1");
+        memberReqDTO.setUsername("초보");
+        memberReqDTO.setPassword("1234");
+        memberReqDTO.setRole("MEMBER");
+        memberReqDTO.setProfileImage("www.url");
+        memberReqDTO.setEmail("member1@gmail.com");
+        memberReqDTO.setIntroduce("안녕");
+
+    }
+
     private ResultActions joinRequest(String memberId, String password, String email) throws Exception{
         return joinRequest(memberId,password,email,null,null,null);
     }
@@ -107,5 +139,49 @@ public class ApiV1MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("409-1"))
                 .andExpect(jsonPath("$.msg").value("사용중인 아이디"));
 
+    }
+
+    @Test
+    @DisplayName("회원 가입3 - 비밀번호 길이 제한 위반")
+    void join3() throws Exception {
+        // 필수 입력값 중 password를 4자로 설정하여 길이 제한 검증
+        memberReqDTO.setUsername("초보");
+        memberReqDTO.setProfileImage("www.url");
+        memberReqDTO.setEmail("member1@gmail.com");
+        memberReqDTO.setIntroduce("안녕");
+        memberReqDTO.setPassword("1234");
+
+        mvc.perform(MockMvcRequestBuilders.post("/api/v1/members/join")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(memberReqDTO)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.msg").value("password : Size : 비밀번호는 최소 6자 이상이어야 합니다."));
+    }
+
+    @Test
+    @DisplayName("회원 가입4 - 필수 입력값 누락 (비밀번호 없음)")
+    void joinWithoutPassword() throws Exception {
+        // 비밀번호 누락 테스트
+        memberReqDTO.setPassword(null);
+
+        mvc.perform(MockMvcRequestBuilders.post("/api/v1/members/join")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(memberReqDTO)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.msg").value("password : NotBlank : 비밀번호는 필수 입력값입니다."));
+    }
+
+    @Test
+    @DisplayName("회원 가입5 - 필수 입력값 누락 (사용자명 없음)")
+    void joinWithoutUsername() throws Exception {
+        // 사용자명 누락 테스트
+        memberReqDTO.setUsername(null);
+        memberReqDTO.setPassword("123456"); // 비밀번호 정상값으로 설정
+
+        mvc.perform(MockMvcRequestBuilders.post("/api/v1/members/join")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(memberReqDTO)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.msg").value("username : NotBlank : 사용자명은 필수 입력값입니다."));
     }
 }
