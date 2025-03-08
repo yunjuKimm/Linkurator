@@ -15,7 +15,6 @@ import java.util.Optional;
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    private final CurationRepository curationRepository;
 
     public Member join(String memberId, String password, RoleEnum role, String email, String profileImage) {
         return join(memberId, password, role, email, profileImage, null);
@@ -26,8 +25,8 @@ public class MemberService {
 
         //TODO: apikey 할당방식 지정
         //TODO: RoleEnum 확인 이후 주입 로직 필요
-        if(role==null){
-            role=RoleEnum.MEMBER;
+        if (role == null) {
+            role = RoleEnum.MEMBER;
         }
         Member member = Member.builder()
                 .memberId(memberId)
@@ -44,7 +43,9 @@ public class MemberService {
         return memberRepository.save(member);
     }
 
-    public Optional<Member> findByApiKey(String apiKey) { return memberRepository.findByApiKey(apiKey);}
+    public Optional<Member> findByApiKey(String apiKey) {
+        return memberRepository.findByApiKey(apiKey);
+    }
 
     public Optional<Member> findByMemberId(String memberId) {
         return memberRepository.findByMemberId(memberId);
@@ -58,4 +59,6 @@ public class MemberService {
         // 2. Member 삭제
         memberRepository.deleteById(memberId);
     }
+
+
 }
