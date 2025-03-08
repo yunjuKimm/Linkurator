@@ -1,5 +1,6 @@
 package com.team8.project2.domain.member.service;
 
+import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.entity.RoleEnum;
 import com.team8.project2.domain.member.repository.MemberRepository;
@@ -14,6 +15,8 @@ import java.util.Optional;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final CurationRepository curationRepository;
+
     public Member join(String memberId, String password, RoleEnum role, String email, String profileImage) {
         return join(memberId, password, role, email, profileImage, null);
     }
@@ -47,4 +50,12 @@ public class MemberService {
         return memberRepository.findByMemberId(memberId);
     }
 
+    @Transactional
+    public void deleteMember(Long memberId) {
+        // 1. 연관된 Curation 데이터 삭제
+        //TODO: curation에 memberID로 인한 삭제 필요
+        //curationRepository.deleteByMemberId(memberId);
+        // 2. Member 삭제
+        memberRepository.deleteById(memberId);
+    }
 }
