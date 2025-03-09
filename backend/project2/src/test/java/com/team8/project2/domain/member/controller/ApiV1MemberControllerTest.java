@@ -8,6 +8,7 @@ import com.team8.project2.domain.member.dto.MemberReqDTO;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.member.service.MemberService;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,9 +50,11 @@ public class ApiV1MemberControllerTest {
 
     private MemberReqDTO memberReqDTO;
 
+    private static String validToken;
+    private static String invalidToken;
+
     @BeforeEach
     void setUp() {
-        memberRepository.deleteAll();
 
         // MemberReqDTO 설정 (링크 포함)
         memberReqDTO = new MemberReqDTO();
@@ -63,6 +66,12 @@ public class ApiV1MemberControllerTest {
         memberReqDTO.setEmail("member1@gmail.com");
         memberReqDTO.setIntroduce("안녕");
 
+    }
+
+    @BeforeAll
+    static void setupTokens() {
+        validToken = "Bearer valid.jwt.token";
+        invalidToken = "Bearer invalid.jwt.token";
     }
 
     private ResultActions joinRequest(String memberId, String password, String email) throws Exception{
@@ -112,6 +121,7 @@ public class ApiV1MemberControllerTest {
                 .andExpect(handler().handlerType(ApiV1MemberController.class))
                 .andExpect(handler().methodName("join"))
                 .andExpect(jsonPath("$.code").value("201-1"))
+                .andExpect(jsonPath("$.data.accessToken").exists())
                 .andExpect(jsonPath("$.msg").value("회원 가입이 완료되었습니다."));
 
         //checkMember(resultActions, member);
@@ -173,15 +183,42 @@ public class ApiV1MemberControllerTest {
 
     @Test
     @DisplayName("회원 가입5 - 필수 입력값 누락 (사용자명 없음)")
-    void joinWithoutUsername() throws Exception {
+    void joinWithoutMemberId() throws Exception {
         // 사용자명 누락 테스트
-        memberReqDTO.setUsername(null);
+        memberReqDTO.setMemberId(null);
         memberReqDTO.setPassword("123456"); // 비밀번호 정상값으로 설정
 
         mvc.perform(MockMvcRequestBuilders.post("/api/v1/members/join")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(new ObjectMapper().writeValueAsString(memberReqDTO)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.msg").value("username : NotBlank : 사용자명은 필수 입력값입니다."));
+                .andExpect(jsonPath("$.msg").value("memberId : NotBlank : 회원 ID는 필수 입력값입니다."));
+    }
+
+    @Test
+    @DisplayName("JWT 인증으로 내 정보 조회")
+    void getMyInfoTest() throws Exception {
+        Member member = memberService.join(memberReqDTO.toEntity());
+        String accessToken = memberService.genAccessToken(member);
+
+        mvc.perform(get("/api/v1/members/me")
+                        .header("Authorization", "Bearer " + accessToken)) // JWT 포함 요청
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-2"))
+                .andExpect(jsonPath("$.data.memberId").value("member1"))
+                .andDo(print());
+    }
+
+    @Test
+    @DisplayName("로그아웃 시 JWT 삭제")
+    void logoutTest() throws Exception {
+        Member member = memberService.join(memberReqDTO.toEntity());
+        String accessToken = memberService.genAccessToken(member);
+
+        mvc.perform(post("/api/v1/members/logout")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-3"))
+                .andDo(print());
     }
 }
