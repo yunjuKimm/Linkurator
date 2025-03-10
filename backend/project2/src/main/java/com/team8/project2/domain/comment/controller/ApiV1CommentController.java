@@ -58,7 +58,7 @@ public class ApiV1CommentController {
 	 * @return 수정된 댓글
 	 */
 	@PutMapping("/{id}")
-	@PreAuthorize("@commentService.canEdit(#id, #userDetails)")
+	@PreAuthorize("@commentService.canEdit(#commentId, #userDetails)")
 	public RsData<CommentDto> updateComment(
 		@PathVariable(name = "id") Long commentId,
 		@RequestBody CommentDto commentDto,
@@ -74,7 +74,7 @@ public class ApiV1CommentController {
 	 * @return 빈 응답 객체를 포함한 응답
 	 */
 	@DeleteMapping("/{id}")
-	@PreAuthorize("@commentService.canDelete(#id, #userDetails)")
+	@PreAuthorize("@commentService.canDelete(#commentId, #userDetails)")
 	public RsData<Void> deleteComment(
 		@PathVariable(name = "id") Long commentId,
 		@AuthenticationPrincipal UserDetails userDetails
