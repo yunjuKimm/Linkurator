@@ -16,9 +16,11 @@ import {
 } from "lucide-react";
 import RightSidebar from "@/app/components/right-sidebar";
 import CommentSection from "@/app/components/comment-section";
+import AddToPlaylistModal from "@/app/components/add-to-playlist-modal";
 
 // 큐레이션 데이터 타입
 interface CurationData {
+  id: number;
   title: string;
   content: string;
   authorName: string;
@@ -48,6 +50,7 @@ export default function CurationDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
 
   // API 데이터 호출
   useEffect(() => {
@@ -226,7 +229,7 @@ export default function CurationDetail() {
             홈으로 돌아가기
           </Link>
 
-          {/* 큐레이션 수정/삭제 버튼 */}
+          {/* 큐레이션 수정/삭제/플레이리스트 추가 버튼 */}
           <div className="relative">
             <button
               onClick={() => setShowActionMenu(!showActionMenu)}
@@ -251,6 +254,16 @@ export default function CurationDetail() {
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     큐레이션 삭제
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowActionMenu(false);
+                      setShowPlaylistModal(true);
+                    }}
+                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    플레이리스트에 추가
                   </button>
                 </div>
               </div>
@@ -441,6 +454,14 @@ export default function CurationDetail() {
           </div>
         </div>
       </div>
+
+      {/* 플레이리스트 추가 모달 렌더링 */}
+      {showPlaylistModal && (
+        <AddToPlaylistModal
+          curationId={post.id}
+          onClose={() => setShowPlaylistModal(false)}
+        />
+      )}
     </main>
   );
 }
