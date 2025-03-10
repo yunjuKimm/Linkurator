@@ -49,9 +49,7 @@ public class CurationService {
 	 * @return 생성된 큐레이션 객체
 	 */
 	@Transactional
-	public Curation createCuration(String title, String content, List<String> urls, List<String> tags) {
-		// 인증 미구현으로 샘플 데이터의 Member 사용
-		Member member = memberRepository.findById(1L).get();
+	public Curation createCuration(String title, String content, List<String> urls, List<String> tags, Member member) {
 
 		Curation curation = Curation.builder()
 			.member(member)

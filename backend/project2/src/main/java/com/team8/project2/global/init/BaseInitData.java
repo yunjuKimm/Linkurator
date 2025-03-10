@@ -1,12 +1,5 @@
 package com.team8.project2.global.init;
 
-import java.util.List;
-
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.team8.project2.domain.comment.dto.CommentDto;
 import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.curation.curation.entity.Curation;
@@ -15,8 +8,13 @@ import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.entity.RoleEnum;
 import com.team8.project2.domain.member.repository.MemberRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
@@ -46,7 +44,8 @@ public class BaseInitData {
 					"curation test title",
 					"curation test content",
 					List.of("https://www.naver.com/", "https://www.github.com/"),
-					List.of("포털", "개발")
+					List.of("포털", "개발"),
+					member
 				);
 
 				commentService.createComment(

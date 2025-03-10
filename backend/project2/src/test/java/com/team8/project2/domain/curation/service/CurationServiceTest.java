@@ -97,12 +97,11 @@ class CurationServiceTest {
 		// Mocking repository and service calls
 		when(linkService.getLink(anyString())).thenReturn(link);
 		when(tagService.getTag(anyString())).thenReturn(tag);
-		when(memberRepository.findById(anyLong())).thenReturn(Optional.of(new Member()));
 		when(curationRepository.save(any(Curation.class))).thenReturn(curation);
 		when(curationLinkRepository.saveAll(ArgumentMatchers.anyList())).thenReturn(List.of(new CurationLink()));
 		when(curationTagRepository.saveAll(ArgumentMatchers.anyList())).thenReturn(List.of(new CurationTag()));
 
-		Curation createdCuration = curationService.createCuration("New Title", "New Content", urls, tags);
+		Curation createdCuration = curationService.createCuration("New Title", "New Content", urls, tags, new Member());
 
 		// Verify interactions
 		verify(curationRepository, times(1)).save(any(Curation.class));

@@ -15,9 +15,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,8 +50,31 @@ public class ApiV1CurationControllerTest {
 	@Autowired
 	private MemberRepository memberRepository;
 
+	private Member testMember;
+
+	@PersistenceContext
+	private EntityManager entityManager;
+
 	@BeforeEach
 	void setUp() {
+		// 테스트용 Member 생성
+		testMember = Member.builder()
+				.memberId("test")
+				.username("test")
+				.password("test")
+				.email("test@example.com")
+				.role(RoleEnum.MEMBER)
+				.introduce("test")
+				.build();
+		memberRepository.save(testMember); // DB에 저장
+
+		// SecurityContext에 인증 설정
+		SecurityContext context = SecurityContextHolder.createEmptyContext();
+		UsernamePasswordAuthenticationToken authentication =
+				new UsernamePasswordAuthenticationToken(testMember, null, testMember.getAuthorities());
+		context.setAuthentication(authentication);
+		SecurityContextHolder.setContext(context);
+
 		// CurationReqDTO 설정 (링크 포함)
 		curationReqDTO = new CurationReqDTO();
 		curationReqDTO.setTitle("Test Title");
@@ -81,32 +109,49 @@ public class ApiV1CurationControllerTest {
 	}
 
 	// 글 수정 테스트
-//	@Test
-//	void updateCuration() throws Exception {
-//		// 테스트용 데이터 저장
-//		Curation savedCuration = curationService.createCuration("before title", "before content",
-//			List.of("https://www.google.com", "https://www.naver.com"), List.of("변경전 태그", "예시 태그"));
-//
-//
-//
-//		mockMvc.perform(put("/api/v1/curation/{id}", savedCuration.getId()).contentType("application/json")
-//				.content(new ObjectMapper().writeValueAsString(curationReqDTO)))
-//			.andExpect(status().isOk())
-//			.andExpect(jsonPath("$.code").value("200-1"))
-//			.andExpect(jsonPath("$.msg").value("글이 성공적으로 수정되었습니다."))
-//			.andExpect(jsonPath("$.data.title").value("Test Title"))
-//			.andExpect(jsonPath("$.data.content").value("Test Content"))
-//			.andExpect(jsonPath("$.data.urls.length()").value(1))
-//			.andExpect(jsonPath("$.data.urls[0].url").value("https://example.com"))
-//			.andExpect(jsonPath("$.data.tags.length()").value(1))
-//			.andExpect(jsonPath("$.data.tags[0].name").value("test"));
-//	}
+	@Test
+	void updateCuration() throws Exception {
+		// 테스트용 데이터 저장
+		Curation savedCuration = curationService.createCuration("before title", "before content",
+				List.of("https://www.google.com", "https://www.naver.com"), List.of("변경전 태그", "예시 태그"), testMember);
+
+		// 기존에 detached 상태일 수 있으므로 merge() 사용
+		savedCuration = entityManager.merge(savedCuration); // Hibernate의 merge()로 엔티티 상태 관리
+
+		// 수정된 curationReqDTO를 사용하여 PUT 요청
+		mockMvc.perform(put("/api/v1/curation/{id}", savedCuration.getId()).contentType("application/json")
+						.content(new ObjectMapper().writeValueAsString(curationReqDTO)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.code").value("200-1"))
+				.andExpect(jsonPath("$.msg").value("글이 성공적으로 수정되었습니다."))
+				.andExpect(jsonPath("$.data.title").value("Test Title"))
+				.andExpect(jsonPath("$.data.content").value("Test Content"))
+				.andExpect(jsonPath("$.data.urls.length()").value(1))
+				.andExpect(jsonPath("$.data.urls[0].url").value("https://example.com"))
+				.andExpect(jsonPath("$.data.tags.length()").value(1))
+				.andExpect(jsonPath("$.data.tags[0].name").value("test"));
+	}
+
 
 	// 글 삭제 테스트
 	@Test
 	void deleteCuration() throws Exception {
-		mockMvc.perform(delete("/api/v1/curation/{id}", 1L)).andExpect(status().isNoContent());
+		// Member 생성 및 저장
+		Member savedMember = memberRepository.save(testMember);
+
+		// 테스트용 큐레이션 생성
+		Curation curation = curationService.createCuration("Test Title", "Test Content",
+				List.of("https://example.com"), List.of("test"), savedMember);
+
+		// detach 상태일 경우 merge()로 관리 상태로 변경 후 삭제
+		curation = entityManager.merge(curation); // merge()로 상태 관리
+
+		// Member 인증 설정 후 삭제 요청
+		mockMvc.perform(delete("/api/v1/curation/{id}", curation.getId())
+						.principal(() -> savedMember.getUsername())) // AuthenticationPrincipal을 설정
+				.andExpect(status().isNoContent());
 	}
+
 
 	// 글 조회 테스트
 	@Test
@@ -134,7 +179,7 @@ public class ApiV1CurationControllerTest {
 					.collect(Collectors.toUnmodifiableList()), curationReqDTO.getTagReqDtos()
 					.stream()
 					.map(tagReqDto -> tagReqDto.getName())
-					.collect(Collectors.toUnmodifiableList()));
+					.collect(Collectors.toUnmodifiableList()), testMember);
 		}
 
 		mockMvc.perform(get("/api/v1/curation"))
@@ -163,7 +208,7 @@ public class ApiV1CurationControllerTest {
 			curationReqDTO.getLinkReqDtos()
 				.stream()
 				.map(linkReqDto -> linkReqDto.getUrl())
-				.collect(Collectors.toUnmodifiableList()), tags);
+				.collect(Collectors.toUnmodifiableList()), tags, testMember);
 	}
 
 	// 제목으로 글 검색
@@ -187,7 +232,7 @@ public class ApiV1CurationControllerTest {
 			.collect(Collectors.toUnmodifiableList()), curationReqDTO.getTagReqDtos()
 			.stream()
 			.map(tagReqDto -> tagReqDto.getName())
-			.collect(Collectors.toUnmodifiableList()));
+			.collect(Collectors.toUnmodifiableList()), testMember);
 	}
 
 	// 내용으로 글 검색
@@ -211,7 +256,7 @@ public class ApiV1CurationControllerTest {
 			.collect(Collectors.toUnmodifiableList()), curationReqDTO.getTagReqDtos()
 			.stream()
 			.map(tagReqDto -> tagReqDto.getName())
-			.collect(Collectors.toUnmodifiableList()));
+			.collect(Collectors.toUnmodifiableList()), testMember);
 	}
 
 	// 제목과 내용으로 글 검색
@@ -235,7 +280,7 @@ public class ApiV1CurationControllerTest {
 			.collect(Collectors.toUnmodifiableList()), curationReqDTO.getTagReqDtos()
 			.stream()
 			.map(tagReqDto -> tagReqDto.getName())
-			.collect(Collectors.toUnmodifiableList()));
+			.collect(Collectors.toUnmodifiableList()), testMember);
 	}
 
 	// 최신순으로 글 조회
@@ -291,7 +336,7 @@ public class ApiV1CurationControllerTest {
 				.stream()
 				.map(linkReqDto -> linkReqDto.getUrl())
 				.collect(Collectors.toList()),
-			curationReqDTO.getTagReqDtos().stream().map(tagReqDto -> tagReqDto.getName()).collect(Collectors.toList()));
+			curationReqDTO.getTagReqDtos().stream().map(tagReqDto -> tagReqDto.getName()).collect(Collectors.toList()), testMember);
 
 		curation.setLikeCount(likeCount);
 		curationRepository.save(curation);
@@ -309,7 +354,7 @@ public class ApiV1CurationControllerTest {
 				.collect(Collectors.toUnmodifiableList()), curationReqDTO.getTagReqDtos()
 				.stream()
 				.map(tagReqDto -> tagReqDto.getName())
-				.collect(Collectors.toUnmodifiableList()));
+				.collect(Collectors.toUnmodifiableList()), testMember);
 
 		Long memberId = 1L; // 테스트용 회원 ID
 
@@ -352,7 +397,7 @@ public class ApiV1CurationControllerTest {
 
 	private void createCurationWithTitleAndMember(String title, Member author) {
 		Curation curation = curationService.createCuration(title, "example content", List.of("https://www.google.com/"),
-			List.of("tag1", "tag2"));
+			List.of("tag1", "tag2"), testMember);
 		curation.setMember(author);
 		curationRepository.save(curation);
 	}

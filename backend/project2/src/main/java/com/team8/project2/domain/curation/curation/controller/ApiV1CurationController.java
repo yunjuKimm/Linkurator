@@ -7,8 +7,10 @@ import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.curation.tag.service.TagService;
+import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.global.dto.RsData;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,12 +35,13 @@ public class ApiV1CurationController {
      * @return 생성된 큐레이션 정보 응답
      */
     @PostMapping
-    public RsData<CurationResDto> createCuration(@RequestBody CurationReqDTO curationReq) {
+    public RsData<CurationResDto> createCuration(@RequestBody CurationReqDTO curationReq, @AuthenticationPrincipal Member member) {
         Curation createdCuration = curationService.createCuration(
                 curationReq.getTitle(),
                 curationReq.getContent(),
                 curationReq.getLinkReqDtos().stream().map(url -> url.getUrl()).collect(Collectors.toUnmodifiableList()),
-                curationReq.getTagReqDtos().stream().map(tag -> tag.getName()).collect(Collectors.toUnmodifiableList())
+                curationReq.getTagReqDtos().stream().map(tag -> tag.getName()).collect(Collectors.toUnmodifiableList()),
+                member
         );
         return new RsData<>("201-1", "글이 성공적으로 생성되었습니다.", new CurationResDto(createdCuration));
     }
@@ -50,7 +53,14 @@ public class ApiV1CurationController {
      * @return 수정된 큐레이션 정보 응답
      */
     @PutMapping("/{id}")
-    public RsData<CurationResDto> updateCuration(@PathVariable Long id, @RequestBody CurationReqDTO curationReq) {
+    public RsData<CurationResDto> updateCuration(@PathVariable Long id, @RequestBody CurationReqDTO curationReq, @AuthenticationPrincipal Member member) {
+        Curation curation = curationService.getCuration(id);
+
+        // 글 작성자와 현재 사용자가 같을 때만 수정 허용
+        if (!curation.getMember().getId().equals(member.getId())) {
+            return new RsData<>("403-1", "권한이 없습니다.", null); // 권한 없음
+        }
+
         Curation updatedCuration = curationService.updateCuration(
                 id,
                 curationReq.getTitle(),
@@ -67,7 +77,13 @@ public class ApiV1CurationController {
      * @return 삭제 성공 응답
      */
     @DeleteMapping("/{id}")
-    public RsData<Void> deleteCuration(@PathVariable Long id) {
+    public RsData<Void> deleteCuration(@PathVariable Long id, @AuthenticationPrincipal Member member) {
+        Curation curation = curationService.getCuration(id);
+
+        // 글 작성자와 현재 사용자가 같을 때만 삭제 허용
+        if (!curation.getMember().getId().equals(member.getId())) {
+            return new RsData<>("403-1", "권한이 없습니다.", null); // 권한 없음
+        }
         curationService.deleteCuration(id);
         return new RsData<>("204-1", "글이 성공적으로 삭제되었습니다.", null);
     }
