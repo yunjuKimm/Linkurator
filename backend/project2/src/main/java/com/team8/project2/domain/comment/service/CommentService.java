@@ -11,6 +11,7 @@ import com.team8.project2.global.exception.ServiceException;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,20 +39,14 @@ public class CommentService {
 	 * @throws ServiceException 큐레이션 ID가 제공되지 않거나 존재하지 않을 경우 예외 발생
 	 */
 	@Transactional
-	public CommentDto createComment(Long curationId, CommentDto commentDto) {
+	public CommentDto createComment(Member author, Long curationId, CommentDto commentDto) {
 		// curationId를 이용해 Curation 조회
 		Curation curation = curationRepository.findById(curationId)
 			.orElseThrow(
 				() -> new ServiceException("CURATION_NOT_FOUND", "해당 큐레이션을 찾을 수 없습니다. (id: " + curationId + ")"));
 
-		// Member 미구현으로 임시 Member 사용
-		Member member = memberRepository.findAll()
-			.stream()
-			.findFirst()
-			.orElseThrow(() -> new ServiceException("500-1", "등록된 회원이 없습니다. 인증 정보를 가져올 수 없습니다."));
-
 		// Curation 객체를 사용해 Comment 생성
-		Comment comment = commentDto.toEntity(member, curation);
+		Comment comment = commentDto.toEntity(author, curation);
 		Comment savedComment = commentRepository.save(comment);
 		return CommentDto.fromEntity(savedComment);
 	}
@@ -73,6 +68,7 @@ public class CommentService {
 	 * @throws ServiceException 해당 댓글이 존재하지 않을 경우 예외 발생
 	 */
 	@Transactional
+	@PreAuthorize("@commentService.canDelete(#commentId, #userDetails.username)")
 	public void deleteComment(Long commentId) {
 		Comment comment = commentRepository.findById(commentId)
 			.orElseThrow(() -> new ServiceException("COMMENT_NOT_FOUND", "해당 댓글을 찾을 수 없습니다."));
@@ -80,12 +76,25 @@ public class CommentService {
 	}
 
 	@Transactional
+	@PreAuthorize("@commentService.canEdit(#commentId, #userDetails.username)")
 	public CommentDto updateComment(Long commentId, CommentDto commentDto) {
 
 		Comment comment = commentRepository.findById(commentId)
 			.orElseThrow(() -> new ServiceException("COMMENT_NOT_FOUND", "해당 댓글을 찾을 수 없습니다."));
 		comment.updateContent(commentDto.getContent());
 		return CommentDto.fromEntity(comment);
+	}
+
+	public boolean canEdit(Long commentId, String username) {
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new ServiceException("COMMENT_NOT_FOUND", "해당 댓글을 찾을 수 없습니다."));
+		return comment.getAuthor().getUsername().equals(username);
+	}
+
+	public boolean canDelete(Long commentId, String username) {
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new ServiceException("COMMENT_NOT_FOUND", "해당 댓글을 찾을 수 없습니다."));
+		return comment.getAuthor().getUsername().equals(username);
 	}
 }
 

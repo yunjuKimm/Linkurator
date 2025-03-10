@@ -50,6 +50,7 @@ public class BaseInitData {
 				);
 
 				commentService.createComment(
+					member,
 					curation.getId(),
 					CommentDto.builder()
 						.content("comment test content")

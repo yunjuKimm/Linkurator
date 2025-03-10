@@ -2,11 +2,13 @@ package com.team8.project2.domain.comment.controller;
 
 import com.team8.project2.domain.comment.dto.CommentDto;
 import com.team8.project2.domain.comment.service.CommentService;
-import com.team8.project2.global.dto.Empty;
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,14 +24,18 @@ public class ApiV1CommentController {
 
 	private final CommentService commentService;
 
+	private final Rq rq;
+
 	/**
 	 * 새로운 댓글을 생성합니다.
 	 * @param commentDto 댓글 생성 요청 데이터
 	 * @return 생성된 댓글 정보를 포함한 응답
 	 */
 	@PostMapping
+	@PreAuthorize("isAuthenticated()")
 	public RsData<CommentDto> createComment(@PathVariable Long curationId, @RequestBody CommentDto commentDto) {
-		CommentDto createdComment = commentService.createComment(curationId, commentDto);
+		Member actor = rq.getActor();
+		CommentDto createdComment = commentService.createComment(actor, curationId, commentDto);
 		return RsData.success(createdComment);
 	}
 
