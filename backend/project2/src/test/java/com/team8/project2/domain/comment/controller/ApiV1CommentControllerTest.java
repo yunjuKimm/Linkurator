@@ -110,7 +110,8 @@ class ApiV1CommentControllerTest {
 	@Test
 	@DisplayName("댓글을 조회할 수 있다")
 	void getCommentsByCurationId() throws Exception {
-		createCommentAtCuration(1L);
+		Member author = memberRepository.findById(1L).get();
+		createCommentAtCuration(1L, author);
 
 		mockMvc.perform(get("/api/v1/curations/1/comments"))
 			.andExpect(status().isOk())
@@ -121,8 +122,7 @@ class ApiV1CommentControllerTest {
 			.andExpect(jsonPath("$.data[0].content").value("comment test content"));
 	}
 
-	private CommentDto createCommentAtCuration(Long curationId) {
-		Member author = memberRepository.findById(1L).get();
+	private CommentDto createCommentAtCuration(Long curationId, Member author) {
 		CommentDto commentDto = CommentDto.builder()
 			.content("content example")
 			.build();
@@ -130,11 +130,13 @@ class ApiV1CommentControllerTest {
 	}
 
 	@Test
-	@DisplayName("댓글을 삭제할 수 있다.")
+	@DisplayName("댓글 작성자는 댓글을 삭제할 수 있다")
 	void deleteComment() throws Exception {
-		CommentDto savedCommentDto = createCommentAtCuration(1L);
+		Member author = memberRepository.findById(1L).get();
+		CommentDto savedCommentDto = createCommentAtCuration(1L, author);
 
-		mockMvc.perform(delete("/api/v1/curations/1/comments/%d".formatted(savedCommentDto.getId())))
+		mockMvc.perform(delete("/api/v1/curations/1/comments/%d".formatted(savedCommentDto.getId()))
+			.header("Authorization", "Bearer " + authorAccessKey))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.code").value("200-1"))
 			.andExpect(jsonPath("$.msg").value("댓글이 삭제되었습니다."));
