@@ -9,6 +9,8 @@ import com.team8.project2.global.dto.RsData;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,7 +34,6 @@ public class ApiV1CommentController {
 	 * @return 생성된 댓글 정보를 포함한 응답
 	 */
 	@PostMapping
-	@PreAuthorize("isAuthenticated()")
 	public RsData<CommentDto> createComment(@PathVariable Long curationId, @RequestBody CommentDto commentDto) {
 		Member actor = rq.getActor();
 		CommentDto createdComment = commentService.createComment(actor, curationId, commentDto);
@@ -57,8 +58,13 @@ public class ApiV1CommentController {
 	 * @return 수정된 댓글
 	 */
 	@PutMapping("/{id}")
-	public RsData<CommentDto> updateComment(@PathVariable(name = "id") Long commentId, @RequestBody CommentDto commentDto) {
-		CommentDto updatedComment = commentService.updateComment(commentId, commentDto);
+	@PreAuthorize("@commentService.canEdit(#id, #userDetails)")
+	public RsData<CommentDto> updateComment(
+		@PathVariable(name = "id") Long commentId,
+		@RequestBody CommentDto commentDto,
+		@AuthenticationPrincipal UserDetails userDetails
+	) {
+		CommentDto updatedComment = commentService.updateComment(commentId, commentDto, userDetails.getUsername());
 		return RsData.success(updatedComment);
 	}
 
@@ -68,8 +74,12 @@ public class ApiV1CommentController {
 	 * @return 빈 응답 객체를 포함한 응답
 	 */
 	@DeleteMapping("/{id}")
-	public RsData<Void> deleteComment(@PathVariable(name = "id") Long commentId) {
-		commentService.deleteComment(commentId);
+	@PreAuthorize("@commentService.canDelete(#id, #userDetails)")
+	public RsData<Void> deleteComment(
+		@PathVariable(name = "id") Long commentId,
+		@AuthenticationPrincipal UserDetails userDetails
+	) {
+		commentService.deleteComment(commentId, userDetails.getUsername());
 		return new RsData<>("200-1", "댓글이 삭제되었습니다.");
 	}
 }

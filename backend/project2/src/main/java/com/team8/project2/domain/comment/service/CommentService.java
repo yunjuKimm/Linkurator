@@ -12,6 +12,7 @@ import com.team8.project2.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +31,6 @@ public class CommentService {
 
 	private final CommentRepository commentRepository;
 	private final CurationRepository curationRepository;
-	private final MemberRepository memberRepository;
 
 	/**
 	 * 새로운 댓글을 생성합니다.
@@ -43,7 +43,7 @@ public class CommentService {
 		// curationId를 이용해 Curation 조회
 		Curation curation = curationRepository.findById(curationId)
 			.orElseThrow(
-				() -> new ServiceException("CURATION_NOT_FOUND", "해당 큐레이션을 찾을 수 없습니다. (id: " + curationId + ")"));
+				() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다. (id: " + curationId + ")"));
 
 		// Curation 객체를 사용해 Comment 생성
 		Comment comment = commentDto.toEntity(author, curation);
@@ -68,33 +68,49 @@ public class CommentService {
 	 * @throws ServiceException 해당 댓글이 존재하지 않을 경우 예외 발생
 	 */
 	@Transactional
-	@PreAuthorize("@commentService.canDelete(#commentId, #userDetails.username)")
-	public void deleteComment(Long commentId) {
+	public void deleteComment(Long commentId, String username) {
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new ServiceException("COMMENT_NOT_FOUND", "해당 댓글을 찾을 수 없습니다."));
+			.orElseThrow(() -> new ServiceException("404-2", "해당 댓글을 찾을 수 없습니다."));
+		if (!comment.getAuthor().getUsername().equals(username)) {
+			throw new ServiceException("403-2", "댓글을 삭제할 권한이 없습니다.");
+		}
 		commentRepository.delete(comment);
 	}
 
 	@Transactional
-	@PreAuthorize("@commentService.canEdit(#commentId, #userDetails.username)")
-	public CommentDto updateComment(Long commentId, CommentDto commentDto) {
+	public CommentDto updateComment(Long commentId, CommentDto commentDto, String username) {
 
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new ServiceException("COMMENT_NOT_FOUND", "해당 댓글을 찾을 수 없습니다."));
+			.orElseThrow(() -> new ServiceException("404-2", "해당 댓글을 찾을 수 없습니다."));
+		if (!comment.getAuthor().getUsername().equals(username)) {
+			throw new ServiceException("403-2", "댓글을 수정할 권한이 없습니다.");
+		}
 		comment.updateContent(commentDto.getContent());
 		return CommentDto.fromEntity(comment);
 	}
 
-	public boolean canEdit(Long commentId, String username) {
+	// 댓글 수정 권한 체크 메서드
+	public boolean canEdit(Long commentId, UserDetails userDetails) {
+		if (userDetails == null) {
+			throw new ServiceException("401-1", "사용자 정보가 없습니다.");
+		}
+
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new ServiceException("COMMENT_NOT_FOUND", "해당 댓글을 찾을 수 없습니다."));
-		return comment.getAuthor().getUsername().equals(username);
+			.orElseThrow(() -> new ServiceException("404-2", "해당 댓글을 찾을 수 없습니다."));
+
+		return comment.getAuthor().getUsername().equals(userDetails.getUsername());
 	}
 
-	public boolean canDelete(Long commentId, String username) {
+	// 댓글 삭제 권한 체크 메서드
+	public boolean canDelete(Long commentId, UserDetails userDetails) {
+		if (userDetails == null) {
+			throw new ServiceException("401-1", "사용자 정보가 없습니다.");
+		}
+
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new ServiceException("COMMENT_NOT_FOUND", "해당 댓글을 찾을 수 없습니다."));
-		return comment.getAuthor().getUsername().equals(username);
+			.orElseThrow(() -> new ServiceException("404-2", "해당 댓글을 찾을 수 없습니다."));
+
+		return comment.getAuthor().getUsername().equals(userDetails.getUsername());
 	}
 }
 
