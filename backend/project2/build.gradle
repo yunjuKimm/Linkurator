@@ -54,6 +54,11 @@ dependencies {
 	// 외부 링크의 메타 데이터 추출 라이브러리 Jsoup
 	implementation 'org.jsoup:jsoup:1.15.4'
 
+	//jwt
+	implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
+	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
+
 }
 
 tasks.named('test') {

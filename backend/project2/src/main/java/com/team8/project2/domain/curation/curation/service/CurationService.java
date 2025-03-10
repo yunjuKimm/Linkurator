@@ -99,23 +99,26 @@ public class CurationService {
 		curation.setTitle(title);
 		curation.setContent(content);
 
-		// 큐레이션 - 링크 연결 업데이트
+//		 큐레이션 - 링크 연결 업데이트
+
 		List<CurationLink> curationLinks = urls.stream()
 			.map(url -> {
 				CurationLink curationLink = new CurationLink();
 				return curationLink.setCurationAndLink(curation, linkService.getLink(url));
 			}).collect(Collectors.toList());
 		curationLinkRepository.saveAll(curationLinks);
-		curation.setCurationLinks(curationLinks);
+		curation.getCurationLinks().clear();
+		curation.getCurationLinks().addAll(curationLinks);
+//		 큐레이션 - 태그 연결 업데이트
 
-		// 큐레이션 - 태그 연결 업데이트
 		List<CurationTag> curationTags = tags.stream()
 			.map(tag -> {
 				CurationTag curationTag = new CurationTag();
 				return curationTag.setCurationAndTag(curation, tagService.getTag(tag));
 			}).collect(Collectors.toList());
 		curationTagRepository.saveAll(curationTags);
-		curation.setTags(curationTags);
+		curation.getTags().clear();
+		curation.getTags().addAll(curationTags);
 
 		return curationRepository.save(curation);
 	}
@@ -152,13 +155,13 @@ public class CurationService {
      * @param order 정렬 기준
      * @return 검색된 큐레이션 목록
      */
-    public List<Curation> searchCurations(List<String> tags, String title, String content, SearchOrder order) {
+    public List<Curation> searchCurations(List<String> tags, String title, String content, String author, SearchOrder order) {
         if (tags == null || tags.isEmpty()) {
             // 태그가 없을 경우 필터 없이 검색
-            return curationRepository.searchByFiltersWithoutTags(tags, title, content, order.name());
+            return curationRepository.searchByFiltersWithoutTags(tags, title, content, author, order.name());
         } else {
             // 태그가 있을 경우 태그 필터 적용
-            return curationRepository.searchByFilters(tags, tags.size(), title, content, order.name());
+            return curationRepository.searchByFilters(tags, tags.size(), title, content, author, order.name());
         }
     }
 

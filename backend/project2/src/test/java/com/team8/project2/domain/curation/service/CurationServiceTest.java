@@ -211,10 +211,10 @@ class CurationServiceTest {
 
 	@Test
 	void findAllCuration() {
-		when(curationRepository.searchByFilters(ArgumentMatchers.anyList(), anyInt(), anyString(), anyString(), any()))
+		when(curationRepository.searchByFilters(ArgumentMatchers.anyList(), anyInt(), anyString(), anyString(), any(), any()))
 			.thenReturn(List.of(curation));
 
-		List<Curation> foundCurations = curationService.searchCurations(List.of("tag"), "title", "content",
+		List<Curation> foundCurations = curationService.searchCurations(List.of("tag"), "title", "content", null,
 			SearchOrder.LATEST);
 
 		// Verify the result
