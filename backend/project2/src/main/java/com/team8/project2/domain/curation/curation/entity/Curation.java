@@ -1,5 +1,7 @@
 package com.team8.project2.domain.curation.curation.entity;
 
+import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -9,10 +11,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.team8.project2.domain.comment.entity.Comment;
-import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
-import com.team8.project2.domain.member.entity.Member;
 
 /**
  * 큐레이션(Curation) 엔티티 클래스입니다.
@@ -81,19 +79,19 @@ public class Curation {
     /**
      * 큐레이션에 포함된 링크 목록 (CurationLink와 1:N 관계)
      */
-    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true)
+    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true, cascade = CascadeType.ALL)
     private List<CurationLink> curationLinks = new ArrayList<>();
 
     /**
      * 큐레이션에 포함된 태그 목록 (CurationTag와 1:N 관계)
      */
-    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true)
+    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true, cascade = CascadeType.ALL)
     private List<CurationTag> tags = new ArrayList<>();
 
     /**
      * 큐레이션에 포함된 댓글 목록 (Comment와 1:N 관계)
      */
-    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true)
+    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true, cascade = CascadeType.ALL)
     private List<Comment> comments = new ArrayList<>();
 
     /**

@@ -315,7 +315,7 @@ export default function PostList() {
               </div>
 
               <div>
-                <Link href={`/post/${curation.id}`} className="group">
+                <Link href={`/curation/${curation.id}`} className="group">
                   <h2 className="text-xl font-bold group-hover:text-blue-600">
                     {curation.title}
                   </h2>
