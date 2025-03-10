@@ -3,12 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Play, MoreVertical } from "lucide-react";
+import { Play } from "lucide-react";
 
 interface Playlist {
   id: number;
   title: string;
-  description: string;
   thumbnailUrl?: string;
   createdAt: string;
 }
@@ -23,9 +22,8 @@ export default function PlaylistGrid() {
         const res = await fetch("http://localhost:8080/api/v1/playlists", {
           cache: "no-store",
         });
-        if (!res.ok) {
+        if (!res.ok)
           throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");
-        }
         const result = await res.json();
         setPlaylists(result.data);
       } catch (error) {
