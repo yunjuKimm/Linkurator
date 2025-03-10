@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/curations/{curationId}/comments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateComment"];
+        post?: never;
+        delete: operations["deleteComment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/curation/{id}": {
         parameters: {
             query?: never;
@@ -78,22 +94,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["addCurationToPlaylist"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/members/join": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["join"];
         delete?: never;
         options?: never;
         head?: never;
@@ -196,6 +196,22 @@ export interface paths {
         patch: operations["updatePlaylistItemOrder"];
         trace?: never;
     };
+    "/api/v1/playlists/{id}/recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getRecommendedPlaylists"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/playlists/{id}/items/{itemId}": {
         parameters: {
             query?: never;
@@ -207,22 +223,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["deletePlaylistItem"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/curations/{curationId}/comments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["deleteComment"];
         options?: never;
         head?: never;
         patch?: never;
@@ -241,6 +241,21 @@ export interface components {
         LinkReqDTO: {
             url: string;
         };
+        Comment: {
+            /** Format: int64 */
+            id?: number;
+            author?: components["schemas"]["Member"];
+            curation?: components["schemas"]["Curation"];
+            content?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            modifiedAt?: string;
+            /** Format: int64 */
+            authorId?: number;
+            authorImgUrl?: string;
+            authorName?: string;
+        };
         Curation: {
             /** Format: int64 */
             id?: number;
@@ -255,6 +270,11 @@ export interface components {
             member?: components["schemas"]["Member"];
             curationLinks?: components["schemas"]["CurationLink"][];
             tags?: components["schemas"]["CurationTag"][];
+            comments?: components["schemas"]["Comment"][];
+            /** Format: int64 */
+            memberId?: number;
+            memberImgUrl?: string;
+            memberName?: string;
         };
         CurationLink: {
             id?: components["schemas"]["CurationLinkId"];
@@ -278,6 +298,9 @@ export interface components {
             /** Format: int64 */
             tagId?: number;
         };
+        GrantedAuthority: {
+            authority?: string;
+        };
         Link: {
             /** Format: int64 */
             id?: number;
@@ -298,13 +321,15 @@ export interface components {
             memberId?: string;
             username?: string;
             password?: string;
-            apiKey?: string;
             /** @enum {string} */
             role?: "ADMIN" | "USER" | "MEMBER";
             profileImage?: string;
             email?: string;
             introduce?: string;
+            authorities?: components["schemas"]["GrantedAuthority"][];
+            member?: boolean;
             admin?: boolean;
+            memberAuthoritesAsString?: string[];
         };
         RsDataLink: {
             code?: string;
@@ -316,6 +341,21 @@ export interface components {
             id?: number;
             name?: string;
             curationTags?: components["schemas"]["CurationTag"][];
+        };
+        CommentDto: {
+            /** Format: int64 */
+            id?: number;
+            authorName?: string;
+            content?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            modifiedAt?: string;
+        };
+        RsDataCommentDto: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["CommentDto"];
         };
         CurationReqDTO: {
             title: string;
@@ -362,6 +402,7 @@ export interface components {
             title?: string;
             description?: string;
             items?: components["schemas"]["PlaylistItemDto"][];
+            tags?: string[];
         };
         PlaylistItemDto: {
             /** Format: int64 */
@@ -375,28 +416,6 @@ export interface components {
             msg?: string;
             data?: components["schemas"]["PlaylistDto"];
         };
-        JoinReqBody: {
-            memberId: string;
-            password: string;
-            email: string;
-            /** @enum {string} */
-            role?: "ADMIN" | "USER" | "MEMBER";
-            profileImage?: string;
-            introduce?: string;
-        };
-        MemberDto: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: date-time */
-            createdDatetime?: string;
-            /** Format: date-time */
-            modifiedDatetime?: string;
-        };
-        RsDataMemberDto: {
-            code?: string;
-            msg?: string;
-            data?: components["schemas"]["MemberDto"];
-        };
         LinkResDTO: {
             url?: string;
             title?: string;
@@ -407,21 +426,6 @@ export interface components {
             code?: string;
             msg?: string;
             data?: components["schemas"]["LinkResDTO"];
-        };
-        CommentDto: {
-            /** Format: int64 */
-            id?: number;
-            authorName?: string;
-            content?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            modifiedAt?: string;
-        };
-        RsDataCommentDto: {
-            code?: string;
-            msg?: string;
-            data?: components["schemas"]["CommentDto"];
         };
         RsDataVoid: {
             code?: string;
@@ -447,6 +451,41 @@ export interface components {
             code?: string;
             msg?: string;
             data?: components["schemas"]["CurationResDto"][];
+        };
+        CommentResDto: {
+            /** Format: int64 */
+            commentId?: number;
+            /** Format: int64 */
+            authorId?: number;
+            authorName?: string;
+            authorImgUrl?: string;
+            content?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            modifiedAt?: string;
+        };
+        CurationDetailResDto: {
+            /** Format: int64 */
+            id?: number;
+            title?: string;
+            content?: string;
+            /** Format: int64 */
+            authorId?: number;
+            authorName?: string;
+            authorImgUrl?: string;
+            urls?: components["schemas"]["LinkResDto"][];
+            tags?: components["schemas"]["TagResDto"][];
+            comments?: components["schemas"]["CommentResDto"][];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            modifiedAt?: string;
+        };
+        RsDataCurationDetailResDto: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["CurationDetailResDto"];
         };
     };
     responses: never;
@@ -523,6 +562,72 @@ export interface operations {
             };
         };
     };
+    updateComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataCommentDto"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
+    deleteComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
     getCuration: {
         parameters: {
             query?: never;
@@ -540,7 +645,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataCurationResDto"];
+                    "*/*": components["schemas"]["RsDataCurationDetailResDto"];
                 };
             };
             /** @description Internal Server Error */
@@ -789,39 +894,6 @@ export interface operations {
             };
         };
     };
-    join: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["JoinReqBody"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RsDataMemberDto"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
-                };
-            };
-        };
-    };
     addLink: {
         parameters: {
             query?: never;
@@ -960,6 +1032,7 @@ export interface operations {
                 tags?: string[];
                 title?: string;
                 content?: string;
+                author?: string;
                 order?: "LATEST" | "OLDEST" | "LIKECOUNT";
             };
             header?: never;
@@ -1153,13 +1226,12 @@ export interface operations {
             };
         };
     };
-    deletePlaylistItem: {
+    getRecommendedPlaylists: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 id: number;
-                itemId: number;
             };
             cookie?: never;
         };
@@ -1171,7 +1243,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataVoid"];
+                    "*/*": components["schemas"]["RsDataListPlaylistDto"];
                 };
             };
             /** @description Internal Server Error */
@@ -1185,12 +1257,13 @@ export interface operations {
             };
         };
     };
-    deleteComment: {
+    deletePlaylistItem: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 id: number;
+                itemId: number;
             };
             cookie?: never;
         };
