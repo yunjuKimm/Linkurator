@@ -45,8 +45,8 @@ public class CurationService {
 	 * @param username 조회할 큐레이터의 username
 	 * @return 해당 큐레이터가 작성한 큐레이션 개수
 	 */
-	public long countByMemberUsername(String username) {
-		return curationRepository.countByMemberUsername(username);
+	public long countByMemberId(String username) {
+		return curationRepository.countByMemberId(username);
 	}
 
 	/**
