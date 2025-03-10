@@ -1,6 +1,7 @@
 package com.team8.project2.domain.curation.curation.dto;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -115,6 +116,7 @@ public class CurationDetailResDto {
 				.collect(Collectors.toList()))
 			.comments(curation.getComments().stream()
 				.map(comment -> new CommentResDto(comment))
+				.sorted(Comparator.comparing(CommentResDto::getCreatedAt).reversed())
 				.collect(Collectors.toList()))
 			.createdAt(curation.getCreatedAt())
 			.modifiedAt(curation.getModifiedAt())
