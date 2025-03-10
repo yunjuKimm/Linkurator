@@ -238,7 +238,7 @@ export default function CuratorProfile({
               </div>
 
               <div>
-                <Link href={`/post/${curation.id}`} className="group">
+                <Link href={`/curation/${curation.id}`} className="group">
                   <h2 className="text-xl font-bold group-hover:text-blue-600">
                     {curation.title}
                   </h2>
@@ -249,7 +249,7 @@ export default function CuratorProfile({
                     : curation.content}
                 </p>
                 <Link
-                  href={`/post/${curation.id}`}
+                  href={`/curation/${curation.id}`}
                   className="mt-2 inline-block text-sm font-medium text-blue-600"
                 >
                   더보기
