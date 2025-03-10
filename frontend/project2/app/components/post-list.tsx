@@ -325,7 +325,9 @@ export default function PostList() {
                     ? `${curation.content.substring(0, 100)}...`
                     : curation.content}
                 </p>
-                <button className="mt-2 text-sm font-medium text-blue-600">더보기</button>
+                <button className="mt-2 text-sm font-medium text-blue-600">
+                  더보기
+                </button>
               </div>
 
               {/* 태그 표시 */}
