@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 import java.util.List;
 import java.util.Arrays;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -40,6 +41,7 @@ class PlaylistServiceTest {
         samplePlaylist = Playlist.builder()
                 .id(1L)
                 .title("테스트 플레이리스트")
+                .tags(Set.of())
                 .description("테스트 설명")
                 .build();
     }
@@ -56,6 +58,7 @@ class PlaylistServiceTest {
                 .id(2L)
                 .title(request.getTitle())
                 .description(request.getDescription())
+                .tags(Set.of())
                 .build();
 
         when(playlistRepository.save(any(Playlist.class))).thenReturn(newPlaylist);

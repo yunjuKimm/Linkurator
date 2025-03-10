@@ -237,7 +237,7 @@ export default function PostDetail({ params }: { params: { id: string } }) {
               <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
                 <div className="py-1" role="menu" aria-orientation="vertical">
                   <Link
-                    href={`/post/${params.id}/edit`}
+                    href={`/curation/${params.id}/edit`}
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     <Edit className="mr-2 h-4 w-4" />
@@ -259,15 +259,21 @@ export default function PostDetail({ params }: { params: { id: string } }) {
         <article className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Image
-                src={post.authorImage || "/placeholder.svg?height=40&width=40"}
-                alt={post.authorName}
-                width={40}
-                height={40}
-                className="rounded-full"
-              />
+              <Link href={`/${post.authorName}`} className="group">
+                <Image
+                  src={
+                    post.authorImage || "/placeholder.svg?height=40&width=40"
+                  }
+                  alt={post.authorName}
+                  width={40}
+                  height={40}
+                  className="rounded-full"
+                />
+              </Link>
               <div>
-                <p className="font-medium">{post.authorName}</p>
+                <Link href={`/${post.authorName}`} className="group">
+                  <p className="font-medium">{post.authorName}</p>
+                </Link>
                 <p className="text-xs text-gray-500">
                   {isModified
                     ? `수정된 날짜: ${formatDate(post.modifiedAt)}`
@@ -409,15 +415,21 @@ export default function PostDetail({ params }: { params: { id: string } }) {
           <div className="rounded-lg border p-4">
             <h3 className="mb-3 font-semibold">이 글의 작성자</h3>
             <div className="flex items-center space-x-3">
-              <Image
-                src={post.authorImage || "/placeholder.svg?height=48&width=48"}
-                alt={post.authorName}
-                width={48}
-                height={48}
-                className="rounded-full"
-              />
+              <Link href={`/${post.authorName}`} className="group">
+                <Image
+                  src={
+                    post.authorImage || "/placeholder.svg?height=48&width=48"
+                  }
+                  alt={post.authorName}
+                  width={48}
+                  height={48}
+                  className="rounded-full"
+                />
+              </Link>
               <div>
-                <p className="font-medium">{post.authorName}</p>
+                <Link href={`/${post.authorName}`} className="group">
+                  <p className="font-medium">{post.authorName}</p>
+                </Link>
                 <p className="text-xs text-gray-500">15개의 글 작성</p>
               </div>
             </div>
