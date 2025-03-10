@@ -108,8 +108,7 @@ public class CurationService {
 			}).collect(Collectors.toList());
 		curationLinkRepository.saveAll(curationLinks);
 		curation.getCurationLinks().clear();
-		curation.setCurationLinks(curationLinks);
-
+		curation.getCurationLinks().addAll(curationLinks);
 //		 큐레이션 - 태그 연결 업데이트
 
 		List<CurationTag> curationTags = tags.stream()
@@ -119,7 +118,7 @@ public class CurationService {
 			}).collect(Collectors.toList());
 		curationTagRepository.saveAll(curationTags);
 		curation.getTags().clear();
-		curation.setTags(curationTags);
+		curation.getTags().addAll(curationTags);
 
 		return curationRepository.save(curation);
 	}
