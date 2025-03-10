@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Play, PlusCircle } from "lucide-react";
 import { getPlaylists } from "@/lib/playlist-service"; // API 호출 함수
 import type { Playlist } from "@/types/playlist";
+import PlaylistGrid from "@/app/components/playlist-grid";
 
 export default function PlaylistsPage() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
