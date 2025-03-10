@@ -98,9 +98,10 @@ public class ApiV1CurationController {
             @RequestParam(required = false) List<String> tags,
             @RequestParam(required = false) String title,
             @RequestParam(required = false) String content,
+            @RequestParam(required = false) String author,
             @RequestParam(required = false, defaultValue = "LATEST") SearchOrder order
     ) {
-        List<CurationResDto> result = curationService.searchCurations(tags, title, content, order)
+        List<CurationResDto> result = curationService.searchCurations(tags, title, content, author, order)
                 .stream()
                 .map(CurationResDto::new)
                 .collect(Collectors.toUnmodifiableList());

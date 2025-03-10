@@ -34,7 +34,6 @@ public class BaseInitData {
 				Member member = Member.builder()
 					.email("team8@gmail.com")
 					.role(RoleEnum.MEMBER)
-					.apiKey("memberId")
 					.memberId("memberId")
 					.username("username")
 					.password("password")

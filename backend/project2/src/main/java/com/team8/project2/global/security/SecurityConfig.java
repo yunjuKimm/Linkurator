@@ -1,11 +1,13 @@
 package com.team8.project2.global.security;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -15,7 +17,10 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+	private final CustomAuthenticationFilter customAuthenticationFilter;
 
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -45,6 +50,8 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
 				.requestMatchers("/api/v1/playlists/**").authenticated()
 
+				// 권한 설정
+				.requestMatchers("/api/v1/posts/statistics").hasRole("ADMIN")
 				// 🔹 h2-console 접근 허용
 				.requestMatchers(HttpMethod.GET, "/h2-console/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
@@ -56,7 +63,8 @@ public class SecurityConfig {
 				.addHeaderWriter(new XFrameOptionsHeaderWriter(
 					XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN)))
 			// ✅ CSRF 비활성화 (API 사용을 위해 필수)
-			.csrf(csrf -> csrf.disable());
+			.csrf(csrf -> csrf.disable())
+			.addFilterBefore(customAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
 
 		return http.build();
