@@ -2,6 +2,7 @@ package com.team8.project2.domain.member.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
+import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.curation.tag.dto.TagReqDto;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +50,9 @@ public class ApiV1MemberControllerTest {
     @Autowired
     private MemberRepository memberRepository;
 
+    @Autowired
+    private CurationService curationService;
+
     private MemberReqDTO memberReqDTO;
 
     private static String validToken;
@@ -65,6 +70,18 @@ public class ApiV1MemberControllerTest {
         memberReqDTO.setProfileImage("www.url");
         memberReqDTO.setEmail("member1@gmail.com");
         memberReqDTO.setIntroduce("안녕");
+
+        // ✅ 회원이 없으면 생성
+        Member member = memberRepository.findByMemberId(memberReqDTO.getMemberId())
+                .orElseGet(() -> memberRepository.save(memberReqDTO.toEntity()));
+
+        // ✅ 큐레이션 추가
+        curationService.createCuration(
+                "테스트 큐레이션 1",
+                "큐레이션 내용",
+                List.of("https://test.com"),
+                List.of("테스트 태그")
+        );
 
     }
 
@@ -194,6 +211,45 @@ public class ApiV1MemberControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.msg").value("memberId : NotBlank : 회원 ID는 필수 입력값입니다."));
     }
+
+    @Test
+    @DisplayName("memberId 기반 큐레이터 정보 조회")
+    void getCuratorInfoTest() throws Exception {
+        // Given
+        long curationCount = curationService.countByMemberId(memberReqDTO.getMemberId()); // ✅ setup()에서 큐레이션 추가됨
+
+        // When
+        mvc.perform(get("/api/v1/members/" + memberReqDTO.getMemberId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-4"))
+                .andExpect(jsonPath("$.data.username").value("초보"))
+                .andExpect(jsonPath("$.data.profileImage").value("www.url"))
+                .andExpect(jsonPath("$.data.introduce").value("안녕"))
+                .andExpect(jsonPath("$.data.curationCount").value(curationCount)) // ✅ 예상 값과 실제 값이 일치하도록 변경
+                .andDo(print());
+    }
+
+    @Test
+    @DisplayName("이미 존재하는 memberId로 회원 가입 시 오류 발생")
+    void joinWithDuplicateMemberId() throws Exception {
+        // Given
+        String duplicateMemberId = memberReqDTO.getMemberId(); // `setup()`에서 이미 생성된 ID 사용
+        String password = "123456";
+        String email = "duplicate@example.com";
+        String role = "MEMBER";
+        String profileImage = "www.url";
+        String introduce = "안녕";
+
+        // When
+        ResultActions resultActions = joinRequest(duplicateMemberId, password, email, role, profileImage, introduce);
+
+        // Then
+        resultActions
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("409-1"))
+                .andExpect(jsonPath("$.msg").value("사용중인 아이디"));
+    }
+
 
     @Test
     @DisplayName("JWT 인증으로 내 정보 조회")

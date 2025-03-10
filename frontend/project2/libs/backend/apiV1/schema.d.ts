@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/curations/{curationId}/comments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateComment"];
+        post?: never;
+        delete: operations["deleteComment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/curation/{id}": {
         parameters: {
             query?: never;
@@ -78,6 +94,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["addCurationToPlaylist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -196,6 +244,54 @@ export interface paths {
         patch: operations["updatePlaylistItemOrder"];
         trace?: never;
     };
+    "/api/v1/playlists/{id}/recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getRecommendedPlaylists"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/{memberId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getCuratorInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMyInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/playlists/{id}/items/{itemId}": {
         parameters: {
             query?: never;
@@ -207,22 +303,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["deletePlaylistItem"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/curations/{curationId}/comments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["deleteComment"];
         options?: never;
         head?: never;
         patch?: never;
@@ -241,6 +321,21 @@ export interface components {
         LinkReqDTO: {
             url: string;
         };
+        Comment: {
+            /** Format: int64 */
+            id?: number;
+            author?: components["schemas"]["Member"];
+            curation?: components["schemas"]["Curation"];
+            content?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            modifiedAt?: string;
+            /** Format: int64 */
+            authorId?: number;
+            authorName?: string;
+            authorImgUrl?: string;
+        };
         Curation: {
             /** Format: int64 */
             id?: number;
@@ -255,6 +350,11 @@ export interface components {
             member?: components["schemas"]["Member"];
             curationLinks?: components["schemas"]["CurationLink"][];
             tags?: components["schemas"]["CurationTag"][];
+            comments?: components["schemas"]["Comment"][];
+            /** Format: int64 */
+            memberId?: number;
+            memberImgUrl?: string;
+            memberName?: string;
         };
         CurationLink: {
             id?: components["schemas"]["CurationLinkId"];
@@ -278,6 +378,9 @@ export interface components {
             /** Format: int64 */
             tagId?: number;
         };
+        GrantedAuthority: {
+            authority?: string;
+        };
         Link: {
             /** Format: int64 */
             id?: number;
@@ -298,13 +401,15 @@ export interface components {
             memberId?: string;
             username?: string;
             password?: string;
-            apiKey?: string;
             /** @enum {string} */
             role?: "ADMIN" | "USER" | "MEMBER";
             profileImage?: string;
             email?: string;
             introduce?: string;
+            member?: boolean;
             admin?: boolean;
+            authorities?: components["schemas"]["GrantedAuthority"][];
+            memberAuthoritesAsString?: string[];
         };
         RsDataLink: {
             code?: string;
@@ -316,6 +421,21 @@ export interface components {
             id?: number;
             name?: string;
             curationTags?: components["schemas"]["CurationTag"][];
+        };
+        CommentDto: {
+            /** Format: int64 */
+            id?: number;
+            authorName?: string;
+            content?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            modifiedAt?: string;
+        };
+        RsDataCommentDto: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["CommentDto"];
         };
         CurationReqDTO: {
             title: string;
@@ -362,6 +482,7 @@ export interface components {
             title?: string;
             description?: string;
             items?: components["schemas"]["PlaylistItemDto"][];
+            tags?: string[];
         };
         PlaylistItemDto: {
             /** Format: int64 */
@@ -375,27 +496,49 @@ export interface components {
             msg?: string;
             data?: components["schemas"]["PlaylistDto"];
         };
-        JoinReqBody: {
-            memberId: string;
+        RsDataVoid: {
+            code?: string;
+            msg?: string;
+            data?: Record<string, never>;
+        };
+        LoginReqBody: {
+            username: string;
             password: string;
-            email: string;
+        };
+        LoginResBody: {
+            item?: components["schemas"]["MemberResDTO"];
+            accessToken?: string;
+        };
+        MemberResDTO: {
+            /** Format: int64 */
+            id?: number;
+            memberId?: string;
+            username?: string;
+            email?: string;
             /** @enum {string} */
             role?: "ADMIN" | "USER" | "MEMBER";
             profileImage?: string;
             introduce?: string;
-        };
-        MemberDto: {
-            /** Format: int64 */
-            id?: number;
             /** Format: date-time */
             createdDatetime?: string;
             /** Format: date-time */
             modifiedDatetime?: string;
+            apiKey?: string;
         };
-        RsDataMemberDto: {
+        RsDataLoginResBody: {
             code?: string;
             msg?: string;
-            data?: components["schemas"]["MemberDto"];
+            data?: components["schemas"]["LoginResBody"];
+        };
+        MemberReqDTO: {
+            memberId: string;
+            password: string;
+            email?: string;
+            username?: string;
+            profileImage?: string;
+            introduce?: string;
+            /** @enum {string} */
+            role?: "ADMIN" | "USER" | "MEMBER";
         };
         LinkResDTO: {
             url?: string;
@@ -408,26 +551,6 @@ export interface components {
             msg?: string;
             data?: components["schemas"]["LinkResDTO"];
         };
-        CommentDto: {
-            /** Format: int64 */
-            id?: number;
-            authorName?: string;
-            content?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            modifiedAt?: string;
-        };
-        RsDataCommentDto: {
-            code?: string;
-            msg?: string;
-            data?: components["schemas"]["CommentDto"];
-        };
-        RsDataVoid: {
-            code?: string;
-            msg?: string;
-            data?: Record<string, never>;
-        };
         PlaylistUpdateDto: {
             title?: string;
             description?: string;
@@ -438,6 +561,18 @@ export interface components {
             msg?: string;
             data?: components["schemas"]["PlaylistDto"][];
         };
+        RsDataMapStringObject: {
+            code?: string;
+            msg?: string;
+            data?: {
+                [key: string]: Record<string, never>;
+            };
+        };
+        RsDataMemberResDTO: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["MemberResDTO"];
+        };
         RsDataListCommentDto: {
             code?: string;
             msg?: string;
@@ -447,6 +582,41 @@ export interface components {
             code?: string;
             msg?: string;
             data?: components["schemas"]["CurationResDto"][];
+        };
+        CommentResDto: {
+            /** Format: int64 */
+            commentId?: number;
+            /** Format: int64 */
+            authorId?: number;
+            authorName?: string;
+            authorImgUrl?: string;
+            content?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            modifiedAt?: string;
+        };
+        CurationDetailResDto: {
+            /** Format: int64 */
+            id?: number;
+            title?: string;
+            content?: string;
+            /** Format: int64 */
+            authorId?: number;
+            authorName?: string;
+            authorImgUrl?: string;
+            urls?: components["schemas"]["LinkResDto"][];
+            tags?: components["schemas"]["TagResDto"][];
+            comments?: components["schemas"]["CommentResDto"][];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            modifiedAt?: string;
+        };
+        RsDataCurationDetailResDto: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["CurationDetailResDto"];
         };
     };
     responses: never;
@@ -523,6 +693,72 @@ export interface operations {
             };
         };
     };
+    updateComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataCommentDto"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
+    deleteComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
     getCuration: {
         parameters: {
             query?: never;
@@ -540,7 +776,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataCurationResDto"];
+                    "*/*": components["schemas"]["RsDataCurationDetailResDto"];
                 };
             };
             /** @description Internal Server Error */
@@ -789,7 +1025,36 @@ export interface operations {
             };
         };
     };
-    join: {
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
+    login: {
         parameters: {
             query?: never;
             header?: never;
@@ -798,7 +1063,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["JoinReqBody"];
+                "application/json": components["schemas"]["LoginReqBody"];
             };
         };
         responses: {
@@ -808,7 +1073,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataMemberDto"];
+                    "*/*": components["schemas"]["RsDataLoginResBody"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
+    join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberReqDTO"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataLoginResBody"];
                 };
             };
             /** @description Internal Server Error */
@@ -960,6 +1258,7 @@ export interface operations {
                 tags?: string[];
                 title?: string;
                 content?: string;
+                author?: string;
                 order?: "LATEST" | "OLDEST" | "LIKECOUNT";
             };
             header?: never;
@@ -1153,13 +1452,12 @@ export interface operations {
             };
         };
     };
-    deletePlaylistItem: {
+    getRecommendedPlaylists: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 id: number;
-                itemId: number;
             };
             cookie?: never;
         };
@@ -1171,7 +1469,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataVoid"];
+                    "*/*": components["schemas"]["RsDataListPlaylistDto"];
                 };
             };
             /** @description Internal Server Error */
@@ -1185,12 +1483,73 @@ export interface operations {
             };
         };
     };
-    deleteComment: {
+    getCuratorInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataMapStringObject"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
+    getMyInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataMemberResDTO"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
+    deletePlaylistItem: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 id: number;
+                itemId: number;
             };
             cookie?: never;
         };

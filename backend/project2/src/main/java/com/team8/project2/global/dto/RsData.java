@@ -26,17 +26,17 @@ public class RsData<T> {
 
 	// 성공 응답 생성 메서드 추가
 	public static <T> RsData<T> success(T data) {
-		return new RsData<>("200-OK", "Success", data);
+		return new RsData<>("200-1", "Success", data);
 	}
 	// custom success response
 	public static <T> RsData<T> success(String msg, T data) {
-		return new RsData<>("200-OK", msg, data);
+		return new RsData<>("200-1", msg, data);
 	}
 
 
 	// 실패 응답 생성 메서드 추가
 	public static <T> RsData<T> fail(String msg) {
-		return new RsData<>("400-BAD_REQUEST", msg, null);
+		return new RsData<>("400-1", msg, null);
 	}
 	// custom fail response
 	public static <T> RsData<T> fail(String code, String msg) {

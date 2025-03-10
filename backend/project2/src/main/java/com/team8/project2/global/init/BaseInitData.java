@@ -40,6 +40,17 @@ public class BaseInitData {
 					.build();
 				memberRepository.save(member);
 
+				Member member2 = Member.builder()
+					.email("team9@gmail.com")
+					.role(RoleEnum.MEMBER)
+					.memberId("othermember")
+					.username("other")
+					.password("password")
+					.profileImage("http://localhost:8080/images/team9-logo.png")
+					.introduce("test2")
+					.build();
+				memberRepository.save(member2);
+
 				Curation curation = curationService.createCuration(
 					"curation test title",
 					"curation test content",
@@ -49,6 +60,7 @@ public class BaseInitData {
 				);
 
 				commentService.createComment(
+					member,
 					curation.getId(),
 					CommentDto.builder()
 						.content("comment test content")
