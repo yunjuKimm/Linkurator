@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team8.project2.domain.comment.dto.CommentDto;
 import com.team8.project2.domain.comment.service.CommentService;
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.MemberRepository;
+import com.team8.project2.domain.member.service.AuthTokenService;
 
 @Transactional
 @ActiveProfiles("test")
@@ -29,6 +33,20 @@ class ApiV1CommentControllerTest {
 	@Autowired
 	private CommentService commentService;
 
+	@Autowired
+	private MemberRepository memberRepository;
+
+	@Autowired
+	private AuthTokenService authTokenService;
+
+	String authorAccessKey;
+
+	@BeforeEach
+	void setUp() {
+		Member author = memberRepository.findById(1L).get();
+		authorAccessKey = authTokenService.genAccessToken(author);
+	}
+
 	@Test
 	@DisplayName("댓글을 작성할 수 있다")
 	void createComment() throws Exception {
@@ -37,6 +55,7 @@ class ApiV1CommentControllerTest {
 			.build();
 
 		mockMvc.perform(post("/api/v1/curations/1/comments")
+				.header("Authorization", "Bearer " + authorAccessKey)
 				.contentType("application/json")
 				.content(new ObjectMapper().writeValueAsString(commentDto)))
 			.andExpect(status().isOk())
@@ -65,10 +84,11 @@ class ApiV1CommentControllerTest {
 	}
 
 	private CommentDto createCommentAtCuration(Long curationId) {
+		Member author = memberRepository.findById(1L).get();
 		CommentDto commentDto = CommentDto.builder()
 			.content("content example")
 			.build();
-		return commentService.createComment(curationId, commentDto);
+		return commentService.createComment(author, curationId, commentDto);
 	}
 
 	@Test
