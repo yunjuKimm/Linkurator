@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -115,29 +117,44 @@ class CurationServiceTest {
 	@Test
 	@DisplayName("큐레이션을 수정할 수 있다")
 	void UpdateCuration() {
+		// Given: 테스트를 위한 데이터 준비
 		List<String> urls = Arrays.asList("http://updated-url.com", "http://another-url.com");
 		List<String> tags = Arrays.asList("updated-tag1", "updated-tag2", "updated-tag3");
 
-		// Mocking repository and service calls
-		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
+		// Mocking Curation 객체
+		Curation curation = new Curation();
+		curation.setId(1L);
+		curation.setTitle("Original Title");
+		curation.setContent("Original Content");
+
+		// Mocking 링크 및 태그
+		Link link = new Link();  // Link 객체를 생성하는 코드 필요 (예: getLink 메서드에서 반환할 객체 설정)
+		Tag tag = new Tag();     // Tag 객체 생성 (예: getTag 메서드에서 반환할 객체 설정)
+
+		// Mocking 리포지토리 및 서비스 호출
+		when(curationRepository.findById(1L)).thenReturn(Optional.of(curation));
 		when(linkService.getLink(anyString())).thenReturn(link);
 		when(tagService.getTag(anyString())).thenReturn(tag);
 		when(curationRepository.save(any(Curation.class))).thenReturn(curation);
 		when(curationLinkRepository.saveAll(ArgumentMatchers.anyList())).thenReturn(List.of(new CurationLink()));
 		when(curationTagRepository.saveAll(ArgumentMatchers.anyList())).thenReturn(List.of(new CurationTag()));
 
+		// When: 큐레이션 업데이트 호출
 		Curation updatedCuration = curationService.updateCuration(1L, "Updated Title", "Updated Content", urls, tags);
 
-		// Verify interactions
-		verify(curationRepository, times(1)).findById(anyLong());
+		// Then: 상호작용 검증
+		verify(curationRepository, times(1)).findById(1L);
 		verify(curationRepository, times(1)).save(any(Curation.class));
 		verify(curationLinkRepository, times(1)).saveAll(ArgumentMatchers.anyList());
 		verify(curationTagRepository, times(1)).saveAll(ArgumentMatchers.anyList());
 
-		// Check the result
-		assert updatedCuration != null;
-		assert updatedCuration.getTitle().equals("Updated Title");
+		// 결과 확인
+		assertNotNull(updatedCuration);
+		assertEquals("Updated Title", updatedCuration.getTitle());
+		assertEquals("Updated Content", updatedCuration.getContent());
 	}
+
+
 
 	@Test
 	@DisplayName("실패 - 존재하지 않는 큐레이션을 수정하면 실패한다")
