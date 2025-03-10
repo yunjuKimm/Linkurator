@@ -73,13 +73,32 @@ class ApiV1CommentControllerTest {
 	}
 
 	@Test
-	@DisplayName("실패 - 인증 정보가 없으면 댓글을 작성에 실패한다")
+	@DisplayName("실패 - 인증 정보가 없으면 댓글 작성에 실패한다")
 	void createCommentWithNoAuth() throws Exception {
 		CommentDto commentDto = CommentDto.builder()
 			.content("content example")
 			.build();
 
 		mockMvc.perform(post("/api/v1/curations/1/comments")
+				.contentType("application/json")
+				.content(new ObjectMapper().writeValueAsString(commentDto)))
+			.andExpect(status().isUnauthorized());
+
+		// 샘플 데이터를 제외하고 댓글이 추가되지 않음
+		assertThat(commentRepository.count()).isEqualTo(1);
+	}
+
+	@Test
+	@DisplayName("실패 - 인증 정보가 잘못되었으면 댓글 작성에 실패한다")
+	void createCommentWithWrongAuth() throws Exception {
+		String wrongAuth = "wrongAuth";
+
+		CommentDto commentDto = CommentDto.builder()
+			.content("content example")
+			.build();
+
+		mockMvc.perform(post("/api/v1/curations/1/comments")
+				.header("Authorization", "Bearer " + wrongAuth)
 				.contentType("application/json")
 				.content(new ObjectMapper().writeValueAsString(commentDto)))
 			.andExpect(status().isUnauthorized());
