@@ -6,8 +6,14 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -37,9 +43,6 @@ public class Member {
     private String username;
     @Column(nullable = false)
     private String password;
-    @Column(nullable = false)
-    private String apiKey;
-
     @Enumerated( EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -51,7 +54,28 @@ public class Member {
     @Column
     private String introduce;
 
-    public boolean isAdmin() {
-        return username.equals("admin");
+    public boolean isAdmin() {return this.role == RoleEnum.ADMIN;}
+    public boolean isMember() {
+        return this.role == RoleEnum.MEMBER;
+    }
+
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+
+        return getMemberAuthoritesAsString()
+                .stream()
+                .map(SimpleGrantedAuthority::new)
+                .toList();
+
+    }
+
+    public List<String> getMemberAuthoritesAsString() {
+
+        List<String> authorities = new ArrayList<>();
+
+        if(isAdmin()) {
+            authorities.add("ROLE_ADMIN");
+        }
+
+        return authorities;
     }
 }
