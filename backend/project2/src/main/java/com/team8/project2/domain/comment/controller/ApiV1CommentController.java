@@ -37,7 +37,7 @@ public class ApiV1CommentController {
 	public RsData<CommentDto> createComment(@PathVariable Long curationId, @RequestBody CommentDto commentDto) {
 		Member actor = rq.getActor();
 		CommentDto createdComment = commentService.createComment(actor, curationId, commentDto);
-		return RsData.success(createdComment);
+		return new RsData("200-2", "댓글이 작성되었습니다.", createdComment);
 	}
 
 	/**
@@ -48,7 +48,7 @@ public class ApiV1CommentController {
 	@GetMapping
 	public RsData<List<CommentDto>> getCommentsByCurationId(@PathVariable Long curationId) {
 		List<CommentDto> comments = commentService.getCommentsByCurationId(curationId);
-		return RsData.success(comments);
+		return new RsData("200-2", "댓글이 조회되었습니다.", comments);
 	}
 
 	/**
@@ -65,7 +65,7 @@ public class ApiV1CommentController {
 		@AuthenticationPrincipal UserDetails userDetails
 	) {
 		CommentDto updatedComment = commentService.updateComment(commentId, commentDto, userDetails.getUsername());
-		return RsData.success(updatedComment);
+		return new RsData("200-2", "댓글이 수정되었습니다.", updatedComment);
 	}
 
 	/**
