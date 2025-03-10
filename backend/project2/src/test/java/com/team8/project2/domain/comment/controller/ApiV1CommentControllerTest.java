@@ -21,6 +21,7 @@ import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.member.service.AuthTokenService;
+import com.team8.project2.domain.member.service.MemberService;
 
 @Transactional
 @ActiveProfiles("test")
@@ -43,6 +44,8 @@ class ApiV1CommentControllerTest {
 	String authorAccessKey;
 	@Autowired
 	private CommentRepository commentRepository;
+	@Autowired
+	private MemberService memberService;
 
 	@BeforeEach
 	void setUp() {
@@ -141,4 +144,18 @@ class ApiV1CommentControllerTest {
 			.andExpect(jsonPath("$.code").value("200-1"))
 			.andExpect(jsonPath("$.msg").value("댓글이 삭제되었습니다."));
 	}
+
+	@Test
+	@DisplayName("실패 - 다른 사람의 댓글을 삭제할 수 없다")
+	void deleteOthersComment() throws Exception {
+		Member otherAuthor = memberRepository.findById(2L).get();
+		CommentDto savedCommentDto = createCommentAtCuration(1L, otherAuthor);
+
+		mockMvc.perform(delete("/api/v1/curations/1/comments/%d".formatted(savedCommentDto.getId()))
+			.header("Authorization", "Bearer " + authorAccessKey))
+			.andExpect(status().isForbidden())
+			.andExpect(jsonPath("$.code").value("403-2"))
+			.andExpect(jsonPath("$.msg").value("댓글을 삭제할 권한이 없습니다."));
+	}
+
 }
