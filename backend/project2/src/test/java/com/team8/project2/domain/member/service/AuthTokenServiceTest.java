@@ -49,7 +49,7 @@ public class AuthTokenServiceTest {
         // Payload 검증
         Map<String, Object> parsedPayload = authTokenService.getPayload(accessToken);
         assertThat(parsedPayload).containsEntry("id", testMember.getId());
-        assertThat(parsedPayload).containsEntry("username", testMember.getUsername());
+        assertThat(parsedPayload).containsEntry("memberId", testMember.getMemberId());
 
         System.out.println("AccessToken = " + accessToken);
     }
