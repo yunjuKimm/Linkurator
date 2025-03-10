@@ -100,6 +100,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/members/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/link": {
         parameters: {
             query?: never;
@@ -212,6 +260,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/members/{memberId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getCuratorInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMyInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/playlists/{id}/items/{itemId}": {
         parameters: {
             query?: never;
@@ -251,10 +331,10 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             modifiedAt?: string;
+            authorName?: string;
             /** Format: int64 */
             authorId?: number;
             authorImgUrl?: string;
-            authorName?: string;
         };
         Curation: {
             /** Format: int64 */
@@ -271,10 +351,10 @@ export interface components {
             curationLinks?: components["schemas"]["CurationLink"][];
             tags?: components["schemas"]["CurationTag"][];
             comments?: components["schemas"]["Comment"][];
+            memberName?: string;
             /** Format: int64 */
             memberId?: number;
             memberImgUrl?: string;
-            memberName?: string;
         };
         CurationLink: {
             id?: components["schemas"]["CurationLinkId"];
@@ -327,8 +407,8 @@ export interface components {
             email?: string;
             introduce?: string;
             authorities?: components["schemas"]["GrantedAuthority"][];
-            member?: boolean;
             admin?: boolean;
+            member?: boolean;
             memberAuthoritesAsString?: string[];
         };
         RsDataLink: {
@@ -416,6 +496,50 @@ export interface components {
             msg?: string;
             data?: components["schemas"]["PlaylistDto"];
         };
+        RsDataVoid: {
+            code?: string;
+            msg?: string;
+            data?: Record<string, never>;
+        };
+        LoginReqBody: {
+            username: string;
+            password: string;
+        };
+        LoginResBody: {
+            item?: components["schemas"]["MemberResDTO"];
+            accessToken?: string;
+        };
+        MemberResDTO: {
+            /** Format: int64 */
+            id?: number;
+            memberId?: string;
+            username?: string;
+            email?: string;
+            /** @enum {string} */
+            role?: "ADMIN" | "USER" | "MEMBER";
+            profileImage?: string;
+            introduce?: string;
+            /** Format: date-time */
+            createdDatetime?: string;
+            /** Format: date-time */
+            modifiedDatetime?: string;
+            apiKey?: string;
+        };
+        RsDataLoginResBody: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["LoginResBody"];
+        };
+        MemberReqDTO: {
+            memberId: string;
+            password: string;
+            email?: string;
+            username?: string;
+            profileImage?: string;
+            introduce?: string;
+            /** @enum {string} */
+            role?: "ADMIN" | "USER" | "MEMBER";
+        };
         LinkResDTO: {
             url?: string;
             title?: string;
@@ -427,11 +551,6 @@ export interface components {
             msg?: string;
             data?: components["schemas"]["LinkResDTO"];
         };
-        RsDataVoid: {
-            code?: string;
-            msg?: string;
-            data?: Record<string, never>;
-        };
         PlaylistUpdateDto: {
             title?: string;
             description?: string;
@@ -441,6 +560,18 @@ export interface components {
             code?: string;
             msg?: string;
             data?: components["schemas"]["PlaylistDto"][];
+        };
+        RsDataMapStringObject: {
+            code?: string;
+            msg?: string;
+            data?: {
+                [key: string]: Record<string, never>;
+            };
+        };
+        RsDataMemberResDTO: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["MemberResDTO"];
         };
         RsDataListCommentDto: {
             code?: string;
@@ -894,6 +1025,101 @@ export interface operations {
             };
         };
     };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginReqBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataLoginResBody"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
+    join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberReqDTO"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataLoginResBody"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
     addLink: {
         parameters: {
             query?: never;
@@ -1244,6 +1470,66 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RsDataListPlaylistDto"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
+    getCuratorInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataMapStringObject"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataEmpty"];
+                };
+            };
+        };
+    };
+    getMyInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataMemberResDTO"];
                 };
             };
             /** @description Internal Server Error */
