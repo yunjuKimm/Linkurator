@@ -143,7 +143,7 @@ class ApiV1PlaylistControllerTest {
         mockMvc.perform(get("/api/v1/playlists/{id}/recommendation", playlistId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("200-OK"))
+                .andExpect(jsonPath("$.code").value("200-1"))
                 .andExpect(jsonPath("$.msg").value("추천 플레이리스트 목록을 조회하였습니다."))
                 .andExpect(jsonPath("$.data", hasSize(2)))
                 .andExpect(jsonPath("$.data[0].id").value(2))

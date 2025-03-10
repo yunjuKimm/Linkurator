@@ -6,6 +6,7 @@ import org.slf4j.Logger; // ✅ 추가: 로깅을 위해 Logger import
 import org.slf4j.LoggerFactory; // ✅ 추가: LoggerFactory import
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -21,7 +22,7 @@ public class GlobalExceptionHandler {
 	private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<RsData<Empty>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+	public ResponseEntity<RsData<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
 
 		// ✅ 수정: 에러 메시지 포맷 개선 (필드명 : 에러코드 : 기본 메시지)
 		String message = e.getBindingResult().getFieldErrors()
@@ -42,7 +43,7 @@ public class GlobalExceptionHandler {
 
 	@ResponseStatus // SpringDoc에서 메서드 인식
 	@ExceptionHandler(ServiceException.class)
-	public ResponseEntity<RsData<Empty>> handleServiceException(ServiceException ex) { // ✅ 수정: 메서드 이름 변경(ServiceExceptionHandle -> handleServiceException)
+	public ResponseEntity<RsData<Void>> handleServiceException(ServiceException ex) { // ✅ 수정: 메서드 이름 변경(ServiceExceptionHandle -> handleServiceException)
 		return ResponseEntity
 				.status(ex.getStatusCode())
 				.body(
@@ -56,7 +57,7 @@ public class GlobalExceptionHandler {
 	/** 400 - Bad Request (BadRequestException 및 IllegalArgumentException) */
 	@ResponseStatus
 	@ExceptionHandler({BadRequestException.class, IllegalArgumentException.class})
-	public ResponseEntity<RsData<Empty>> handleBadRequestException(RuntimeException e) {
+	public ResponseEntity<RsData<Void>> handleBadRequestException(RuntimeException e) {
 		return ResponseEntity
 				.status(HttpStatus.BAD_REQUEST)
 				.body(new RsData<>("400-2", e.getMessage()));
@@ -65,16 +66,23 @@ public class GlobalExceptionHandler {
 	/** 404 - Not Found (NotFoundException) */
 	@ResponseStatus
 	@ExceptionHandler(NotFoundException.class)
-	public ResponseEntity<RsData<Empty>> handleNotFoundException(NotFoundException e) {
+	public ResponseEntity<RsData<Void>> handleNotFoundException(NotFoundException e) {
 		return ResponseEntity
 				.status(HttpStatus.NOT_FOUND)
 				.body(new RsData<>("404-1", e.getMessage()));
 	}
 
+	/** 401 - Unauthorized */
+	@ExceptionHandler(AccessDeniedException.class)
+	public RsData<Void> handleAccessDeniedException(AccessDeniedException ex) {
+		// 예외 발생 시 반환할 메시지와 상태 코드 정의
+		return new RsData<>("401-1","접근이 거부되었습니다. 로그인 상태를 확인해 주세요.");
+	}
+
 	/** 500 - Internal Server Error */
 	@ResponseStatus
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<RsData<Empty>> handleGlobalException(Exception e) {
+	public ResponseEntity<RsData<Void>> handleGlobalException(Exception e) {
 		// ✅ 추가: 발생한 예외를 로깅합니다.
 		logger.error("Unhandled exception occurred", e);
 
