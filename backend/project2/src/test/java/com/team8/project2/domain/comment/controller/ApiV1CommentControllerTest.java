@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team8.project2.domain.comment.dto.CommentDto;
+import com.team8.project2.domain.comment.repository.CommentRepository;
 import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
@@ -40,6 +41,8 @@ class ApiV1CommentControllerTest {
 	private AuthTokenService authTokenService;
 
 	String authorAccessKey;
+	@Autowired
+	private CommentRepository commentRepository;
 
 	@BeforeEach
 	void setUp() {
@@ -67,6 +70,22 @@ class ApiV1CommentControllerTest {
 
 		// BaseInitData에서 추가된 샘플 데이터를 포함해 2개
 		assertThat(commentService.getCommentsByCurationId(1L)).hasSize(2);
+	}
+
+	@Test
+	@DisplayName("실패 - 인증 정보가 없으면 댓글을 작성에 실패한다")
+	void createCommentWithNoAuth() throws Exception {
+		CommentDto commentDto = CommentDto.builder()
+			.content("content example")
+			.build();
+
+		mockMvc.perform(post("/api/v1/curations/1/comments")
+				.contentType("application/json")
+				.content(new ObjectMapper().writeValueAsString(commentDto)))
+			.andExpect(status().isUnauthorized());
+
+		// 샘플 데이터를 제외하고 댓글이 추가되지 않음
+		assertThat(commentRepository.count()).isEqualTo(1);
 	}
 
 	@Test
