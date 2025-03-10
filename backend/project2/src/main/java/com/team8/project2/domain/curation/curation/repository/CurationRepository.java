@@ -16,6 +16,9 @@ import java.util.List;
 @Repository
 public interface CurationRepository extends JpaRepository<Curation, Long> {
 
+	@Query("SELECT COUNT(c) FROM Curation c WHERE c.member.memberId = :memberId")
+	long countByMemberId(@Param("memberId") String memberId);
+
 	/**
 	 * 필터 조건을 기반으로 큐레이션을 검색하는 메서드입니다.
 	 * 제목, 내용, 태그를 기준으로 검색하며, 정렬 방식(최신순, 오래된순, 좋아요순)을 지원합니다.

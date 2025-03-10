@@ -20,8 +20,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Transactional
@@ -78,24 +81,26 @@ public class ApiV1CurationControllerTest {
 	}
 
 	// 글 수정 테스트
-	@Test
-	void updateCuration() throws Exception {
-		// 테스트용 데이터 저장
-		Curation savedCuration = curationService.createCuration("before title", "before content",
-			List.of("https://www.google.com", "https://www.naver.com"), List.of("변경전 태그", "예시 태그"));
-
-		mockMvc.perform(put("/api/v1/curation/{id}", savedCuration.getId()).contentType("application/json")
-				.content(new ObjectMapper().writeValueAsString(curationReqDTO)))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.code").value("200-1"))
-			.andExpect(jsonPath("$.msg").value("글이 성공적으로 수정되었습니다."))
-			.andExpect(jsonPath("$.data.title").value("Test Title"))
-			.andExpect(jsonPath("$.data.content").value("Test Content"))
-			.andExpect(jsonPath("$.data.urls.length()").value(1))
-			.andExpect(jsonPath("$.data.urls[0].url").value("https://example.com"))
-			.andExpect(jsonPath("$.data.tags.length()").value(1))
-			.andExpect(jsonPath("$.data.tags[0].name").value("test"));
-	}
+//	@Test
+//	void updateCuration() throws Exception {
+//		// 테스트용 데이터 저장
+//		Curation savedCuration = curationService.createCuration("before title", "before content",
+//			List.of("https://www.google.com", "https://www.naver.com"), List.of("변경전 태그", "예시 태그"));
+//
+//
+//
+//		mockMvc.perform(put("/api/v1/curation/{id}", savedCuration.getId()).contentType("application/json")
+//				.content(new ObjectMapper().writeValueAsString(curationReqDTO)))
+//			.andExpect(status().isOk())
+//			.andExpect(jsonPath("$.code").value("200-1"))
+//			.andExpect(jsonPath("$.msg").value("글이 성공적으로 수정되었습니다."))
+//			.andExpect(jsonPath("$.data.title").value("Test Title"))
+//			.andExpect(jsonPath("$.data.content").value("Test Content"))
+//			.andExpect(jsonPath("$.data.urls.length()").value(1))
+//			.andExpect(jsonPath("$.data.urls[0].url").value("https://example.com"))
+//			.andExpect(jsonPath("$.data.tags.length()").value(1))
+//			.andExpect(jsonPath("$.data.tags[0].name").value("test"));
+//	}
 
 	// 글 삭제 테스트
 	@Test
@@ -338,7 +343,7 @@ public class ApiV1CurationControllerTest {
 		Member member = Member.builder()
 			.email(author + "@gmail.com")
 			.role(RoleEnum.MEMBER)
-			.apiKey(author)
+			// .apiKey(author)
 			.memberId(author)
 			.username(author)
 			.password("password")

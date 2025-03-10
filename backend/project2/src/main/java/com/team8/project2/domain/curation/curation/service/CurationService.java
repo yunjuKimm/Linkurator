@@ -41,6 +41,15 @@ public class CurationService {
     private final LikeRepository likeRepository;
 
 	/**
+	 * ✅ 특정 큐레이터의 큐레이션 개수를 반환하는 메서드 추가
+	 * @param memberId 조회할 큐레이터의 memberId
+	 * @return 해당 큐레이터가 작성한 큐레이션 개수
+	 */
+	public long countByMemberId(String memberId) {
+		return curationRepository.countByMemberId(memberId);
+	}
+
+	/**
 	 * 큐레이션을 생성합니다.
 	 * @param title 큐레이션 제목
 	 * @param content 큐레이션 내용

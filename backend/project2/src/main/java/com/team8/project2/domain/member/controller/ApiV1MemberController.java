@@ -1,5 +1,6 @@
 package com.team8.project2.domain.member.controller;
 
+import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
 import com.team8.project2.domain.member.dto.MemberResDTO;
 import com.team8.project2.domain.member.entity.Member;
@@ -13,11 +14,14 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/members")
 @RequiredArgsConstructor
 public class ApiV1MemberController {
 
+    private final CurationService curationService;
     private final MemberService memberService;
     private final Rq rq;
 
@@ -81,4 +85,24 @@ public class ApiV1MemberController {
         rq.removeCookie("accessToken"); // JWT 삭제
         return new RsData<>("200-3", "로그아웃 되었습니다.");
     }
+
+    @GetMapping("/{memberId}")
+    public RsData<Map<String, Object>> getCuratorInfo(@PathVariable String memberId) {
+        Member member = memberService.findByMemberId(memberId).orElseThrow(
+                () -> new ServiceException("404-1", "해당 큐레이터를 찾을 수 없습니다.")
+        );
+
+        long curationCount = curationService.countByMemberId(memberId); // ✅ 코드 수정됨
+
+        Map<String, Object> responseData = Map.of(
+                "username", member.getUsername(),
+                "profileImage", member.getProfileImage(),
+                "introduce", member.getIntroduce(),
+                "curationCount", curationCount
+        );
+
+        return new RsData<>("200-4", "큐레이터 정보 조회 성공", responseData);
+    }
+
+
 }
