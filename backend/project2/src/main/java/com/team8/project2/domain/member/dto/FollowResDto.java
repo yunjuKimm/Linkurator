@@ -1,4 +1,4 @@
-package com.team8.project2.domain.playlist.dto;
+package com.team8.project2.domain.member.dto;
 
 import java.time.LocalDateTime;
 
