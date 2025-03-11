@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-java@v4.7.0
         with:
           java-version: '21'
-          distribution: 'jdk'
+          distribution: 'temurin'
           
       - name: 🔐 Grant execute permission for gradlew
         run: chmod +x ./gradlew
