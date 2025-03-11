@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react";
-import { ClipLoader } from "react-spinners";
+import CurationSkeleton from "@/app/components/skeleton/curation-skeleton";
 
 // Curation 데이터 인터페이스 정의
 interface Curation {
@@ -57,7 +57,10 @@ export default function FollowingCurations() {
       console.error("Error fetching following curations:", error);
       setError((error as Error).message);
     } finally {
-      setLoading(false);
+      // 스켈레톤 UI가 잠시 보이도록 약간의 지연 추가 (실제 환경에서는 제거 가능)
+      setTimeout(() => {
+        setLoading(false);
+      }, 500);
     }
   };
 
@@ -149,10 +152,12 @@ export default function FollowingCurations() {
 
   return (
     <>
-      {/* 로딩 상태 표시 */}
+      {/* 로딩 상태 표시 - 스켈레톤 UI로 대체 */}
       {loading ? (
-        <div className="flex justify-center items-center py-10">
-          <ClipLoader size={50} color="#3498db" />
+        <div className="space-y-6 pt-4">
+          {[...Array(3)].map((_, index) => (
+            <CurationSkeleton key={index} />
+          ))}
         </div>
       ) : (
         /* 게시글 목록 */
@@ -202,7 +207,10 @@ export default function FollowingCurations() {
                     <div className="mt-4 rounded-lg border p-4 cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <img
-                          src={metaData.image || "/placeholder.svg"}
+                          src={
+                            metaData.image ||
+                            "/placeholder.svg?height=48&width=48"
+                          }
                           alt="Preview"
                           className="h-12 w-12 rounded-lg"
                         />

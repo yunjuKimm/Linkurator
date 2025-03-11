@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react";
-import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
+import CurationSkeleton from "./skeleton/curation-skeleton";
 
 // Curation 데이터 인터페이스 정의
 interface Curation {
@@ -37,7 +37,7 @@ type SortOrder = "LATEST" | "LIKECOUNT";
 export default function PostList() {
   const [curations, setCurations] = useState<Curation[]>([]);
   const [sortOrder, setSortOrder] = useState<SortOrder>("LATEST"); // 기본값: 최신순
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [linkMetaDataList, setLinkMetaDataList] = useState<{
     [key: number]: LinkMetaData[];
   }>({}); // 각 큐레이션에 대한 메타 데이터 상태 (배열로 수정)
@@ -307,10 +307,12 @@ export default function PostList() {
         </div>
       )}
 
-      {/* 로딩 상태 표시 */}
+      {/* 로딩 상태 표시 - 스켈레톤 UI로 대체 */}
       {loading ? (
-        <div className="flex justify-center items-center py-10">
-          <ClipLoader size={50} color="#3498db" />
+        <div className="space-y-6 pt-4">
+          {[...Array(3)].map((_, index) => (
+            <CurationSkeleton key={index} />
+          ))}
         </div>
       ) : (
         /* 게시글 목록 */
@@ -321,14 +323,9 @@ export default function PostList() {
             curations.map((curation) => (
               <div key={curation.id} className="space-y-4 border-b pb-6">
                 <div className="flex items-center space-x-2">
-                  <p className="text-xs text-gray-500">
-                    {
-                      `작성된 날짜 : ${formatDate(curation.createdAt)}`
-                      /* {Math.floor(new Date(curation.modifiedAt).getTime() / 1000) !== Math.floor(new Date(curation.createdAt).getTime() / 1000)
-                  ? `수정된 날짜 : ${formatDate(curation.modifiedAt)}`
-                  : `작성된 날짜 : ${formatDate(curation.createdAt)}`} */
-                    }
-                  </p>
+                  <p className="text-xs text-gray-500">{`작성된 날짜 : ${formatDate(
+                    curation.createdAt
+                  )}`}</p>
                 </div>
 
                 <div>
@@ -370,7 +367,7 @@ export default function PostList() {
                     <div className="mt-4 rounded-lg border p-4 cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <img
-                          src={metaData.image}
+                          src={metaData.image || "/placeholder.svg"}
                           alt="Preview"
                           className="h-12 w-12 rounded-lg"
                         />
