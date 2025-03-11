@@ -327,4 +327,21 @@ public class ApiV1MemberControllerTest {
             .andExpect(jsonPath("$.code").value("400-1"))
             .andExpect(jsonPath("$.msg").value("자신을 팔로우할 수 없습니다."));
     }
+
+    @Test
+    @DisplayName("팔로우중인 다른 사용자를 팔로우 취소할 수 있다")
+    void unfollow() throws Exception {
+        Long followeeId = 1L;
+        Long followerId = 3L;
+        Member followee = memberService.findById(followeeId).get();
+        Member member = memberRepository.findById(followerId).get();
+        String accessToken = memberService.genAccessToken(member);
+
+        mvc.perform(post("/api/v1/members/%s/unfollow".formatted(followee.getMemberId()))
+                .header("Authorization", "Bearer " + accessToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("200-1"))
+            .andExpect(jsonPath("$.msg").value("%s님을 팔로우 취소했습니다.".formatted(followee.getUsername())))
+            .andExpect(jsonPath("$.data.followee").value(followee.getUsername()));
+    }
 }
