@@ -102,7 +102,7 @@ public class ApiV1MemberController {
                 () -> new ServiceException("404-1", "해당 큐레이터를 찾을 수 없습니다.")
         );
 
-        long curationCount = curationService.countByMember(username); // ✅ 코드 수정됨
+        long curationCount = curationService.countByMember(member); // ✅ 코드 수정됨
 
         Map<String, Object> responseData = Map.of(
                 "username", member.getUsername(),
