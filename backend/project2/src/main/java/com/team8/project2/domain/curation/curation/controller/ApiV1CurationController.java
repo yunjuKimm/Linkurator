@@ -6,7 +6,8 @@ import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.service.CurationService;
-import com.team8.project2.domain.curation.tag.service.TagService;
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +26,8 @@ import java.util.stream.Collectors;
 public class ApiV1CurationController {
 
     private final CurationService curationService;
-    private final TagService tagService;
+
+    private final Rq rq;
 
     /**
      * 새로운 큐레이션을 생성합니다.
@@ -34,11 +36,14 @@ public class ApiV1CurationController {
      */
     @PostMapping
     public RsData<CurationResDto> createCuration(@RequestBody CurationReqDTO curationReq) {
+        Member member = rq.getActor();
+
         Curation createdCuration = curationService.createCuration(
                 curationReq.getTitle(),
                 curationReq.getContent(),
                 curationReq.getLinkReqDtos().stream().map(url -> url.getUrl()).collect(Collectors.toUnmodifiableList()),
-                curationReq.getTagReqDtos().stream().map(tag -> tag.getName()).collect(Collectors.toUnmodifiableList())
+                curationReq.getTagReqDtos().stream().map(tag -> tag.getName()).collect(Collectors.toUnmodifiableList()),
+                member
         );
         return new RsData<>("201-1", "글이 성공적으로 생성되었습니다.", new CurationResDto(createdCuration));
     }
@@ -51,12 +56,22 @@ public class ApiV1CurationController {
      */
     @PutMapping("/{id}")
     public RsData<CurationResDto> updateCuration(@PathVariable Long id, @RequestBody CurationReqDTO curationReq) {
+        Member member = rq.getActor();
+
+        Curation curation = curationService.getCuration(id);
+
+//         글 작성자와 현재 사용자가 같을 때만 수정 허용
+        if (!curation.getMember().getId().equals(member.getId())) {
+            return new RsData<>("403-1", "권한이 없습니다.", null); // 권한 없음
+        }
+
         Curation updatedCuration = curationService.updateCuration(
                 id,
                 curationReq.getTitle(),
                 curationReq.getContent(),
                 curationReq.getLinkReqDtos().stream().map(url -> url.getUrl()).collect(Collectors.toUnmodifiableList()),
-                curationReq.getTagReqDtos().stream().map(tag -> tag.getName()).collect(Collectors.toUnmodifiableList())
+                curationReq.getTagReqDtos().stream().map(tag -> tag.getName()).collect(Collectors.toUnmodifiableList()),
+                member
         );
         return new RsData<>("200-1", "글이 성공적으로 수정되었습니다.", new CurationResDto(updatedCuration));
     }
@@ -68,6 +83,14 @@ public class ApiV1CurationController {
      */
     @DeleteMapping("/{id}")
     public RsData<Void> deleteCuration(@PathVariable Long id) {
+        Member member = rq.getActor();
+
+        Curation curation = curationService.getCuration(id);
+
+        // 글 작성자와 현재 사용자가 같을 때만 삭제 허용
+        if (!curation.getMember().getId().equals(member.getId())) {
+            return new RsData<>("403-1", "권한이 없습니다.", null); // 권한 없음
+        }
         curationService.deleteCuration(id);
         return new RsData<>("204-1", "글이 성공적으로 삭제되었습니다.", null);
     }
@@ -112,11 +135,11 @@ public class ApiV1CurationController {
     /**
      * 특정 큐레이션에 좋아요를 추가합니다.
      * @param id 큐레이션 ID
-     * @param memberId 좋아요를 누른 회원 ID
      * @return 좋아요 성공 응답
      */
     @PostMapping("/{id}")
-    public RsData<Void> likeCuration(@PathVariable Long id, @RequestParam Long memberId) {
+    public RsData<Void> likeCuration(@PathVariable Long id) {
+        Long memberId = rq.getActor().getId();
         curationService.likeCuration(id, memberId);
         return new RsData<>("200-1", "글에 좋아요를 했습니다.", null);
     }
