@@ -71,6 +71,11 @@ public class BaseInitData {
 				follow.setFollowerAndFollowee(member3, member);
 				followRepository.save(follow);
 
+				// member3가 member2를 follow
+				Follow follow2 = new Follow();
+				follow2.setFollowerAndFollowee(member3, member2);
+				followRepository.save(follow2);
+
 				Curation curation = curationService.createCuration(
 					"curation test title",
 					"curation test content",
