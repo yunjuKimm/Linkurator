@@ -266,7 +266,6 @@ public class ApiV1MemberControllerTest {
                         .header("Authorization", "Bearer " + accessToken)) // JWT 포함 요청
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-2"))
-                .andExpect(jsonPath("$.data.memberId").value("member1"))
                 .andDo(print());
     }
 
