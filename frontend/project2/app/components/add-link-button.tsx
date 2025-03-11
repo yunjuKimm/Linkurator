@@ -1,57 +1,150 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { addItemToPlaylist } from "@/lib/playlist-service";
 
 interface AddLinkButtonProps {
   playlistId: number;
 }
 
 export default function AddLinkButton({ playlistId }: AddLinkButtonProps) {
-  const [showForm, setShowForm] = useState(false);
-  const [url, setUrl] = useState("");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    url: "",
+    thumbnailUrl: "",
+    creator: "",
+    description: "",
+  });
 
-  const handleSubmit = async () => {
-    if (!url.trim()) return;
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
     try {
-      const response = await fetch(
-        `/api/v1/playlists/${playlistId}/items/link`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          // BE API에 맞게 전달할 데이터 형식 조정 (예: { url: url } 혹은 { linkId: url } 등)
-          body: JSON.stringify({ url }),
-        }
-      );
-      if (!response.ok) {
-        throw new Error("링크 추가에 실패했습니다.");
-      }
-      alert("링크가 성공적으로 추가되었습니다.");
-      // 필요 시 페이지 새로고침 또는 상태 업데이트 로직 추가
-      setUrl("");
-      setShowForm(false);
-    } catch (error: any) {
-      alert(error.message);
+      await addItemToPlaylist(playlistId, {
+        title: formData.title,
+        url: formData.url,
+        thumbnailUrl: formData.thumbnailUrl,
+        creator: formData.creator,
+        description: formData.description,
+      });
+
+      setFormData({
+        title: "",
+        url: "",
+        thumbnailUrl: "",
+        creator: "",
+        description: "",
+      });
+      setOpen(false);
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to add link:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div>
-      {showForm ? (
-        <div className="flex gap-2">
-          <input
-            type="url"
-            placeholder="https://example.com"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            className="border rounded p-2"
-          />
-          <Button onClick={handleSubmit}>저장</Button>
-          <Button onClick={() => setShowForm(false)}>취소</Button>
-        </div>
-      ) : (
-        <Button onClick={() => setShowForm(true)}>링크 추가</Button>
-      )}
-    </div>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          링크 추가
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>새 링크 추가</DialogTitle>
+            <DialogDescription>
+              플레이리스트에 추가할 링크 정보를 입력하세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="url">URL</Label>
+              <Input
+                id="url"
+                name="url"
+                type="url"
+                placeholder="https://example.com"
+                value={formData.url}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="title">제목</Label>
+              <Input
+                id="title"
+                name="title"
+                placeholder="링크 제목"
+                value={formData.title}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="creator">크리에이터 (선택사항)</Label>
+              <Input
+                id="creator"
+                name="creator"
+                placeholder="콘텐츠 제작자"
+                value={formData.creator}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">설명 (선택사항)</Label>
+              <Textarea
+                id="description"
+                name="description"
+                placeholder="링크에 대한 설명을 입력하세요"
+                value={formData.description}
+                onChange={handleChange}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              취소
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "추가 중..." : "추가하기"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

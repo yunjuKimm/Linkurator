@@ -1,5 +1,6 @@
 package com.team8.project2.domain.link.service;
 
+import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.link.dto.LinkResDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.repository.LinkRepository;
@@ -26,16 +27,27 @@ public class LinkService {
     /**
      * 새로운 링크를 추가합니다.
      *
-     * @param url 추가할 링크 URL
+     * @param linkReqDTO 링크 추가 요청 데이터 객체
      * @return 생성된 링크 객체
      */
+//    @Transactional
+//    public Link addLink(String url) {
+//        Link link = new Link();
+//        link.setUrl(url);
+//        link.setClick(0); // 초기 클릭수
+//        return linkRepository.save(link);
+//    }
     @Transactional
-    public Link addLink(String url) {
-        Link link = new Link();
-        link.setUrl(url);
-        link.setClick(0); // 초기 클릭수
+    public Link addLink(LinkReqDTO linkReqDTO) {
+        Link link = Link.builder()
+                .title(linkReqDTO.getTitle())
+                .url(linkReqDTO.getUrl())
+                .description(linkReqDTO.getDescription())
+                .click(0)
+                .build();
         return linkRepository.save(link);
     }
+
 
     /**
      * 기존 링크를 수정합니다.

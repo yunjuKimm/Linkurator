@@ -1,5 +1,8 @@
 export interface PlaylistItem {
   id: number;
+  itemId: number;
+  itemType: "LINK" | "CURATION";
+  displayOrder: number;
   url: string;
   title: string;
   thumbnailUrl?: string;
@@ -11,7 +14,15 @@ export interface Playlist {
   title: string;
   description?: string;
   thumbnailUrl?: string;
+  isPublic: boolean;
   createdAt: string;
   items?: PlaylistItem[];
-  category?: string;
+  tags?: string[];
+}
+export interface LinkData {
+  title: string;
+  url: string;
+  thumbnailUrl?: string;
+  creator?: string;
+  description?: string;
 }

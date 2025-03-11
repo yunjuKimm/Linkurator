@@ -14,7 +14,7 @@ export default async function PlaylistDetailPage({
 }: {
   params: { id: string };
 }) {
-  const playlist = await getPlaylistById(params.id);
+  const playlist = await getPlaylistById(Number(params.id));
   if (!playlist) {
     notFound();
   }
@@ -40,9 +40,9 @@ export default async function PlaylistDetailPage({
               <h1 className="text-3xl font-bold tracking-tight">
                 {playlist.title}
               </h1>
-              {playlist.category && (
+              {playlist.tags && (
                 <Badge variant="secondary" className="ml-2">
-                  {playlist.category}
+                  {playlist.tags}
                 </Badge>
               )}
             </div>
@@ -53,7 +53,7 @@ export default async function PlaylistDetailPage({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {/* 링크 추가 버튼 (여기서는 플레이리스트 항목 추가 기능으로만 처리) */}
+            {/* 링크 추가 버튼 */}
             <AddLinkButton playlistId={playlist.id} />
             <Link href={`/playlists/${playlist.id}/edit`}>
               <Button variant="outline" size="icon">

@@ -57,4 +57,16 @@ public class Link {
      */
     @OneToMany(mappedBy = "link")
     private List<CurationLink> curationLinks;
+
+    /**
+     * 링크 제목
+     */
+    @Column(name = "title", nullable = false)
+    private String title;
+
+    /**
+     * 링크 설명
+     */
+    @Column(name = "description", nullable = false)
+    private String description;
 }

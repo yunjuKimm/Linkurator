@@ -130,10 +130,13 @@ public class PlaylistService {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
 
+        int newDisplayOrder = playlist.getItems().size();
+
         PlaylistItem newItem = PlaylistItem.builder()
                 .itemId(itemId)
                 .itemType(itemType)
                 .playlist(playlist)
+                .displayOrder(newDisplayOrder)
                 .build();
 
         playlist.getItems().add(newItem);

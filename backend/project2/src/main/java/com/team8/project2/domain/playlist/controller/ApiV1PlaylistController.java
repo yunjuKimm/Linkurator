@@ -1,5 +1,8 @@
 package com.team8.project2.domain.playlist.controller;
 
+import com.team8.project2.domain.link.dto.LinkReqDTO;
+import com.team8.project2.domain.link.entity.Link;
+import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
@@ -92,17 +95,17 @@ public class ApiV1PlaylistController {
      * 플레이리스트에 링크를 추가합니다.
      *
      * @param id      플레이리스트의 ID
-     * @param request 링크 ID를 담은 요청
+     * @param linkReqDTO 링크 추가 요청 DTO
      * @return 업데이트된 플레이리스트 정보
      */
     @PostMapping("/{id}/items/link")
     public RsData<PlaylistDto> addLinkToPlaylist(
             @PathVariable("id") Long id,
-            @RequestBody Map<String, String> request
+            @RequestBody @Valid LinkReqDTO linkReqDTO
     ) {
-        Long linkId = Long.parseLong(request.get("linkId"));
+        Link link = linkService.addLink(linkReqDTO);
         PlaylistDto updatedPlaylist =
-                playlistService.addPlaylistItem(id, linkId, PlaylistItem.PlaylistItemType.LINK);
+                playlistService.addPlaylistItem(id, link.getId(), PlaylistItem.PlaylistItemType.LINK);
         return RsData.success("플레이리스트에 링크가 추가되었습니다.", updatedPlaylist);
     }
 
@@ -169,4 +172,6 @@ public class ApiV1PlaylistController {
         List<PlaylistDto> recommended  = playlistService.recommendPlaylist(id);
         return RsData.success("추천 플레이리스트 목록을 조회하였습니다.", recommended );
     }
+
+    private final LinkService linkService;
 }
