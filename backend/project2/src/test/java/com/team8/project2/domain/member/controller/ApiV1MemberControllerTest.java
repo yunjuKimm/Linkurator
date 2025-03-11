@@ -313,6 +313,21 @@ public class ApiV1MemberControllerTest {
     }
 
     @Test
+    @DisplayName("실패 - 존재하지 않는 사용자를 팔로우할 수 없다")
+    void follow_invalidFollowee() throws Exception {
+        String invalidFolloweeMemberId = "invalidMemberId";
+        Long followerId = 1L;
+        Member member = memberRepository.findById(followerId).get();
+        String accessToken = memberService.genAccessToken(member);
+
+        mvc.perform(post("/api/v1/members/%s/follow".formatted(invalidFolloweeMemberId))
+                .header("Authorization", "Bearer " + accessToken))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("404-1"))
+            .andExpect(jsonPath("$.msg").value("존재하지 않는 사용자입니다."));
+    }
+
+    @Test
     @DisplayName("실패 - 자신을 팔로우할 수 없다")
     void follow_self() throws Exception {
         Long followeeId = 1L;
