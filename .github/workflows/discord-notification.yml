@@ -1,0 +1,20 @@
+name: Discord Notifications
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  push:
+    branches:
+      - main
+
+jobs:
+  discordNotification:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Discord Github Notification
+      uses: Aleph-Kim/discord-github-notification@v1.2.0
+      with:
+        discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+        language: "korean"
+        custom: true
