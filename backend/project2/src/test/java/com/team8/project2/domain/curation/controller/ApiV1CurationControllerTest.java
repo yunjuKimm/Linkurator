@@ -384,7 +384,6 @@ public class ApiV1CurationControllerTest {
 		Member member = Member.builder()
 			.email(author + "@gmail.com")
 			.role(RoleEnum.MEMBER)
-			// .apiKey(author)
 			.memberId(author)
 			.username(author)
 			.password("password")
