@@ -29,8 +29,6 @@ export default function AddLinkButton({ playlistId }: AddLinkButtonProps) {
   const [formData, setFormData] = useState({
     title: "",
     url: "",
-    thumbnailUrl: "",
-    creator: "",
     description: "",
   });
 
@@ -48,8 +46,6 @@ export default function AddLinkButton({ playlistId }: AddLinkButtonProps) {
       await addItemToPlaylist(playlistId, {
         title: formData.title,
         url: formData.url,
-        thumbnailUrl: formData.thumbnailUrl,
-        creator: formData.creator,
         description: formData.description,
       });
 
