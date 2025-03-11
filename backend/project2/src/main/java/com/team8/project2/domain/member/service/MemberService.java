@@ -101,6 +101,10 @@ public class MemberService {
 		Member followee = findByMemberId(followeeId)
 			.orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 사용자입니다."));
 
+		if (follower.getMemberId().equals(followee.getMemberId())) {
+			throw new ServiceException("400-1", "자신을 팔로우할 수 없습니다.");
+		}
+
 		Follow follow = new Follow();
 		follow.setFollowerAndFollowee(follower, followee);
 
