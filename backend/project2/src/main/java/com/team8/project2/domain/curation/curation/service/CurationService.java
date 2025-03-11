@@ -188,11 +188,6 @@ public class CurationService {
 		curationRepository.save(curation);
 	}
 
-
-
-
-
-
 	/**
      * 큐레이션을 검색합니다.
      * @param tags 태그 목록 (선택적)
@@ -215,26 +210,63 @@ public class CurationService {
      * 큐레이션 좋아요 기능
      * @param curationId 좋아요를 추가할 큐레이션 ID
      */
-    @Transactional
-    public void likeCuration(Long curationId, Long memberId) {
-        Curation curation = curationRepository.findById(curationId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 큐레이션을 찾을 수 없습니다."));
+	@Transactional
+	public void likeCuration(Long curationId, Long memberId) {
+		String likeQueueKey = "like:queue:" + curationId; // 큐레이션에 대한 좋아요 큐 키
+		String userLikeKey = "like:" + curationId + ":" + memberId; // 사용자의 좋아요 상태 키
 
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 멤버를 찾을 수 없습니다."));
+		// 좋아요 이벤트를 Redis 큐에 추가
+		redisTemplate.opsForList().leftPush(likeQueueKey, memberId); // 큐에 사용자의 memberId 추가
 
-        likeRepository.findByCurationAndMember(curation, member).ifPresentOrElse(
-                // 이미 좋아요를 눌렀다면 삭제
-                like -> {
-                    likeRepository.delete(like);
-                    curation.setLikeCount(curation.getLikeCount() - 1);
-                },
-                // 좋아요를 누르지 않았다면 추가
-                () -> {
-                    Like newLike = new Like().setLike(curation, member);
-                    likeRepository.save(newLike);
-                    curation.setLikeCount(curation.getLikeCount() + 1);
-                }
-        );
-    }
+		// 3. Redis에 사용자가 좋아요를 눌렀음을 기록 (10분 동안 유효)
+		redisTemplate.opsForValue().set(userLikeKey, "liked", Duration.ofMinutes(10));
+
+		// 실제로 큐에서 좋아요를 처리하는 별도의 비동기 작업
+		processLikeQueue(curationId, likeQueueKey);
+	}
+
+	public void processLikeQueue(Long curationId, String likeQueueKey) {
+		// 큐에서 좋아요 이벤트를 하나씩 처리하는 로직
+		new Thread(() -> {
+			try {
+				// 큐에서 멤버 아이디를 하나씩 꺼내서 처리
+				while (true) {
+					String memberId = (String) redisTemplate.opsForList().rightPop(likeQueueKey, Duration.ofSeconds(10)); // 큐에서 하나씩 꺼냄
+
+					if (memberId == null) {
+						break; // 큐에 더 이상 처리할 데이터가 없으면 종료
+					}
+
+					// 큐레이션과 멤버를 조회
+					Curation curation = curationRepository.findById(curationId)
+							.orElseThrow(() -> new EntityNotFoundException("해당 큐레이션을 찾을 수 없습니다."));
+
+					Member member = memberRepository.findByMemberId(memberId)
+							.orElseThrow(() -> new EntityNotFoundException("해당 멤버를 찾을 수 없습니다."));
+
+					// 좋아요 처리
+					likeRepository.findByCurationAndMember(curation, member).ifPresentOrElse(
+							like -> {
+								// 이미 좋아요가 있으면 삭제
+								likeRepository.delete(like);
+								curation.setLikeCount(curation.getLikeCount() - 1);
+							},
+							() -> {
+								// 좋아요가 없으면 추가
+								Like newLike = new Like().setLike(curation, member);
+								likeRepository.save(newLike);
+								curation.setLikeCount(curation.getLikeCount() + 1);
+							}
+					);
+
+					// 변경 사항 저장
+					curationRepository.save(curation);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}).start(); // 비동기 작업을 별도의 스레드에서 실행
+	}
+
+
 }

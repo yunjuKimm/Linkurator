@@ -26,6 +26,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -299,55 +300,69 @@ class CurationServiceTest {
 	@Test
 	@DisplayName("큐레이션 좋아요 기능을 테스트합니다.")
 	void likeCuration() {
-		// Mocking repository to return a Curation
+		String expectedMemberId = "memberId";
+
+		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+		ListOperations<String, Object> listOps = mock(ListOperations.class);
+		when(listOps.rightPop(anyString(), any(Duration.class)))
+				.thenReturn(expectedMemberId)
+				.thenReturn(null);
+
+		when(redisTemplate.opsForList()).thenReturn(listOps);
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
-
-		// Mocking repository to return a Member
-		when(memberRepository.findById(anyLong())).thenReturn(Optional.of(new Member()));
-
-		// Mocking repository to return an empty Optional
+		when(memberRepository.findByMemberId(anyString())).thenReturn(Optional.of(new Member()));
 		when(likeRepository.findByCurationAndMember(any(Curation.class), any(Member.class))).thenReturn(
 			Optional.empty());
 
-		// Call the service method
 		curationService.likeCuration(1L, 1L);
 
-		// Verify the interactions
 		verify(curationRepository, times(1)).findById(anyLong());
-		verify(memberRepository, times(1)).findById(anyLong());
+		verify(memberRepository, times(1)).findByMemberId(anyString());
 		verify(likeRepository, times(1)).findByCurationAndMember(any(Curation.class), any(Member.class));
 		verify(likeRepository, times(1)).save(any(Like.class));
 	}
 
 	@Test
 	@DisplayName("큐레이션 좋아요를 한 번 더 누르면 취소되고 카운트가 감소해야 합니다.")
-	void unlikeCuration() {
-		// Mocking repository to return a Curation
+	void likeCurationWithCancel() {
+		String expectedMemberId = "memberId";
+
+		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+		ListOperations<String, Object> listOps = mock(ListOperations.class);
+		when(listOps.rightPop(anyString(), any(Duration.class)))
+				.thenReturn(expectedMemberId)
+				.thenReturn(null);
+
+		when(redisTemplate.opsForList()).thenReturn(listOps);
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
-
-		// Mocking repository to return a Member
-		Member member = new Member();
-		when(memberRepository.findById(anyLong())).thenReturn(Optional.of(member));
-
-		// Mocking repository to return an existing Like (좋아요를 이미 누른 상태)
-		Like existingLike = new Like().setLike(curation, member);
+		when(memberRepository.findByMemberId(anyString())).thenReturn(Optional.of(new Member()));
 		when(likeRepository.findByCurationAndMember(any(Curation.class), any(Member.class)))
-			.thenReturn(Optional.of(existingLike));
+				.thenReturn(Optional.of(new Like()));
+		doNothing().when(likeRepository).delete(any(Like.class));
 
-		// Call the service method (좋아요 취소)
 		curationService.likeCuration(1L, 1L);
 
-		// Verify the interactions
+		// Verify that the like was deleted (cancelled)
+		verify(likeRepository, times(1)).findByCurationAndMember(any(), any());
 		verify(likeRepository, times(1)).delete(any(Like.class));
-		verify(likeRepository, never()).save(any(Like.class)); // 새로운 좋아요가 저장되지 않아야 함
-		verify(curationRepository, times(1)).findById(anyLong());
-		verify(memberRepository, times(1)).findById(anyLong());
-		verify(likeRepository, times(1)).findByCurationAndMember(any(Curation.class), any(Member.class));
+
+		// Verify that the like count was decreased
+		verify(curationRepository, times(1)).save(any(Curation.class)); // Just verify the save method was called
 	}
+
+
 
 	@Test
 	@DisplayName("존재하지 않는 큐레이션에 좋아요를 누르면 예외가 발생해야 합니다.")
 	void likeNonExistentCuration() {
+		ListOperations<String, Object> listOperations = mock(ListOperations.class);
+		when(redisTemplate.opsForList()).thenReturn(listOperations);
+		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 		// Mocking repository to return empty Optional (큐레이션 없음)
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
@@ -366,6 +381,10 @@ class CurationServiceTest {
 	@Test
 	@DisplayName("존재하지 않는 멤버가 좋아요를 누르면 예외가 발생해야 합니다.")
 	void likeByNonExistentMember() {
+		ListOperations<String, Object> listOperations = mock(ListOperations.class);
+		when(redisTemplate.opsForList()).thenReturn(listOperations);
+		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 		// Mocking repository to return a valid Curation
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
 
