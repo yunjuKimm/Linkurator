@@ -10,6 +10,8 @@ import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -142,5 +144,13 @@ public class ApiV1CurationController {
         Long memberId = rq.getActor().getId();
         curationService.likeCuration(id, memberId);
         return new RsData<>("200-1", "글에 좋아요를 했습니다.", null);
+    }
+
+    @GetMapping("/following")
+    @PreAuthorize("isAuthenticated()")
+    public RsData<List<CurationResDto>> followingCuration() {
+        Member actor = rq.getActor();
+        List<CurationResDto> curations = curationService.getFollowingCurations(actor);
+        return new RsData<>("200-1", "팔로우중인 큐레이터의 큐레이션이 조회되었습니다.", curations);
     }
 }
