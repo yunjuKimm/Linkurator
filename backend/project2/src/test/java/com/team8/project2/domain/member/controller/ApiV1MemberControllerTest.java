@@ -1,7 +1,10 @@
 package com.team8.project2.domain.member.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.curation.tag.dto.TagReqDto;
+import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
@@ -20,13 +23,18 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -248,6 +256,8 @@ public class ApiV1MemberControllerTest {
     @Test
     @DisplayName("JWT 인증으로 내 정보 조회")
     void getMyInfoTest() throws Exception {
+        memberReqDTO.setMemberId( "member" + UUID.randomUUID());
+        memberReqDTO.setUsername("user" + UUID.randomUUID());
         Member member = memberService.join(memberReqDTO.toEntity());
         String accessToken = memberService.genAccessToken(member);
 
@@ -262,6 +272,8 @@ public class ApiV1MemberControllerTest {
     @Test
     @DisplayName("로그아웃 시 JWT 삭제")
     void logoutTest() throws Exception {
+        memberReqDTO.setMemberId( "member" + UUID.randomUUID());
+        memberReqDTO.setUsername("user" + UUID.randomUUID());
         Member member = memberService.join(memberReqDTO.toEntity());
         String accessToken = memberService.genAccessToken(member);
 
