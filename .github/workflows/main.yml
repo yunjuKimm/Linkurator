@@ -29,9 +29,3 @@ jobs:
         run: sudo ./gradlew build -Pprofile=test
         working-directory: backend/project2/
         shell: bash
-
-      - name: Discord Message
-        uses: discord-actions/message@v2
-        with:
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-          message: '새로운 Pull Request입니다.'
