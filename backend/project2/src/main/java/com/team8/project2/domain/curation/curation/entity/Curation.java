@@ -69,6 +69,14 @@ public class Curation {
     @Column(name = "likeCount", nullable = false)
     private Long likeCount = 0L;
 
+
+    /**
+     * 큐레이션 조회 수 (기본값 0)
+     */
+    @Builder.Default
+    @Column(name = "viewCount", nullable = false)
+    private Long viewCount = 0L;
+
     /**
      * 큐레이션 작성자 (Member와 N:1 관계, 선택적)
      */
@@ -100,6 +108,7 @@ public class Curation {
     public void like() {
         this.likeCount++;
     }
+
 
     public String getMemberName() {
         return member.getUsername();

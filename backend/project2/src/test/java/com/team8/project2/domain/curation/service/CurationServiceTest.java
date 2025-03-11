@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -120,94 +122,100 @@ class CurationServiceTest {
 		assert createdCuration.getTitle().equals("New Title");
 	}
 
-//	@Test
-//	@DisplayName("큐레이션을 수정할 수 있다")
-//	void UpdateCuration() {
-//
-//
-//		// Given: 테스트를 위한 데이터 준비
-//		List<String> urls = Arrays.asList("http://updated-url.com", "http://another-url.com");
-//		List<String> tags = Arrays.asList("updated-tag1", "updated-tag2", "updated-tag3");
-//
-//		// Mocking Curation 객체
-//		Curation curation = new Curation();
-//		curation.setId(1L);
-//		curation.setTitle("Original Title");
-//		curation.setContent("Original Content");
-//		curation.setMember(member);
-//
-//		// Mocking 링크 및 태그
-//		Link link = new Link();  // Link 객체를 생성하는 코드 필요 (예: getLink 메서드에서 반환할 객체 설정)
-//		Tag tag = new Tag();     // Tag 객체 생성 (예: getTag 메서드에서 반환할 객체 설정)
-//
-//		// Mocking 리포지토리 및 서비스 호출
-//		when(curationRepository.findById(1L)).thenReturn(Optional.of(curation));
-//		when(linkService.getLink(anyString())).thenReturn(link);
-//		when(tagService.getTag(anyString())).thenReturn(tag);
-//		when(curationRepository.save(any(Curation.class))).thenReturn(curation);
-//		when(curationLinkRepository.saveAll(ArgumentMatchers.anyList())).thenReturn(List.of(new CurationLink()));
-//		when(curationTagRepository.saveAll(ArgumentMatchers.anyList())).thenReturn(List.of(new CurationTag()));
-//
-//		// When: 큐레이션 업데이트 호출
-//		Curation updatedCuration = curationService.updateCuration(1L, "Updated Title", "Updated Content", urls, tags, member);
-//
-//		// Then: 상호작용 검증
-//		verify(curationRepository, times(1)).findById(1L);
-//		verify(curationRepository, times(1)).save(any(Curation.class));
-//		verify(curationLinkRepository, times(1)).saveAll(ArgumentMatchers.anyList());
-//		verify(curationTagRepository, times(1)).saveAll(ArgumentMatchers.anyList());
-//
-//		// 결과 확인
-//		assertNotNull(updatedCuration);
-//		assertEquals("Updated Title", updatedCuration.getTitle());
-//		assertEquals("Updated Content", updatedCuration.getContent());
-//	}
-//
-//
-//
-//	@Test
-//	@DisplayName("실패 - 존재하지 않는 큐레이션을 수정하면 실패한다")
-//	void UpdateCurationNotFound() {
-//		Member member = new Member(); // Member 객체 생성
-//		List<String> urls = Arrays.asList("http://updated-url.com");
-//		List<String> tags = Arrays.asList("tag1", "tag2", "tag3");
-//
-//		// Mocking repository to return empty Optional
-//		when(curationRepository.findById(anyLong())).thenReturn(Optional.empty());
-//
-//		// Check if exception is thrown
-//		try {
-//			curationService.updateCuration(1L, "Updated Title", "Updated Content", urls, tags, member);
-//		} catch (ServiceException e) {
-//			assert e.getMessage().contains("해당 글을 찾을 수 없습니다.");
-//		}
-//	}
+	@Test
+	@DisplayName("큐레이션을 수정할 수 있다")
+	void UpdateCuration() {
+
+
+		// Given: 테스트를 위한 데이터 준비
+		List<String> urls = Arrays.asList("http://updated-url.com", "http://another-url.com");
+		List<String> tags = Arrays.asList("updated-tag1", "updated-tag2", "updated-tag3");
+
+		// Mocking Curation 객체
+		Curation curation = new Curation();
+		curation.setId(1L);
+		curation.setTitle("Original Title");
+		curation.setContent("Original Content");
+		curation.setMember(member);
+
+		// Mocking 링크 및 태그
+		Link link = new Link();  // Link 객체를 생성하는 코드 필요 (예: getLink 메서드에서 반환할 객체 설정)
+		Tag tag = new Tag();     // Tag 객체 생성 (예: getTag 메서드에서 반환할 객체 설정)
+
+		// Mocking 리포지토리 및 서비스 호출
+		when(curationRepository.findById(1L)).thenReturn(Optional.of(curation));
+		when(linkService.getLink(anyString())).thenReturn(link);
+		when(tagService.getTag(anyString())).thenReturn(tag);
+		when(curationRepository.save(any(Curation.class))).thenReturn(curation);
+		when(curationLinkRepository.saveAll(ArgumentMatchers.anyList())).thenReturn(List.of(new CurationLink()));
+		when(curationTagRepository.saveAll(ArgumentMatchers.anyList())).thenReturn(List.of(new CurationTag()));
+
+		// When: 큐레이션 업데이트 호출
+		Curation updatedCuration = curationService.updateCuration(1L, "Updated Title", "Updated Content", urls, tags, member);
+
+		// Then: 상호작용 검증
+		verify(curationRepository, times(1)).findById(1L);
+		verify(curationRepository, times(1)).save(any(Curation.class));
+		verify(curationLinkRepository, times(1)).saveAll(ArgumentMatchers.anyList());
+		verify(curationTagRepository, times(1)).saveAll(ArgumentMatchers.anyList());
+
+		// 결과 확인
+		assertNotNull(updatedCuration);
+		assertEquals("Updated Title", updatedCuration.getTitle());
+		assertEquals("Updated Content", updatedCuration.getContent());
+	}
+
+
+
+	@Test
+	@DisplayName("실패 - 존재하지 않는 큐레이션을 수정하면 실패한다")
+	void UpdateCurationNotFound() {
+		Member member = new Member(); // Member 객체 생성
+		List<String> urls = Arrays.asList("http://updated-url.com");
+		List<String> tags = Arrays.asList("tag1", "tag2", "tag3");
+
+		// Mocking repository to return empty Optional
+		when(curationRepository.findById(anyLong())).thenReturn(Optional.empty());
+
+		// Check if exception is thrown
+		try {
+			curationService.updateCuration(1L, "Updated Title", "Updated Content", urls, tags, member);
+		} catch (ServiceException e) {
+			assert e.getMessage().contains("해당 글을 찾을 수 없습니다.");
+		}
+	}
 
 	@Test
 	@DisplayName("큐레이션을 삭제할 수 있다")
 	void DeleteCuration() {
 		// Mocking repository to return true for existence check
-		when(curationRepository.existsById(anyLong())).thenReturn(true);
+		when(curationRepository.findById(1L)).thenReturn(Optional.of(curation));
 
-		curationService.deleteCuration(1L);
+		// Mocking the actual delete operation
+		doNothing().when(curationRepository).deleteById(anyLong());
 
-		// Verify delete operation
-		verify(curationRepository, times(1)).deleteById(anyLong());
+		// Execute the service method to delete curation
+		curationService.deleteCuration(1L, member.getId());
+
+		// Verify the delete operation was called once
+		verify(curationRepository, times(1)).deleteById(1L);
 	}
 
 	@Test
 	@DisplayName("실패 - 존재하지 않는 큐레이션을 삭제할 수 없다")
 	void DeleteCurationNotFound() {
 		// Mocking repository to return false for existence check
-		when(curationRepository.existsById(anyLong())).thenReturn(false);
+		when(curationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
 		// Check if exception is thrown
-		try {
-			curationService.deleteCuration(1L);
-		} catch (ServiceException e) {
-			assert e.getMessage().contains("해당 글을 찾을 수 없습니다.");
-		}
+		assertThatThrownBy(() -> curationService.deleteCuration(1L, member.getId()))
+				.isInstanceOf(ServiceException.class)
+				.hasMessageContaining("해당 큐레이션을 찾을 수 없습니다.");
+
+		// Verify that deleteById is never called because the curation does not exist
+		verify(curationRepository, never()).deleteById(anyLong());
 	}
+
 
 	@Test
 	@DisplayName("큐레이션을 조회할 수 있다")
@@ -215,11 +223,29 @@ class CurationServiceTest {
 		// Mocking repository to return a Curation
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
 
-		Curation retrievedCuration = curationService.getCuration(1L);
+		Curation retrievedCuration = curationService.getCuration(1L, member.getId());
 
 		// Verify the result
 		assert retrievedCuration != null;
 		assert retrievedCuration.getTitle().equals("Test Title");
+	}
+
+	@Test
+	@DisplayName("큐레이션 조회수는 한 번만 증가해야 한다")
+	void GetCurationMultipleTimes() {
+		// Given: 조회수를 증가시키는 로직을 검증하기 위한 큐레이션 준비
+		when(curationRepository.findById(1L)).thenReturn(Optional.of(curation));
+
+		// 조회수 초기 상태 저장
+		Long initialViewCount = curation.getViewCount();
+
+		// When: 큐레이션을 여러 번 조회한다
+		curationService.getCuration(1L, member.getId());  // 첫 번째 조회
+		curationService.getCuration(1L, member.getId());  // 두 번째 조회
+		curationService.getCuration(1L, member.getId());  // 세 번째 조회
+
+		// Then: 조회수는 한 번만 증가해야 한다
+		assertEquals(initialViewCount + 1, curation.getViewCount()); // 조회수가 1만 증가해야 한다.
 	}
 
 	@Test
@@ -230,7 +256,7 @@ class CurationServiceTest {
 
 		// Check if exception is thrown
 		try {
-			curationService.getCuration(1L);
+			curationService.getCuration(1L, member.getId());
 		} catch (ServiceException e) {
 			assert e.getMessage().contains("해당 글을 찾을 수 없습니다.");
 		}

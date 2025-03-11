@@ -58,13 +58,6 @@ public class ApiV1CurationController {
     public RsData<CurationResDto> updateCuration(@PathVariable Long id, @RequestBody CurationReqDTO curationReq) {
         Member member = rq.getActor();
 
-        Curation curation = curationService.getCuration(id);
-
-//         글 작성자와 현재 사용자가 같을 때만 수정 허용
-        if (!curation.getMember().getId().equals(member.getId())) {
-            return new RsData<>("403-1", "권한이 없습니다.", null); // 권한 없음
-        }
-
         Curation updatedCuration = curationService.updateCuration(
                 id,
                 curationReq.getTitle(),
@@ -84,14 +77,7 @@ public class ApiV1CurationController {
     @DeleteMapping("/{id}")
     public RsData<Void> deleteCuration(@PathVariable Long id) {
         Member member = rq.getActor();
-
-        Curation curation = curationService.getCuration(id);
-
-        // 글 작성자와 현재 사용자가 같을 때만 삭제 허용
-        if (!curation.getMember().getId().equals(member.getId())) {
-            return new RsData<>("403-1", "권한이 없습니다.", null); // 권한 없음
-        }
-        curationService.deleteCuration(id);
+        curationService.deleteCuration(id, member.getId());
         return new RsData<>("204-1", "글이 성공적으로 삭제되었습니다.", null);
     }
 
@@ -103,7 +89,10 @@ public class ApiV1CurationController {
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
     public RsData<CurationDetailResDto> getCuration(@PathVariable Long id) {
-        Curation curation = curationService.getCuration(id);
+        Member member = rq.getActor(); // 현재 로그인한 사용자
+        curationService.increaseViewCount(id, member.getId()); // 조회수 증가 호출
+
+        Curation curation = curationService.getCuration(id, member.getId());
         return new RsData<>("200-1", "조회 성공", CurationDetailResDto.fromEntity(curation));
     }
 
@@ -143,4 +132,6 @@ public class ApiV1CurationController {
         curationService.likeCuration(id, memberId);
         return new RsData<>("200-1", "글에 좋아요를 했습니다.", null);
     }
+
+
 }

@@ -14,13 +14,13 @@ import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
-
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,6 +39,36 @@ public class CurationService {
 	private final TagService tagService;
 	private final MemberRepository memberRepository;
     private final LikeRepository likeRepository;
+	private final RedisTemplate<String, Object> redisTemplate;
+	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
+
+	/**
+	 * ✅ 큐레이션 조회수 증가 메서드 추가
+	 * @param curationId 조회수를 증가할 큐레이션 ID
+	 * @param memberId 조회한 사용자 ID
+	 */
+	public void increaseViewCount(Long curationId, Long memberId) {
+		String key = VIEW_COUNT_KEY + curationId + ":" + memberId; // 사용자와 큐레이션 ID로 키 생성
+
+		// Redis에서 조회한 사용자 정보가 있으면 조회수 증가하지 않음
+		if (redisTemplate.hasKey(key)) {
+			return; // 이미 조회한 사용자는 조회수 증가하지 않음
+		}
+
+		// 조회수 증가 로직
+		Curation curation = curationRepository.findById(curationId)
+				.orElseThrow(() -> new EntityNotFoundException("해당 큐레이션을 찾을 수 없습니다."));
+
+		// 조회수 증가
+		Long beforeCount = curation.getViewCount();
+		curation.setViewCount(beforeCount + 1);
+		curationRepository.save(curation);
+
+		// Redis에 사용자가 해당 큐레이션을 조회했음을 기록하고 10분 동안 유효하도록 설정
+		boolean setResult = redisTemplate.opsForValue().setIfAbsent(key, true, Duration.ofMinutes(10));
+	}
+
+
 
 	/**
 	 * ✅ 특정 큐레이터의 큐레이션 개수를 반환하는 메서드 추가
@@ -139,9 +169,14 @@ public class CurationService {
 	 * @param curationId 삭제할 큐레이션 ID
 	 */
 	@Transactional
-	public void deleteCuration(Long curationId) {
-		if (!curationRepository.existsById(curationId)) {
-			throw new ServiceException("404-1", "해당 글을 찾을 수 없습니다.");
+	public void deleteCuration(Long curationId, Long memberId) {
+		// 큐레이션이 존재하는지 확인
+		Curation curation = curationRepository.findById(curationId)
+				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+
+		// 삭제 권한이 있는지 확인 (작성자와 요청자가 같은지 확인)
+		if (!curation.getMember().getId().equals(memberId)) {
+			throw new ServiceException("403-1", "권한이 없습니다."); // 권한 없음
 		}
 		curationLinkRepository.deleteByCurationId(curationId);
 		curationTagRepository.deleteByCurationId(curationId);
@@ -153,7 +188,10 @@ public class CurationService {
 	 * @param curationId 조회할 큐레이션 ID
 	 * @return 조회된 큐레이션 객체
 	 */
-	public Curation getCuration(Long curationId) {
+	public Curation getCuration(Long curationId, Long memberId) {
+		// 조회수 증가 처리
+		increaseViewCount(curationId, memberId);
+
 		return curationRepository.findById(curationId)
 			.orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
 	}
