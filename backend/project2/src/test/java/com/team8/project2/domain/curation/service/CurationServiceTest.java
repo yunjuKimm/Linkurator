@@ -26,7 +26,10 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -60,6 +63,9 @@ class CurationServiceTest {
 
 	@Mock
 	private TagService tagService;
+
+	@Mock
+	private RedisTemplate<String, Object> redisTemplate;
 
 	@InjectMocks
 	private  CurationService curationService;
@@ -181,7 +187,7 @@ class CurationServiceTest {
 		try {
 			curationService.updateCuration(1L, "Updated Title", "Updated Content", urls, tags, member);
 		} catch (ServiceException e) {
-			assert e.getMessage().contains("해당 글을 찾을 수 없습니다.");
+			assert e.getMessage().contains("해당 큐레이션을 찾을 수 없습니다.");
 		}
 	}
 
@@ -220,6 +226,8 @@ class CurationServiceTest {
 	@Test
 	@DisplayName("큐레이션을 조회할 수 있다")
 	void GetCuration() {
+		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 		// Mocking repository to return a Curation
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
 
@@ -233,7 +241,16 @@ class CurationServiceTest {
 	@Test
 	@DisplayName("큐레이션 조회수는 한 번만 증가해야 한다")
 	void GetCurationMultipleTimes() {
-		// Given: 조회수를 증가시키는 로직을 검증하기 위한 큐레이션 준비
+		// Given: Redis와 큐레이션 관련 의존성 준비
+		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+		// 첫 번째 조회에서만 true 반환하고, 그 이후에는 false 반환하도록 설정
+		when(valueOperations.setIfAbsent(anyString(), eq(true), eq(Duration.ofMinutes(10))))
+				.thenReturn(true)  // 첫 번째 조회에서는 키가 없으므로 true 반환
+				.thenReturn(false); // 두 번째 이후의 조회에서는 키가 이미 있으므로 false 반환
+
+		// 큐레이션 조회 로직이 제대로 동작하도록 설정
 		when(curationRepository.findById(1L)).thenReturn(Optional.of(curation));
 
 		// 조회수 초기 상태 저장
@@ -248,17 +265,21 @@ class CurationServiceTest {
 		assertEquals(initialViewCount + 1, curation.getViewCount()); // 조회수가 1만 증가해야 한다.
 	}
 
+
 	@Test
 	@DisplayName("실패 - 존재하지 않는 큐레이션을 조회하면 실패한다")
 	void GetCurationNotFound() {
+		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 		// Mocking repository to return empty Optional
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.empty());
+
 
 		// Check if exception is thrown
 		try {
 			curationService.getCuration(1L, member.getId());
 		} catch (ServiceException e) {
-			assert e.getMessage().contains("해당 글을 찾을 수 없습니다.");
+			assert e.getMessage().contains("해당 큐레이션을 찾을 수 없습니다.");
 		}
 	}
 
