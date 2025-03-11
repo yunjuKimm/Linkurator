@@ -43,34 +43,6 @@ public class CurationService {
 	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
 
 	/**
-	 * ✅ 큐레이션 조회수 증가 메서드 추가
-	 * @param curationId 조회수를 증가할 큐레이션 ID
-	 * @param memberId 조회한 사용자 ID
-	 */
-	public void increaseViewCount(Long curationId, Long memberId) {
-		String key = VIEW_COUNT_KEY + curationId + ":" + memberId; // 사용자와 큐레이션 ID로 키 생성
-
-		// Redis에서 조회한 사용자 정보가 있으면 조회수 증가하지 않음
-		if (redisTemplate.hasKey(key)) {
-			return; // 이미 조회한 사용자는 조회수 증가하지 않음
-		}
-
-		// 조회수 증가 로직
-		Curation curation = curationRepository.findById(curationId)
-				.orElseThrow(() -> new EntityNotFoundException("해당 큐레이션을 찾을 수 없습니다."));
-
-		// 조회수 증가
-		Long beforeCount = curation.getViewCount();
-		curation.setViewCount(beforeCount + 1);
-		curationRepository.save(curation);
-
-		// Redis에 사용자가 해당 큐레이션을 조회했음을 기록하고 10분 동안 유효하도록 설정
-		boolean setResult = redisTemplate.opsForValue().setIfAbsent(key, true, Duration.ofMinutes(10));
-	}
-
-
-
-	/**
 	 * ✅ 특정 큐레이터의 큐레이션 개수를 반환하는 메서드 추가
 	 * @param memberId 조회할 큐레이터의 memberId
 	 * @return 해당 큐레이터가 작성한 큐레이션 개수
@@ -131,7 +103,7 @@ public class CurationService {
 	public Curation updateCuration(Long curationId, String title, String content, List<String> urls,
 		List<String> tags, Member member) {
 		Curation curation = curationRepository.findById(curationId)
-			.orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+			.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
 
 		if (!curation.getMember().getId().equals(member.getId())) {
 			throw new ServiceException("403", "권한이 없습니다.");
@@ -189,14 +161,39 @@ public class CurationService {
 	 * @return 조회된 큐레이션 객체
 	 */
 	public Curation getCuration(Long curationId, Long memberId) {
-		// 조회수 증가 처리
-		increaseViewCount(curationId, memberId);
+		String key = VIEW_COUNT_KEY + curationId + ":" + memberId;
 
-		return curationRepository.findById(curationId)
-			.orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+		// Redis에 먼저 키 저장 (최초 요청만 true 반환, 10분 유지)
+		boolean isNewView = redisTemplate.opsForValue().setIfAbsent(key, true, Duration.ofMinutes(10));
+		System.out.println("Redis Key Set? " + isNewView + " | Key: " + key);
+
+		// 큐레이션 조회
+		Curation curation = curationRepository.findById(curationId)
+				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+
+		// 새로운 조회일 때만 조회수 증가
+		if (isNewView) {
+			increaseViewCount(curation);
+			System.out.println("조회수 증가! 현재 조회수: " + curation.getViewCount());
+		} else {
+			System.out.println("조회수 증가 안 함 (이미 조회된 사용자)");
+		}
+
+		return curation;
 	}
 
-    /**
+	@Transactional
+	public void increaseViewCount(Curation curation) {
+		curation.setViewCount(curation.getViewCount() + 1);
+		curationRepository.save(curation);
+	}
+
+
+
+
+
+
+	/**
      * 큐레이션을 검색합니다.
      * @param tags 태그 목록 (선택적)
      * @param title 제목 검색어 (선택적)

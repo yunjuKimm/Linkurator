@@ -90,8 +90,6 @@ public class ApiV1CurationController {
     @Transactional(readOnly = true)
     public RsData<CurationDetailResDto> getCuration(@PathVariable Long id) {
         Member member = rq.getActor(); // 현재 로그인한 사용자
-        curationService.increaseViewCount(id, member.getId()); // 조회수 증가 호출
-
         Curation curation = curationService.getCuration(id, member.getId());
         return new RsData<>("200-1", "조회 성공", CurationDetailResDto.fromEntity(curation));
     }
