@@ -380,5 +380,27 @@ public class ApiV1MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("400-1"))
                 .andExpect(jsonPath("$.msg").value("팔로우중이 아닙니다."));
         }
+
+        @Test
+        @DisplayName("팔로우중인 사용자를 조회할 수 있다")
+        void following() throws Exception {
+            Long followee1Id = 1L;
+            Long followee2Id = 2L;
+            Long followerId = 3L;
+            Member followee1 = memberService.findById(followee1Id).get();
+            Member followee2 = memberService.findById(followee2Id).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(get("/api/v1/members/following")
+                .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("팔로우 중인 사용자를 조회했습니다."))
+                .andExpect(jsonPath("$.data.following[0].followee").value(followee2.getUsername()))
+                .andExpect(jsonPath("$.data.following[0].followedAt").isNotEmpty())
+                .andExpect(jsonPath("$.data.following[1].followee").value(followee1.getUsername()))
+                .andExpect(jsonPath("$.data.following[1].followedAt").isNotEmpty());
+        }
     }
 }
