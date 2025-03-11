@@ -6,12 +6,13 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.team8.project2.domain.member.dto.UnfollowResDto;
 import com.team8.project2.domain.member.entity.Follow;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.entity.RoleEnum;
 import com.team8.project2.domain.member.repository.FollowRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
-import com.team8.project2.domain.playlist.dto.FollowResDto;
+import com.team8.project2.domain.member.dto.FollowResDto;
 import com.team8.project2.global.exception.ServiceException;
 
 import lombok.RequiredArgsConstructor;
@@ -115,5 +116,24 @@ public class MemberService {
 
 		follow = followRepository.save(follow);
 		return FollowResDto.fromEntity(follow);
+	}
+
+	@Transactional
+	public UnfollowResDto unfollowUser(Member follower, String followeeId) {
+		Member followee = findByMemberId(followeeId)
+			.orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 사용자입니다."));
+
+		if (follower.getMemberId().equals(followee.getMemberId())) {
+			throw new ServiceException("400-1", "자신을 팔로우할 수 없습니다.");
+		}
+
+		Follow follow = new Follow();
+		follow.setFollowerAndFollowee(follower, followee);
+
+		followRepository.findByFollowerAndFollowee(follower, followee)
+			.orElseThrow(() -> new ServiceException("400-1", "팔로우중이 아닙니다."));
+
+		followRepository.delete(follow);
+		return UnfollowResDto.fromEntity(follow);
 	}
 }

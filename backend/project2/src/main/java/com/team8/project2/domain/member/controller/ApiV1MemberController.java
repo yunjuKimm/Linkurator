@@ -11,11 +11,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.member.dto.FollowResDto;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
 import com.team8.project2.domain.member.dto.MemberResDTO;
+import com.team8.project2.domain.member.dto.UnfollowResDto;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.service.MemberService;
-import com.team8.project2.domain.playlist.dto.FollowResDto;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
 import com.team8.project2.global.exception.ServiceException;
@@ -118,5 +119,13 @@ public class ApiV1MemberController {
         Member actor = rq.getActor();
         FollowResDto followResDto = memberService.followUser(actor, memberId);
         return new RsData<>("200-1", "%s님을 팔로우했습니다.".formatted(followResDto.getFollowee()), followResDto);
+    }
+
+    @PostMapping("/{memberId}/unfollow")
+    @PreAuthorize("isAuthenticated()")
+    public RsData<UnfollowResDto> unfollow(@PathVariable String memberId) {
+        Member actor = rq.getActor();
+        UnfollowResDto unfollowResDto = memberService.unfollowUser(actor, memberId);
+        return new RsData<>("200-1", "%s님을 팔로우 취소했습니다.".formatted(unfollowResDto.getFollowee()), unfollowResDto);
     }
 }
