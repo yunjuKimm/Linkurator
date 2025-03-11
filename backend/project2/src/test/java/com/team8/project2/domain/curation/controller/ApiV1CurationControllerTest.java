@@ -12,6 +12,7 @@ import com.team8.project2.domain.member.entity.RoleEnum;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.member.service.AuthTokenService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -40,20 +41,24 @@ public class ApiV1CurationControllerTest {
 	@Autowired
 	private CurationService curationService; // 실제 서비스 사용
 
-	private CurationReqDTO curationReqDTO;
+	@Autowired
+	private AuthTokenService authTokenService;
+
 	@Autowired
 	private CurationRepository curationRepository;
 	@Autowired
 	private MemberRepository memberRepository;
 
+	private CurationReqDTO curationReqDTO;
+
 	String memberAccessKey;
 	Member member;
+
 
 	@BeforeEach
 	void setUp() {
 		member = memberRepository.findById(1L).get();
 		memberAccessKey = authTokenService.genAccessToken(member);
-
 
 		// CurationReqDTO 설정 (링크 포함)
 		curationReqDTO = new CurationReqDTO();
@@ -74,8 +79,8 @@ public class ApiV1CurationControllerTest {
 		curationReqDTO.setTagReqDtos(Collections.singletonList(tagReqDto));
 	}
 
-	// 글 생성 테스트
 	@Test
+	@DisplayName("큐레이션을 생성할 수 있다")
 	void createCuration() throws Exception {
 		mockMvc.perform(post("/api/v1/curation")
 				.header("Authorization", "Bearer " + memberAccessKey)
@@ -90,8 +95,8 @@ public class ApiV1CurationControllerTest {
 			.andExpect(jsonPath("$.data.tags[0].name").value("test"));
 	}
 
-	// 글 수정 테스트
 	@Test
+	@DisplayName("큐레이션을 수정할 수 있다")
 	void updateCuration() throws Exception {
 		Curation savedCuration = curationRepository.findById(1L).orElseThrow();
 
@@ -111,6 +116,7 @@ public class ApiV1CurationControllerTest {
 	}
 
 	@Test
+	@DisplayName("실패 - 작성자가 아니면 큐레이션 수정에 실패한다")
 	void updateCurationByOtherUser_ShouldFail() throws Exception {
 		// 다른 사용자 생성
 		Member anotherMember = Member.builder()
@@ -135,9 +141,8 @@ public class ApiV1CurationControllerTest {
 				.andExpect(status().isForbidden());
 	}
 
-
-	// 글 삭제 테스트
 	@Test
+	@DisplayName("큐레이션 작성자는 큐레이션을 삭제할 수 있다")
 	void deleteCuration() throws Exception {
 		Curation savedCuration = curationRepository.findById(1L).orElseThrow();
 
@@ -147,9 +152,8 @@ public class ApiV1CurationControllerTest {
 				.andExpect(status().isNoContent());
 	}
 
-
-	// 글 조회 테스트
 	@Test
+	@DisplayName("큐레이션을 조회할 수 있다")
 	void getCuration() throws Exception {
 		mockMvc.perform(get("/api/v1/curation/{id}", 1L))
 				.andExpect(status().isOk())
@@ -163,8 +167,8 @@ public class ApiV1CurationControllerTest {
 				.andExpect(jsonPath("$.data.comments[0].content").value("comment test content"));
 	}
 
-	// 글 전체 조회
 	@Test
+	@DisplayName("큐레이션을 전체 조회할 수 있다")
 	void findAll() throws Exception {
 		for (int i = 0; i < 10; i++) {
 			curationService.createCuration(curationReqDTO.getTitle(), curationReqDTO.getContent(),
@@ -184,8 +188,8 @@ public class ApiV1CurationControllerTest {
 				.andExpect(jsonPath("$.data.length()").value(11));
 	}
 
-	// 태그로 글 검색
 	@Test
+	@DisplayName("큐레이션을 태그로 검색할 수 있다")
 	void findCurationByTags() throws Exception {
 		createCurationWithTags(List.of("ex1", "ex2", "ex3"));
 		createCurationWithTags(List.of("ex2", "ex3", "ex4", "ex5"));
@@ -205,8 +209,8 @@ public class ApiV1CurationControllerTest {
 				.collect(Collectors.toUnmodifiableList()), tags, member);
 	}
 
-	// 제목으로 글 검색
 	@Test
+	@DisplayName("큐레이션을 제목으로 검색할 수 있다")
 	void findCurationByTitle() throws Exception {
 		createCurationWithTitle("ex1");
 		createCurationWithTitle("test-ex");
@@ -230,8 +234,8 @@ public class ApiV1CurationControllerTest {
 			.collect(Collectors.toUnmodifiableList()), member);
 	}
 
-	// 내용으로 글 검색
 	@Test
+	@DisplayName("내용으로 큐레이션을 검색할 수 있다")
 	void findCurationByContent() throws Exception {
 		createCurationWithContent("example");
 		createCurationWithContent("test-example");
@@ -254,8 +258,8 @@ public class ApiV1CurationControllerTest {
 			.collect(Collectors.toUnmodifiableList()), member);
 	}
 
-	// 제목과 내용으로 글 검색
 	@Test
+	@DisplayName("제목과 내용으로 큐레이션을 검색할 수 있다")
 	void findCurationByTitleAndContent() throws Exception {
 		createCurationWithTitleAndContent("popular", "famous1");
 		createCurationWithTitleAndContent("sample", "test-famous");
@@ -278,8 +282,8 @@ public class ApiV1CurationControllerTest {
 			.collect(Collectors.toUnmodifiableList()), member);
 	}
 
-	// 최신순으로 글 조회
 	@Test
+	@DisplayName("최신순으로 큐레이션을 전체 조회할 수 있다")
 	void findCurationByLatest() throws Exception {
 		createCurationWithTitleAndContent("title1", "content1");
 		createCurationWithTitleAndContent("title2", "content2");
@@ -294,8 +298,8 @@ public class ApiV1CurationControllerTest {
 			.andExpect(jsonPath("$.data[2].content").value("content1"));
 	}
 
-	// 오래된순으로 글 조회
 	@Test
+	@DisplayName("오래된 순으로 큐레이션을 전체 조회할 수 있다")
 	void findCurationByOldest() throws Exception {
 		createCurationWithTitleAndContent("title1", "content1");
 		createCurationWithTitleAndContent("title2", "content2");
@@ -310,8 +314,8 @@ public class ApiV1CurationControllerTest {
 			.andExpect(jsonPath("$.data[3].content").value("content3"));
 	}
 
-	// 좋아요순으로 글 조회
 	@Test
+	@DisplayName("좋아요 순으로 큐레이션을 전체 조회할 수 있다")
 	void findCurationByLikeCount() throws Exception {
 		createCurationWithTitleAndContentAndLikeCount("title1", "content1", 4L);
 		createCurationWithTitleAndContentAndLikeCount("title2", "content2", 10L);
@@ -338,11 +342,9 @@ public class ApiV1CurationControllerTest {
 		return curation;
 	}
 
-	// 좋아요 테스트
 	@Test
+	@DisplayName("큐레이션에 좋아요를 할 수 있다")
 	void likeCuration() throws Exception {
-		// 테스트용 데이터 저장
-
 		Curation savedCuration = curationService.createCuration("Test Title", "Test Content",
 			curationReqDTO.getLinkReqDtos()
 				.stream()
@@ -351,8 +353,6 @@ public class ApiV1CurationControllerTest {
 				.stream()
 				.map(tagReqDto -> tagReqDto.getName())
 				.collect(Collectors.toUnmodifiableList()), member);
-
-
 
 		mockMvc.perform(
 				post("/api/v1/curation/{id}", savedCuration.getId())
@@ -365,6 +365,7 @@ public class ApiV1CurationControllerTest {
 	}
 
 	@Test
+	@DisplayName("큐레이션 작성자로 큐레이션을 검색할 수 있다")
 	void findCurationByAuthor() throws Exception {
 		var author1 = createMember("author1");
 		var author2 = createMember("author2");
@@ -400,6 +401,26 @@ public class ApiV1CurationControllerTest {
 		curationRepository.save(curation);
 	}
 
-    @Autowired
-    private AuthTokenService authTokenService;
+	@Test
+	@DisplayName("팔로우중인 큐레이터의 큐레이션을 전체 조회할 수 있다")
+	void followingCuration() throws Exception {
+		Member member = memberRepository.findById(3L).get();
+		String accessToken = authTokenService.genAccessToken(member);
+
+		mockMvc.perform(get("/api/v1/curation/following")
+			.header("Authorization", "Bearer " + accessToken))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.code").value("200-1"))
+			.andExpect(jsonPath("$.msg").value("팔로우중인 큐레이터의 큐레이션이 조회되었습니다."))
+			.andExpect(jsonPath("$.data.length()").value(1));
+	}
+
+	@Test
+	@DisplayName("실패 - 인증 정보가 없으면 팔로우중인 큐레이션 조회에 실패한다")
+	void followingCuration_noAuth() throws Exception {
+		mockMvc.perform(get("/api/v1/curation/following"))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.code").value("401-1"))
+			.andExpect(jsonPath("$.msg").value("접근이 거부되었습니다. 로그인 상태를 확인해 주세요."));
+	}
 }
