@@ -352,10 +352,12 @@ public class ApiV1CurationControllerTest {
 				.map(tagReqDto -> tagReqDto.getName())
 				.collect(Collectors.toUnmodifiableList()), member);
 
-		Long memberId = 1L; // 테스트용 회원 ID
+
 
 		mockMvc.perform(
-				post("/api/v1/curation/{id}", savedCuration.getId()).param("memberId", String.valueOf(memberId)))
+				post("/api/v1/curation/{id}", savedCuration.getId())
+				.header("Authorization", "Bearer " + memberAccessKey)
+				.param("memberId", String.valueOf(member.getMemberId())))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.code").value("200-1"))
 			.andExpect(jsonPath("$.msg").value("글에 좋아요를 했습니다."))
