@@ -1,11 +1,14 @@
 package com.team8.project2.domain.member.service;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.team8.project2.domain.member.dto.FollowingResDto;
 import com.team8.project2.domain.member.dto.UnfollowResDto;
 import com.team8.project2.domain.member.entity.Follow;
 import com.team8.project2.domain.member.entity.Member;
@@ -135,5 +138,13 @@ public class MemberService {
 
 		followRepository.delete(follow);
 		return UnfollowResDto.fromEntity(follow);
+	}
+
+	@Transactional(readOnly = true)
+	public FollowingResDto getFollowingUsers(Member actor) {
+		List<Follow> followings = followRepository.findByFollower(actor).stream()
+			.sorted(Comparator.comparing(Follow::getFollowedAt).reversed())
+			.toList();
+		return FollowingResDto.fromEntity(followings);
 	}
 }

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.dto.FollowResDto;
+import com.team8.project2.domain.member.dto.FollowingResDto;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
 import com.team8.project2.domain.member.dto.MemberResDTO;
 import com.team8.project2.domain.member.dto.UnfollowResDto;
@@ -127,5 +128,13 @@ public class ApiV1MemberController {
         Member actor = rq.getActor();
         UnfollowResDto unfollowResDto = memberService.unfollowUser(actor, memberId);
         return new RsData<>("200-1", "%s님을 팔로우 취소했습니다.".formatted(unfollowResDto.getFollowee()), unfollowResDto);
+    }
+
+    @GetMapping("/following")
+    @PreAuthorize("isAuthenticated()")
+    public RsData<FollowingResDto> following() {
+        Member actor = rq.getActor();
+        FollowingResDto followingResDto = memberService.getFollowingUsers(actor);
+        return new RsData<>("200-1", "팔로우 중인 사용자를 조회했습니다.", followingResDto);
     }
 }
