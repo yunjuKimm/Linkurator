@@ -76,4 +76,6 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 		@Param("author") String author,
 		@Param("searchOrder") String searchOrder);
 
+	@Query("SELECT c FROM Curation c WHERE c.member IN (SELECT f.followee FROM Follow f WHERE f.follower.id = :userId) ORDER BY c.createdAt DESC")
+	List<Curation> findFollowingCurations(@Param("userId") Long userId);
 }
