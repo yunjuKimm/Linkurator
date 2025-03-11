@@ -1,10 +1,7 @@
 package com.team8.project2.domain.member.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.service.CurationService;
-import com.team8.project2.domain.curation.tag.dto.TagReqDto;
-import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
@@ -25,16 +22,12 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -81,7 +74,8 @@ public class ApiV1MemberControllerTest {
                 "테스트 큐레이션 1",
                 "큐레이션 내용",
                 List.of("https://test.com"),
-                List.of("테스트 태그")
+                List.of("테스트 태그"),
+                member
         );
 
     }
@@ -368,8 +362,8 @@ public class ApiV1MemberControllerTest {
         @Test
         @DisplayName("실패 - 팔로우중이 아닌 사용자를 팔로우 취소하면 실패한다")
         void unfollow_notFollowed() throws Exception {
-            Long followeeId = 2L;
-            Long followerId = 3L;
+            Long followeeId = 3L;
+            Long followerId = 1L;
             Member followee = memberService.findById(followeeId).get();
             Member member = memberRepository.findById(followerId).get();
             String accessToken = memberService.genAccessToken(member);

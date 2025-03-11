@@ -312,11 +312,10 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Empty: Record<string, never>;
-        RsDataEmpty: {
+        RsDataVoid: {
             code?: string;
             msg?: string;
-            data?: components["schemas"]["Empty"];
+            data?: Record<string, never>;
         };
         LinkReqDTO: {
             url: string;
@@ -331,10 +330,10 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             modifiedAt?: string;
+            authorImgUrl?: string;
+            authorName?: string;
             /** Format: int64 */
             authorId?: number;
-            authorName?: string;
-            authorImgUrl?: string;
         };
         Curation: {
             /** Format: int64 */
@@ -351,10 +350,10 @@ export interface components {
             curationLinks?: components["schemas"]["CurationLink"][];
             tags?: components["schemas"]["CurationTag"][];
             comments?: components["schemas"]["Comment"][];
+            memberName?: string;
+            memberImgUrl?: string;
             /** Format: int64 */
             memberId?: number;
-            memberImgUrl?: string;
-            memberName?: string;
         };
         CurationLink: {
             id?: components["schemas"]["CurationLinkId"];
@@ -406,10 +405,10 @@ export interface components {
             profileImage?: string;
             email?: string;
             introduce?: string;
-            member?: boolean;
-            admin?: boolean;
-            authorities?: components["schemas"]["GrantedAuthority"][];
             memberAuthoritesAsString?: string[];
+            admin?: boolean;
+            member?: boolean;
+            authorities?: components["schemas"]["GrantedAuthority"][];
         };
         RsDataLink: {
             code?: string;
@@ -495,11 +494,6 @@ export interface components {
             code?: string;
             msg?: string;
             data?: components["schemas"]["PlaylistDto"];
-        };
-        RsDataVoid: {
-            code?: string;
-            msg?: string;
-            data?: Record<string, never>;
         };
         LoginReqBody: {
             username: string;
@@ -657,7 +651,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -688,7 +682,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -723,7 +717,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -754,7 +748,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -785,7 +779,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -820,7 +814,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -853,7 +847,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -884,7 +878,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -913,7 +907,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -946,7 +940,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -983,7 +977,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1020,7 +1014,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1049,7 +1043,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1082,7 +1076,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1115,7 +1109,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1148,7 +1142,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1181,7 +1175,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1212,7 +1206,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1247,7 +1241,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1282,7 +1276,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1315,7 +1309,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1346,7 +1340,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1377,7 +1371,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1412,7 +1406,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1447,7 +1441,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1478,7 +1472,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1509,7 +1503,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1538,7 +1532,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1570,7 +1564,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataEmpty"];
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };

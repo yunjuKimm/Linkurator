@@ -1,7 +1,6 @@
 package com.team8.project2.domain.playlist.entity;
 
 import com.team8.project2.domain.curation.tag.entity.Tag;
-import com.team8.project2.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
 

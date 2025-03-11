@@ -58,9 +58,7 @@ public class CurationService {
 	 * @return 생성된 큐레이션 객체
 	 */
 	@Transactional
-	public Curation createCuration(String title, String content, List<String> urls, List<String> tags) {
-		// 인증 미구현으로 샘플 데이터의 Member 사용
-		Member member = memberRepository.findById(1L).get();
+	public Curation createCuration(String title, String content, List<String> urls, List<String> tags, Member member) {
 
 		Curation curation = Curation.builder()
 			.member(member)
@@ -101,9 +99,13 @@ public class CurationService {
 	 */
 	@Transactional
 	public Curation updateCuration(Long curationId, String title, String content, List<String> urls,
-		List<String> tags) {
+		List<String> tags, Member member) {
 		Curation curation = curationRepository.findById(curationId)
 			.orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+
+		if (!curation.getMember().getId().equals(member.getId())) {
+			throw new ServiceException("403", "권한이 없습니다.");
+		}
 
 		curation.setTitle(title);
 		curation.setContent(content);
