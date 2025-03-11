@@ -52,8 +52,6 @@ export default function AddLinkButton({ playlistId }: AddLinkButtonProps) {
       setFormData({
         title: "",
         url: "",
-        thumbnailUrl: "",
-        creator: "",
         description: "",
       });
       setOpen(false);
@@ -103,16 +101,6 @@ export default function AddLinkButton({ playlistId }: AddLinkButtonProps) {
                 value={formData.title}
                 onChange={handleChange}
                 required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="creator">크리에이터 (선택사항)</Label>
-              <Input
-                id="creator"
-                name="creator"
-                placeholder="콘텐츠 제작자"
-                value={formData.creator}
-                onChange={handleChange}
               />
             </div>
             <div className="grid gap-2">
