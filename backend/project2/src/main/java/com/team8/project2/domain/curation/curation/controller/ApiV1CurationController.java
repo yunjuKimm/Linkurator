@@ -37,9 +37,6 @@ public class ApiV1CurationController {
     @PostMapping
     public RsData<CurationResDto> createCuration(@RequestBody CurationReqDTO curationReq) {
         Member member = rq.getActor();
-        if (member == null) {
-            return new RsData<>("401-1", "로그인이 필요합니다.", null);
-        }
 
         Curation createdCuration = curationService.createCuration(
                 curationReq.getTitle(),
@@ -60,9 +57,6 @@ public class ApiV1CurationController {
     @PutMapping("/{id}")
     public RsData<CurationResDto> updateCuration(@PathVariable Long id, @RequestBody CurationReqDTO curationReq) {
         Member member = rq.getActor();
-        if (member == null) {
-            return new RsData<>("401-1", "로그인이 필요합니다.", null);
-        }
 
         Curation curation = curationService.getCuration(id);
 
@@ -90,9 +84,6 @@ public class ApiV1CurationController {
     @DeleteMapping("/{id}")
     public RsData<Void> deleteCuration(@PathVariable Long id) {
         Member member = rq.getActor();
-        if (member == null) {
-            return new RsData<>("401-1", "로그인이 필요합니다.", null);
-        }
 
         Curation curation = curationService.getCuration(id);
 
