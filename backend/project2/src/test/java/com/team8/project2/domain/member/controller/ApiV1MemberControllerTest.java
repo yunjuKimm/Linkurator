@@ -297,7 +297,7 @@ public class ApiV1MemberControllerTest {
     }
 
     @Test
-    @DisplayName("이미 팔로우중인 사용자를 팔로우할 수 없다")
+    @DisplayName("실패 - 이미 팔로우중인 사용자를 팔로우할 수 없다")
     void follow_alreadyFollowed() throws Exception {
         Long followeeId = 1L;
         Long followerId = 3L;
@@ -310,5 +310,21 @@ public class ApiV1MemberControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("400-1"))
             .andExpect(jsonPath("$.msg").value("이미 팔로우중인 사용자입니다."));
+    }
+
+    @Test
+    @DisplayName("실패 - 자신을 팔로우할 수 없다")
+    void follow_self() throws Exception {
+        Long followeeId = 1L;
+        Long followerId = 1L;
+        Member followee = memberService.findById(followeeId).get();
+        Member member = memberRepository.findById(followerId).get();
+        String accessToken = memberService.genAccessToken(member);
+
+        mvc.perform(post("/api/v1/members/%s/follow".formatted(followee.getMemberId()))
+                .header("Authorization", "Bearer " + accessToken))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("400-1"))
+            .andExpect(jsonPath("$.msg").value("자신을 팔로우할 수 없습니다."));
     }
 }
