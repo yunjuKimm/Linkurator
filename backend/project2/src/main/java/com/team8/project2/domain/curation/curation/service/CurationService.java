@@ -99,9 +99,13 @@ public class CurationService {
 	 */
 	@Transactional
 	public Curation updateCuration(Long curationId, String title, String content, List<String> urls,
-		List<String> tags) {
+		List<String> tags, Member member) {
 		Curation curation = curationRepository.findById(curationId)
 			.orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+
+		if (!curation.getMember().getId().equals(member.getId())) {
+			throw new ServiceException("403", "권한이 없습니다.");
+		}
 
 		curation.setTitle(title);
 		curation.setContent(content);
