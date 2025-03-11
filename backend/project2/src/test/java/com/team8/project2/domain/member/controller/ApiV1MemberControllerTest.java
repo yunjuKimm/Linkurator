@@ -12,6 +12,7 @@ import com.team8.project2.domain.member.service.MemberService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -282,5 +283,130 @@ public class ApiV1MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-3"))
                 .andDo(print());
+    }
+
+    @Nested
+    @DisplayName("팔로우")
+    class Follow {
+
+        @Test
+        @DisplayName("다른 사용자를 팔로우할 수 있다")
+        void follow() throws Exception {
+            Long followeeId = 1L;
+            Long followerId = 2L;
+            Member followee = memberService.findById(followeeId).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/follow".formatted(followee.getMemberId()))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("%s님을 팔로우했습니다.".formatted(followee.getUsername())))
+                .andExpect(jsonPath("$.data.followee").value(followee.getUsername()))
+                .andExpect(jsonPath("$.data.followedAt").isNotEmpty());
+        }
+
+        @Test
+        @DisplayName("실패 - 이미 팔로우중인 사용자를 팔로우할 수 없다")
+        void follow_alreadyFollowed() throws Exception {
+            Long followeeId = 1L;
+            Long followerId = 3L;
+            Member followee = memberService.findById(followeeId).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/follow".formatted(followee.getMemberId()))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("400-1"))
+                .andExpect(jsonPath("$.msg").value("이미 팔로우중인 사용자입니다."));
+        }
+
+        @Test
+        @DisplayName("실패 - 존재하지 않는 사용자를 팔로우할 수 없다")
+        void follow_invalidFollowee() throws Exception {
+            String invalidFolloweeMemberId = "invalidMemberId";
+            Long followerId = 1L;
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/follow".formatted(invalidFolloweeMemberId))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("404-1"))
+                .andExpect(jsonPath("$.msg").value("존재하지 않는 사용자입니다."));
+        }
+
+        @Test
+        @DisplayName("실패 - 자신을 팔로우할 수 없다")
+        void follow_self() throws Exception {
+            Long followeeId = 1L;
+            Long followerId = 1L;
+            Member followee = memberService.findById(followeeId).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/follow".formatted(followee.getMemberId()))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("400-1"))
+                .andExpect(jsonPath("$.msg").value("자신을 팔로우할 수 없습니다."));
+        }
+
+        @Test
+        @DisplayName("팔로우중인 다른 사용자를 팔로우 취소할 수 있다")
+        void unfollow() throws Exception {
+            Long followeeId = 1L;
+            Long followerId = 3L;
+            Member followee = memberService.findById(followeeId).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/unfollow".formatted(followee.getMemberId()))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("%s님을 팔로우 취소했습니다.".formatted(followee.getUsername())))
+                .andExpect(jsonPath("$.data.followee").value(followee.getUsername()));
+        }
+
+        @Test
+        @DisplayName("실패 - 팔로우중이 아닌 사용자를 팔로우 취소하면 실패한다")
+        void unfollow_notFollowed() throws Exception {
+            Long followeeId = 3L;
+            Long followerId = 1L;
+            Member followee = memberService.findById(followeeId).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/unfollow".formatted(followee.getMemberId()))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("400-1"))
+                .andExpect(jsonPath("$.msg").value("팔로우중이 아닙니다."));
+        }
+
+        @Test
+        @DisplayName("팔로우중인 사용자를 조회할 수 있다")
+        void following() throws Exception {
+            Long followee1Id = 1L;
+            Long followee2Id = 2L;
+            Long followerId = 3L;
+            Member followee1 = memberService.findById(followee1Id).get();
+            Member followee2 = memberService.findById(followee2Id).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(get("/api/v1/members/following")
+                .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("팔로우 중인 사용자를 조회했습니다."))
+                .andExpect(jsonPath("$.data.following[0].followee").value(followee2.getUsername()))
+                .andExpect(jsonPath("$.data.following[0].followedAt").isNotEmpty())
+                .andExpect(jsonPath("$.data.following[1].followee").value(followee1.getUsername()))
+                .andExpect(jsonPath("$.data.following[1].followedAt").isNotEmpty());
+        }
     }
 }
