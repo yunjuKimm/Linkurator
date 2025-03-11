@@ -344,4 +344,20 @@ public class ApiV1MemberControllerTest {
             .andExpect(jsonPath("$.msg").value("%s님을 팔로우 취소했습니다.".formatted(followee.getUsername())))
             .andExpect(jsonPath("$.data.followee").value(followee.getUsername()));
     }
+
+    @Test
+    @DisplayName("실패 - 팔로우중이 아닌 사용자를 팔로우 취소하면 실패한다")
+    void unfollow_notFollowed() throws Exception {
+        Long followeeId = 2L;
+        Long followerId = 3L;
+        Member followee = memberService.findById(followeeId).get();
+        Member member = memberRepository.findById(followerId).get();
+        String accessToken = memberService.genAccessToken(member);
+
+        mvc.perform(post("/api/v1/members/%s/unfollow".formatted(followee.getMemberId()))
+                .header("Authorization", "Bearer " + accessToken))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("400-1"))
+            .andExpect(jsonPath("$.msg").value("팔로우중이 아닙니다."));
+    }
 }
