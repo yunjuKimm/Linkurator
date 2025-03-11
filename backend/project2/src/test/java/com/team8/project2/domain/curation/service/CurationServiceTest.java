@@ -62,7 +62,7 @@ class CurationServiceTest {
 	private TagService tagService;
 
 	@InjectMocks
-	private CurationService curationService;
+	private  CurationService curationService;
 
 	private Curation curation;
 	private Link link;
