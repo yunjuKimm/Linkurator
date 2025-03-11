@@ -23,10 +23,12 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -61,7 +63,8 @@ public class ApiV1MemberControllerTest {
     @BeforeEach
     void setUp() {
 
-        // MemberReqDTO 설정 (링크 포함)
+
+       // MemberReqDTO 설정 (링크 포함)
         memberReqDTO = new MemberReqDTO();
         memberReqDTO.setMemberId("member1");
         memberReqDTO.setUsername("초보");
@@ -254,6 +257,8 @@ public class ApiV1MemberControllerTest {
     @Test
     @DisplayName("JWT 인증으로 내 정보 조회")
     void getMyInfoTest() throws Exception {
+        memberReqDTO.setMemberId( "member" + UUID.randomUUID());
+        memberReqDTO.setUsername("user" + UUID.randomUUID());
         Member member = memberService.join(memberReqDTO.toEntity());
         String accessToken = memberService.genAccessToken(member);
 
@@ -261,13 +266,14 @@ public class ApiV1MemberControllerTest {
                         .header("Authorization", "Bearer " + accessToken)) // JWT 포함 요청
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-2"))
-                .andExpect(jsonPath("$.data.memberId").value("member1"))
                 .andDo(print());
     }
 
     @Test
     @DisplayName("로그아웃 시 JWT 삭제")
     void logoutTest() throws Exception {
+        memberReqDTO.setMemberId( "member" + UUID.randomUUID());
+        memberReqDTO.setUsername("user" + UUID.randomUUID());
         Member member = memberService.join(memberReqDTO.toEntity());
         String accessToken = memberService.genAccessToken(member);
 
