@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useParams } from "next/navigation"; // useParams import 추가
+import { useParams } from "next/navigation" // useParams import 추가
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -26,7 +26,7 @@ interface CurationData {
 }
 
 export default function EditPostPage() {
-  const { id } = useParams(); // useParams 훅으로 id 가져오기
+  const { id } = useParams() // useParams 훅으로 id 가져오기
   const router = useRouter()
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
@@ -158,7 +158,7 @@ export default function EditPostPage() {
         },
         body: JSON.stringify(requestData),
       })
-      
+
       if (!response.ok) {
         throw new Error("큐레이션 수정에 실패했습니다.")
       }
@@ -208,10 +208,7 @@ export default function EditPostPage() {
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <Link
-          href={`/curation/${id}`}
-          className="inline-flex items-center text-sm text-gray-500 hover:text-black"
-        >
+        <Link href={`/curation/${id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-black">
           <ArrowLeft className="mr-2 h-4 w-4" />
           큐레이션으로 돌아가기
         </Link>

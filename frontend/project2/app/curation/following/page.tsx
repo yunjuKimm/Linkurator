@@ -1,154 +1,138 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react";
-import CurationSkeleton from "@/app/components/skeleton/curation-skeleton";
+import { useEffect, useState } from "react"
+import Link from "next/link"
+import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react"
+import CurationSkeleton from "@/app/components/skeleton/curation-skeleton"
 
 // Curation 데이터 인터페이스 정의
 interface Curation {
-  id: number;
-  title: string;
-  content: string;
-  createdAt: string;
-  modifiedAt: string;
-  likeCount: number;
-  urls: { url: string }[];
-  tags: { name: string }[];
+  id: number
+  title: string
+  content: string
+  createdAt: string
+  modifiedAt: string
+  likeCount: number
+  urls: { url: string }[]
+  tags: { name: string }[]
 }
 
 // Link 메타 데이터 인터페이스 정의
 interface LinkMetaData {
-  url: string;
-  title: string;
-  description: string;
-  image: string;
+  url: string
+  title: string
+  description: string
+  image: string
 }
 
 export default function FollowingCurations() {
-  const [curations, setCurations] = useState<Curation[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [curations, setCurations] = useState<Curation[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
   const [linkMetaDataList, setLinkMetaDataList] = useState<{
-    [key: number]: LinkMetaData[];
-  }>({});
+    [key: number]: LinkMetaData[]
+  }>({})
 
   // API 요청 함수
   const fetchFollowingCurations = async () => {
     try {
-      setLoading(true);
-      const response = await fetch(
-        "http://localhost:8080/api/v1/curation/following"
-      );
+      setLoading(true)
+      const response = await fetch("http://localhost:8080/api/v1/curation/following")
       if (!response.ok) {
-        throw new Error(
-          "팔로우 중인 큐레이터의 큐레이션을 불러오지 못했습니다."
-        );
+        throw new Error("팔로우 중인 큐레이터의 큐레이션을 불러오지 못했습니다.")
       }
 
-      const data = await response.json();
+      const data = await response.json()
       if (data && data.data) {
-        setCurations(data.data);
+        setCurations(data.data)
       } else {
-        console.error("No data found in the response");
-        setCurations([]);
+        console.error("No data found in the response")
+        setCurations([])
       }
     } catch (error) {
-      console.error("Error fetching following curations:", error);
-      setError((error as Error).message);
+      console.error("Error fetching following curations:", error)
+      setError((error as Error).message)
     } finally {
       // 스켈레톤 UI가 잠시 보이도록 약간의 지연 추가 (실제 환경에서는 제거 가능)
       setTimeout(() => {
-        setLoading(false);
-      }, 500);
+        setLoading(false)
+      }, 500)
     }
-  };
+  }
 
   // 메타 데이터 추출 함수
   const fetchLinkMetaData = async (url: string, curationId: number) => {
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/link/preview`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ url: url }),
-        }
-      );
+      const response = await fetch(`http://localhost:8080/api/v1/link/preview`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: url }),
+      })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch link metadata");
+        throw new Error("Failed to fetch link metadata")
       }
 
-      const data = await response.json();
+      const data = await response.json()
       setLinkMetaDataList((prev) => {
-        const existingMetaData = prev[curationId] || [];
-        const newMetaData = existingMetaData.filter(
-          (meta) => meta.url !== data.data.url
-        );
+        const existingMetaData = prev[curationId] || []
+        const newMetaData = existingMetaData.filter((meta) => meta.url !== data.data.url)
         return {
           ...prev,
           [curationId]: [...newMetaData, data.data],
-        };
-      });
+        }
+      })
     } catch (error) {
-      console.error("Error fetching link metadata:", error);
+      console.error("Error fetching link metadata:", error)
     }
-  };
+  }
 
   // 큐레이션마다 메타 데이터 추출
   useEffect(() => {
     curations.forEach((curation) => {
       if (curation.urls && curation.urls.length > 0) {
         curation.urls.forEach((urlObj) => {
-          if (
-            !linkMetaDataList[curation.id]?.some(
-              (meta) => meta.url === urlObj.url
-            )
-          ) {
-            fetchLinkMetaData(urlObj.url, curation.id);
+          if (!linkMetaDataList[curation.id]?.some((meta) => meta.url === urlObj.url)) {
+            fetchLinkMetaData(urlObj.url, curation.id)
           }
-        });
+        })
       }
-    });
-  }, [curations, linkMetaDataList]);
+    })
+  }, [curations, linkMetaDataList])
 
   // 좋아요 추가 API 호출 함수
   const likeCuration = async (id: number) => {
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/curation/${id}`,
-        {
-          method: "POST",
-        }
-      );
+      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
+        method: "POST",
+      })
       if (!response.ok) {
-        throw new Error("Failed to like the post");
+        throw new Error("Failed to like the post")
       }
 
       // 좋아요를 추가한 후, 데이터를 다시 불러와서 화면 갱신
-      fetchFollowingCurations();
+      fetchFollowingCurations()
     } catch (error) {
-      console.error("Error liking the post:", error);
+      console.error("Error liking the post:", error)
     }
-  };
+  }
 
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
-  };
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    const hours = String(date.getHours()).padStart(2, "0")
+    const minutes = String(date.getMinutes()).padStart(2, "0")
+    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`
+  }
 
   useEffect(() => {
-    fetchFollowingCurations();
-  }, []);
+    fetchFollowingCurations()
+  }, [])
 
   return (
     <>
@@ -168,25 +152,17 @@ export default function FollowingCurations() {
             curations.map((curation) => (
               <div key={curation.id} className="space-y-4 border-b pb-6">
                 <div className="flex items-center space-x-2">
-                  <p className="text-xs text-gray-500">{`작성된 날짜 : ${formatDate(
-                    curation.createdAt
-                  )}`}</p>
+                  <p className="text-xs text-gray-500">{`작성된 날짜 : ${formatDate(curation.createdAt)}`}</p>
                 </div>
 
                 <div>
                   <Link href={`/curation/${curation.id}`} className="group">
-                    <h2 className="text-xl font-bold group-hover:text-blue-600">
-                      {curation.title}
-                    </h2>
+                    <h2 className="text-xl font-bold group-hover:text-blue-600">{curation.title}</h2>
                   </Link>
                   <p className="mt-2 text-gray-600">
-                    {curation.content.length > 100
-                      ? `${curation.content.substring(0, 100)}...`
-                      : curation.content}
+                    {curation.content.length > 100 ? `${curation.content.substring(0, 100)}...` : curation.content}
                   </p>
-                  <button className="mt-2 text-sm font-medium text-blue-600">
-                    더보기
-                  </button>
+                  <button className="mt-2 text-sm font-medium text-blue-600">더보기</button>
                 </div>
 
                 {/* 태그 표시 */}
@@ -207,18 +183,13 @@ export default function FollowingCurations() {
                     <div className="mt-4 rounded-lg border p-4 cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <img
-                          src={
-                            metaData.image ||
-                            "/placeholder.svg?height=48&width=48"
-                          }
+                          src={metaData.image || "/placeholder.svg?height=48&width=48"}
                           alt="Preview"
                           className="h-12 w-12 rounded-lg"
                         />
                         <div>
                           <h3 className="font-medium">{metaData.title}</h3>
-                          <p className="text-sm text-gray-600">
-                            {metaData.description}
-                          </p>
+                          <p className="text-sm text-gray-600">{metaData.description}</p>
                         </div>
                       </div>
                     </div>
@@ -254,5 +225,6 @@ export default function FollowingCurations() {
         </div>
       )}
     </>
-  );
+  )
 }
+

@@ -103,5 +103,6 @@ export default function CurationDetailSkeleton() {
         </div>
       </div>
     </div>
-  );
+  )
 }
+

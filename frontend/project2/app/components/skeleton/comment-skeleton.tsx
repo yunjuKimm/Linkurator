@@ -32,5 +32,6 @@ export default function CommentSkeleton() {
         ))}
       </div>
     </div>
-  );
+  )
 }
+

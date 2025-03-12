@@ -1,11 +1,9 @@
 interface PlaylistDetailPageProps {
-  params: { id: string };
+  params: { id: string }
 }
 
-export default function PlaylistDetailPage({
-  params,
-}: PlaylistDetailPageProps) {
-  const { id } = params;
+export default function PlaylistDetailPage({ params }: PlaylistDetailPageProps) {
+  const { id } = params
 
   return (
     <div>
@@ -13,5 +11,6 @@ export default function PlaylistDetailPage({
       <p>ID: {id}</p>
       {/* 상세 내용 렌더링 */}
     </div>
-  );
+  )
 }
+

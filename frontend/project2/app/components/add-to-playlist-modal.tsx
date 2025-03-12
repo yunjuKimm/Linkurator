@@ -1,27 +1,22 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { useState, useEffect } from "react"
+import { X } from "lucide-react"
 
 interface Playlist {
-  id: number;
-  title: string;
+  id: number
+  title: string
 }
 
 interface AddToPlaylistModalProps {
-  curationId: number; // 현재 큐레이션의 ID
-  onClose: () => void;
+  curationId: number // 현재 큐레이션의 ID
+  onClose: () => void
 }
 
-export default function AddToPlaylistModal({
-  curationId,
-  onClose,
-}: AddToPlaylistModalProps) {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(
-    null
-  );
-  const [loading, setLoading] = useState(true);
+export default function AddToPlaylistModal({ curationId, onClose }: AddToPlaylistModalProps) {
+  const [playlists, setPlaylists] = useState<Playlist[]>([])
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
 
   // 플레이리스트 목록 불러오기
   useEffect(() => {
@@ -29,40 +24,36 @@ export default function AddToPlaylistModal({
       try {
         const res = await fetch("http://localhost:8080/api/v1/playlists", {
           cache: "no-store",
-        });
-        if (!res.ok)
-          throw new Error("플레이리스트 목록을 불러오지 못했습니다.");
-        const result = await res.json();
-        setPlaylists(result.data);
+        })
+        if (!res.ok) throw new Error("플레이리스트 목록을 불러오지 못했습니다.")
+        const result = await res.json()
+        setPlaylists(result.data)
       } catch (error) {
-        console.error(error);
+        console.error(error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     }
-    fetchPlaylists();
-  }, []);
+    fetchPlaylists()
+  }, [])
 
   // 큐레이션을 선택한 플레이리스트에 추가하는 API 호출
   const handleAddCuration = async () => {
-    if (!selectedPlaylistId) return;
+    if (!selectedPlaylistId) return
     try {
-      const res = await fetch(
-        `http://localhost:8080/api/v1/playlists/${selectedPlaylistId}/items/curation`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ curationId }),
-        }
-      );
-      if (!res.ok) throw new Error("큐레이션 추가에 실패했습니다.");
-      alert("큐레이션이 성공적으로 추가되었습니다.");
-      onClose();
+      const res = await fetch(`http://localhost:8080/api/v1/playlists/${selectedPlaylistId}/items/curation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ curationId }),
+      })
+      if (!res.ok) throw new Error("큐레이션 추가에 실패했습니다.")
+      alert("큐레이션이 성공적으로 추가되었습니다.")
+      onClose()
     } catch (error) {
-      console.error(error);
-      alert("큐레이션 추가 중 오류가 발생했습니다.");
+      console.error(error)
+      alert("큐레이션 추가 중 오류가 발생했습니다.")
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -82,12 +73,7 @@ export default function AddToPlaylistModal({
             {playlists.map((pl) => (
               <li key={pl.id}>
                 <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="playlist"
-                    value={pl.id}
-                    onChange={() => setSelectedPlaylistId(pl.id)}
-                  />
+                  <input type="radio" name="playlist" value={pl.id} onChange={() => setSelectedPlaylistId(pl.id)} />
                   <span>{pl.title}</span>
                 </label>
               </li>
@@ -98,14 +84,12 @@ export default function AddToPlaylistModal({
           <button onClick={onClose} className="px-4 py-2 border rounded">
             취소
           </button>
-          <button
-            onClick={handleAddCuration}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
+          <button onClick={handleAddCuration} className="px-4 py-2 bg-blue-600 text-white rounded">
             추가
           </button>
         </div>
       </div>
     </div>
-  );
+  )
 }
+

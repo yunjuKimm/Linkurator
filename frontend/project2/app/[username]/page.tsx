@@ -1,103 +1,95 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import {
-  Heart,
-  MessageSquare,
-  Bookmark,
-  Share2,
-  ArrowLeft,
-} from "lucide-react";
-import { ClipLoader } from "react-spinners";
+import { useEffect, useState } from "react"
+import Link from "next/link"
+import Image from "next/image"
+import { Heart, MessageSquare, Bookmark, Share2, ArrowLeft } from "lucide-react"
+import { ClipLoader } from "react-spinners"
 
 // Curator 데이터 인터페이스 정의
 interface Curator {
-  username: string;
-  profileImage: string;
-  introduce: string;
-  curationCount: number;
+  username: string
+  profileImage: string
+  introduce: string
+  curationCount: number
 }
 
 // Curation 데이터 인터페이스 정의
 interface Curation {
-  id: number;
-  title: string;
-  content: string;
-  createdBy?: string;
-  createdAt: string;
-  modifiedAt: string;
-  likeCount: number;
-  urls: { url: string }[];
-  tags: { name: string }[];
+  id: number
+  title: string
+  content: string
+  createdBy?: string
+  createdAt: string
+  modifiedAt: string
+  likeCount: number
+  urls: { url: string }[]
+  tags: { name: string }[]
 }
 
 // Link 메타 데이터 인터페이스 정의
 interface LinkMetaData {
-  url: string;
-  title: string;
-  description: string;
-  image: string;
+  url: string
+  title: string
+  description: string
+  image: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
 export default function CuratorProfile({
   params,
 }: {
-  params: { username: string };
+  params: { username: string }
 }) {
-  const [curator, setCurator] = useState<Curator | null>(null);
-  const [curations, setCurations] = useState<Curation[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [curator, setCurator] = useState<Curator | null>(null)
+  const [curations, setCurations] = useState<Curation[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
   const [linkMetaDataList, setLinkMetaDataList] = useState<{
-    [key: number]: LinkMetaData[];
-  }>({});
+    [key: number]: LinkMetaData[]
+  }>({})
 
   // 큐레이터 정보 가져오기
   const fetchCuratorInfo = async (username: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/members/${username}`);
+      const response = await fetch(`${API_URL}/api/v1/members/${username}`)
       if (!response.ok) {
-        throw new Error("큐레이터 정보를 불러오는 데 실패했습니다.");
+        throw new Error("큐레이터 정보를 불러오는 데 실패했습니다.")
       }
-      const data = await response.json();
+      const data = await response.json()
       if (data.code === "200-4") {
-        setCurator(data.data);
+        setCurator(data.data)
       } else {
-        throw new Error(data.msg || "큐레이터 데이터가 없습니다.");
+        throw new Error(data.msg || "큐레이터 데이터가 없습니다.")
       }
     } catch (error) {
-      console.error("Error fetching curator info:", error);
-      setError((error as Error).message);
+      console.error("Error fetching curator info:", error)
+      setError((error as Error).message)
     }
-  };
+  }
 
   // 큐레이터의 큐레이션 목록 가져오기
   const fetchCuratorCurations = async (username: string) => {
     try {
-      const response = await fetch(
-        `${API_URL}/api/v1/curation?author=${username}`
-      );
+      const response = await fetch(`${API_URL}/api/v1/curation?author=${username}`)
       if (!response.ok) {
-        throw new Error("큐레이션 목록을 불러오는 데 실패했습니다.");
+        throw new Error("큐레이션 목록을 불러오는 데 실패했습니다.")
       }
-      const data = await response.json();
+      const data = await response.json()
       if (data && data.data) {
-        setCurations(data.data);
+        setCurations(data.data)
       } else {
-        console.error("No curation data found in the response");
-        setCurations([]);
+        console.error("No curation data found in the response")
+        setCurations([])
       }
     } catch (error) {
-      console.error("Error fetching curator curations:", error);
-      setError((error as Error).message);
+      console.error("Error fetching curator curations:", error)
+      setError((error as Error).message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   // 메타 데이터 추출 함수
   const fetchLinkMetaData = async (url: string, curationId: number) => {
@@ -108,70 +100,61 @@ export default function CuratorProfile({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ url: url }),
-      });
+      })
 
       if (!response.ok) {
-        throw new Error("Failed to fetch link metadata");
+        throw new Error("Failed to fetch link metadata")
       }
 
-      const data = await response.json();
+      const data = await response.json()
       setLinkMetaDataList((prev) => {
-        const existingMetaData = prev[curationId] || [];
-        const newMetaData = existingMetaData.filter(
-          (meta) => meta.url !== data.data.url
-        );
+        const existingMetaData = prev[curationId] || []
+        const newMetaData = existingMetaData.filter((meta) => meta.url !== data.data.url)
         return {
           ...prev,
           [curationId]: [...newMetaData, data.data],
-        };
-      });
+        }
+      })
     } catch (error) {
-      console.error("Error fetching link metadata:", error);
+      console.error("Error fetching link metadata:", error)
     }
-  };
+  }
 
   // 큐레이션마다 메타 데이터 추출
   useEffect(() => {
     curations.forEach((curation) => {
       if (curation.urls && curation.urls.length > 0) {
         curation.urls.forEach((urlObj) => {
-          if (
-            !linkMetaDataList[curation.id]?.some(
-              (meta) => meta.url === urlObj.url
-            )
-          ) {
-            fetchLinkMetaData(urlObj.url, curation.id);
+          if (!linkMetaDataList[curation.id]?.some((meta) => meta.url === urlObj.url)) {
+            fetchLinkMetaData(urlObj.url, curation.id)
           }
-        });
+        })
       }
-    });
-  }, [curations, linkMetaDataList]);
+    })
+  }, [curations, linkMetaDataList])
 
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
-  };
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    const hours = String(date.getHours()).padStart(2, "0")
+    const minutes = String(date.getMinutes()).padStart(2, "0")
+    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`
+  }
 
   // 컴포넌트 마운트 시 API 호출
   useEffect(() => {
-    fetchCuratorInfo(params.username);
-    fetchCuratorCurations(params.username);
-  }, [params.username]);
+    fetchCuratorInfo(params.username)
+    fetchCuratorCurations(params.username)
+  }, [params.username])
 
   return (
     <div className="container mx-auto px-4 py-8">
       {/* 뒤로 가기 버튼 */}
       <div className="mb-6">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-gray-500 hover:text-black"
-        >
+        <Link href="/" className="inline-flex items-center text-sm text-gray-500 hover:text-black">
           <ArrowLeft className="mr-2 h-4 w-4" />
           홈으로 돌아가기
         </Link>
@@ -193,10 +176,7 @@ export default function CuratorProfile({
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
               <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                 <Image
-                  src={
-                    curator.profileImage ||
-                    `/placeholder.svg?height=96&width=96`
-                  }
+                  src={curator.profileImage || `/placeholder.svg?height=96&width=96`}
                   alt={curator.username}
                   width={96}
                   height={96}
@@ -208,9 +188,7 @@ export default function CuratorProfile({
                 <p className="text-gray-600 mb-4">{curator.introduce}</p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold">
-                      {curator.curationCount}
-                    </p>
+                    <p className="text-2xl font-bold">{curator.curationCount}</p>
                     <p className="text-sm text-gray-500">큐레이션</p>
                   </div>
                 </div>
@@ -238,21 +216,15 @@ export default function CuratorProfile({
               {curations.map((curation) => (
                 <div key={curation.id} className="space-y-4 border-b pb-6">
                   <div className="flex items-center space-x-2">
-                    <p className="text-xs text-gray-500">{`작성된 날짜 : ${formatDate(
-                      curation.createdAt
-                    )}`}</p>
+                    <p className="text-xs text-gray-500">{`작성된 날짜 : ${formatDate(curation.createdAt)}`}</p>
                   </div>
 
                   <div>
                     <Link href={`/curation/${curation.id}`} className="group">
-                      <h2 className="text-xl font-bold group-hover:text-blue-600">
-                        {curation.title}
-                      </h2>
+                      <h2 className="text-xl font-bold group-hover:text-blue-600">{curation.title}</h2>
                     </Link>
                     <p className="mt-2 text-gray-600">
-                      {curation.content.length > 100
-                        ? `${curation.content.substring(0, 100)}...`
-                        : curation.content}
+                      {curation.content.length > 100 ? `${curation.content.substring(0, 100)}...` : curation.content}
                     </p>
                     <Link
                       href={`/curation/${curation.id}`}
@@ -271,14 +243,14 @@ export default function CuratorProfile({
                           tag.name === "포털"
                             ? "bg-blue-100 text-blue-800"
                             : tag.name === "개발"
-                            ? "bg-green-100 text-green-800"
-                            : tag.name === "디자인"
-                            ? "bg-purple-100 text-purple-800"
-                            : tag.name === "AI"
-                            ? "bg-red-100 text-red-800"
-                            : tag.name === "생산성"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-gray-100 text-gray-800"
+                              ? "bg-green-100 text-green-800"
+                              : tag.name === "디자인"
+                                ? "bg-purple-100 text-purple-800"
+                                : tag.name === "AI"
+                                  ? "bg-red-100 text-red-800"
+                                  : tag.name === "생산성"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-gray-100 text-gray-800"
                         }`}
                       >
                         #{tag.name}
@@ -298,9 +270,7 @@ export default function CuratorProfile({
                           />
                           <div>
                             <h3 className="font-medium">{metaData.title}</h3>
-                            <p className="text-sm text-gray-600 line-clamp-1">
-                              {metaData.description}
-                            </p>
+                            <p className="text-sm text-gray-600 line-clamp-1">{metaData.description}</p>
                           </div>
                         </div>
                       </div>
@@ -334,5 +304,6 @@ export default function CuratorProfile({
         </>
       ) : null}
     </div>
-  );
+  )
 }
+
