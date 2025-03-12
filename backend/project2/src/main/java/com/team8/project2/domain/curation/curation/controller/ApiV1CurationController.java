@@ -9,6 +9,7 @@ import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -60,13 +61,6 @@ public class ApiV1CurationController {
     public RsData<CurationResDto> updateCuration(@PathVariable Long id, @RequestBody CurationReqDTO curationReq) {
         Member member = rq.getActor();
 
-        Curation curation = curationService.getCuration(id);
-
-//         글 작성자와 현재 사용자가 같을 때만 수정 허용
-        if (!curation.getMember().getId().equals(member.getId())) {
-            return new RsData<>("403-1", "권한이 없습니다.", null); // 권한 없음
-        }
-
         Curation updatedCuration = curationService.updateCuration(
                 id,
                 curationReq.getTitle(),
@@ -86,14 +80,7 @@ public class ApiV1CurationController {
     @DeleteMapping("/{id}")
     public RsData<Void> deleteCuration(@PathVariable Long id) {
         Member member = rq.getActor();
-
-        Curation curation = curationService.getCuration(id);
-
-        // 글 작성자와 현재 사용자가 같을 때만 삭제 허용
-        if (!curation.getMember().getId().equals(member.getId())) {
-            return new RsData<>("403-1", "권한이 없습니다.", null); // 권한 없음
-        }
-        curationService.deleteCuration(id);
+        curationService.deleteCuration(id, member.getId());
         return new RsData<>("204-1", "글이 성공적으로 삭제되었습니다.", null);
     }
 
@@ -104,8 +91,11 @@ public class ApiV1CurationController {
      */
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
-    public RsData<CurationDetailResDto> getCuration(@PathVariable Long id) {
-        Curation curation = curationService.getCuration(id);
+    public RsData<CurationDetailResDto> getCuration(@PathVariable Long id, HttpServletRequest request) {
+
+        // 큐레이션 서비스 호출 시 IP를 전달
+        Curation curation = curationService.getCuration(id, request);
+
         return new RsData<>("200-1", "조회 성공", CurationDetailResDto.fromEntity(curation));
     }
 
@@ -145,7 +135,7 @@ public class ApiV1CurationController {
         curationService.likeCuration(id, memberId);
         return new RsData<>("200-1", "글에 좋아요를 했습니다.", null);
     }
-
+  
     @GetMapping("/following")
     @PreAuthorize("isAuthenticated()")
     public RsData<List<CurationResDto>> followingCuration() {
