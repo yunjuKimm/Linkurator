@@ -17,10 +17,7 @@ import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
-import jakarta.persistence.EntityNotFoundException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
@@ -29,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -41,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @ExtendWith(MockitoExtension.class)
 class CurationServiceTest {
 
@@ -86,23 +85,23 @@ class CurationServiceTest {
 
 
 		curation = Curation.builder()
-			.id(1L)
-			.title("Test Title")
-			.content("Test Content")
-			.member(member)
-			.build();
+				.id(1L)
+				.title("Test Title")
+				.content("Test Content")
+				.member(member)
+				.build();
 
 		link = Link.builder()
-			.id(1L)
-			.url("https://test.com")
-			.build();
+				.id(1L)
+				.url("https://test.com")
+				.build();
 
 		tag = Tag.builder()
-			.name("test")
-			.build();
-
+				.name("test")
+				.build();
 
 	}
+
 
 	@Test
 	@DisplayName("큐레이션을 생성할 수 있다")
@@ -297,54 +296,59 @@ class CurationServiceTest {
 		assert foundCurations.size() == 1;
 	}
 
+
+
+
+	@Transactional
 	@Test
 	@DisplayName("큐레이션 좋아요 기능을 테스트합니다.")
 	void likeCuration() {
-		String expectedMemberId = "memberId";
+		Long expectedId = 1L;
 
 		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
 		ListOperations<String, Object> listOps = mock(ListOperations.class);
 		when(listOps.rightPop(anyString(), any(Duration.class)))
-				.thenReturn(expectedMemberId)
+				.thenReturn(expectedId.toString())
 				.thenReturn(null);
 
 		when(redisTemplate.opsForList()).thenReturn(listOps);
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
-		when(memberRepository.findByMemberId(anyString())).thenReturn(Optional.of(new Member()));
+		when(memberRepository.findById(anyLong())).thenReturn(Optional.of(new Member()));
 		when(likeRepository.findByCurationAndMember(any(Curation.class), any(Member.class))).thenReturn(
 			Optional.empty());
 
-		curationService.likeCuration(1L, 1L);
+		curationService.likeCuration(1L, expectedId);
 
 		verify(curationRepository, times(1)).findById(anyLong());
-		verify(memberRepository, times(1)).findByMemberId(anyString());
+		verify(memberRepository, times(1)).findById(anyLong());
 		verify(likeRepository, times(1)).findByCurationAndMember(any(Curation.class), any(Member.class));
 		verify(likeRepository, times(1)).save(any(Like.class));
 	}
 
+	@Transactional
 	@Test
 	@DisplayName("큐레이션 좋아요를 한 번 더 누르면 취소되고 카운트가 감소해야 합니다.")
 	void likeCurationWithCancel() {
-		String expectedMemberId = "memberId";
+		Long expectedId = 1L;
 
 		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
 		ListOperations<String, Object> listOps = mock(ListOperations.class);
 		when(listOps.rightPop(anyString(), any(Duration.class)))
-				.thenReturn(expectedMemberId)
+				.thenReturn(expectedId.toString())
 				.thenReturn(null);
 
 		when(redisTemplate.opsForList()).thenReturn(listOps);
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
-		when(memberRepository.findByMemberId(anyString())).thenReturn(Optional.of(new Member()));
+		when(memberRepository.findById(anyLong())).thenReturn(Optional.of(new Member()));
 		when(likeRepository.findByCurationAndMember(any(Curation.class), any(Member.class)))
 				.thenReturn(Optional.of(new Like()));
 		doNothing().when(likeRepository).delete(any(Like.class));
 
-		curationService.likeCuration(1L, 1L);
+		curationService.likeCuration(1L, expectedId);
 
 		// Verify that the like was deleted (cancelled)
 		verify(likeRepository, times(1)).findByCurationAndMember(any(), any());
@@ -359,16 +363,12 @@ class CurationServiceTest {
 	@Test
 	@DisplayName("존재하지 않는 큐레이션에 좋아요를 누르면 예외가 발생해야 합니다.")
 	void likeNonExistentCuration() {
-		ListOperations<String, Object> listOperations = mock(ListOperations.class);
-		when(redisTemplate.opsForList()).thenReturn(listOperations);
-		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
-		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 		// Mocking repository to return empty Optional (큐레이션 없음)
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
 		// 예외 발생 검증
 		assertThatThrownBy(() -> curationService.likeCuration(1L, 1L))
-			.isInstanceOf(EntityNotFoundException.class)
+			.isInstanceOf(ServiceException.class)
 			.hasMessageContaining("해당 큐레이션을 찾을 수 없습니다.");
 
 		// Verify interactions (likeRepository는 호출되지 않아야 함)
@@ -381,10 +381,6 @@ class CurationServiceTest {
 	@Test
 	@DisplayName("존재하지 않는 멤버가 좋아요를 누르면 예외가 발생해야 합니다.")
 	void likeByNonExistentMember() {
-		ListOperations<String, Object> listOperations = mock(ListOperations.class);
-		when(redisTemplate.opsForList()).thenReturn(listOperations);
-		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
-		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 		// Mocking repository to return a valid Curation
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
 
@@ -393,7 +389,7 @@ class CurationServiceTest {
 
 		// 예외 발생 검증
 		assertThatThrownBy(() -> curationService.likeCuration(1L, 1L))
-			.isInstanceOf(EntityNotFoundException.class)
+			.isInstanceOf(ServiceException.class)
 			.hasMessageContaining("해당 멤버를 찾을 수 없습니다.");
 
 		// Verify interactions (likeRepository는 호출되지 않아야 함)
@@ -402,4 +398,6 @@ class CurationServiceTest {
 		verify(likeRepository, never()).findByCurationAndMember(any(Curation.class), any(Member.class));
 		verify(likeRepository, never()).save(any(Like.class));
 	}
+
+
 }

@@ -14,7 +14,6 @@ import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -212,20 +211,25 @@ public class CurationService {
      */
 	@Transactional
 	public void likeCuration(Long curationId, Long memberId) {
-		String likeQueueKey = "like:queue:" + curationId; // 큐레이션에 대한 좋아요 큐 키
-		String userLikeKey = "like:" + curationId + ":" + memberId; // 사용자의 좋아요 상태 키
+		String likeQueueKey = "like:queue:" + curationId;
+		String userLikeKey = "like:" + curationId + ":" + memberId;
+
+		// 여기에서 먼저 존재 여부 확인
+		Curation curation = curationRepository.findById(curationId)
+				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+
+		Member member = memberRepository.findById(memberId)
+				.orElseThrow(() -> new ServiceException("404-1", "해당 멤버를 찾을 수 없습니다."));
 
 		// 좋아요 이벤트를 Redis 큐에 추가
-		redisTemplate.opsForList().leftPush(likeQueueKey, memberId); // 큐에 사용자의 memberId 추가
-
-		// 3. Redis에 사용자가 좋아요를 눌렀음을 기록 (10분 동안 유효)
+		redisTemplate.opsForList().leftPush(likeQueueKey, memberId);
 		redisTemplate.opsForValue().set(userLikeKey, "liked", Duration.ofMinutes(10));
 
-		// 실제로 큐에서 좋아요를 처리하는 별도의 비동기 작업
-		processLikeQueue(curationId, likeQueueKey);
+		// 비동기 처리 실행
+		processLikeQueue(curationId, likeQueueKey, curation, member);
 	}
 
-	public void processLikeQueue(Long curationId, String likeQueueKey) {
+	public void processLikeQueue(Long curationId, String likeQueueKey, Curation curation, Member member) {
 		// 큐에서 좋아요 이벤트를 하나씩 처리하는 로직
 		new Thread(() -> {
 			try {
@@ -237,12 +241,6 @@ public class CurationService {
 						break; // 큐에 더 이상 처리할 데이터가 없으면 종료
 					}
 
-					// 큐레이션과 멤버를 조회
-					Curation curation = curationRepository.findById(curationId)
-							.orElseThrow(() -> new EntityNotFoundException("해당 큐레이션을 찾을 수 없습니다."));
-
-					Member member = memberRepository.findByMemberId(memberId)
-							.orElseThrow(() -> new EntityNotFoundException("해당 멤버를 찾을 수 없습니다."));
 
 					// 좋아요 처리
 					likeRepository.findByCurationAndMember(curation, member).ifPresentOrElse(
