@@ -1,6 +1,5 @@
 package com.team8.project2.domain.curation.curation.service;
 
-import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
 import com.team8.project2.domain.curation.curation.entity.CurationTag;
@@ -12,25 +11,17 @@ import com.team8.project2.domain.curation.like.entity.Like;
 import com.team8.project2.domain.curation.like.repository.LikeRepository;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.domain.link.service.LinkService;
-import com.team8.project2.domain.member.entity.Follow;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.FollowRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
-
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.time.Duration;
-import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -280,6 +271,18 @@ public class CurationService {
 				e.printStackTrace();
 			}
 		}).start(); // 비동기 작업을 별도의 스레드에서 실행
+	}
+
+	/**
+	 * ✅ 특정 멤버가 팔로우하는 큐레이션 목록을 조회하는 메서드 추가
+	 * @param member 팔로우한 멤버
+	 * @return 팔로우한 멤버의 큐레이션 목록
+	 */
+	public List<CurationResDto> getFollowingCurations(Member member) {
+		List<Curation> followingCurations = curationRepository.findFollowingCurations(member.getId());
+		return followingCurations.stream()
+				.map(CurationResDto::new)
+				.collect(Collectors.toList());
 	}
 
 }
