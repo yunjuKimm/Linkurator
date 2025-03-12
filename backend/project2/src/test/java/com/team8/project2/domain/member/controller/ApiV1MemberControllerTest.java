@@ -6,18 +6,16 @@ import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.curation.tag.dto.TagReqDto;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
+import com.team8.project2.domain.member.dto.MemberResDTO;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.member.service.MemberService;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -60,6 +58,8 @@ public class ApiV1MemberControllerTest {
     private static String validToken;
     private static String invalidToken;
 
+    private Member member;
+
     @BeforeEach
     void setUp() {
 
@@ -73,9 +73,25 @@ public class ApiV1MemberControllerTest {
         memberReqDTO.setEmail("member1@gmail.com");
         memberReqDTO.setIntroduce("안녕");
 
-        // ✅ 회원이 없으면 생성
-        Member member = memberRepository.findByMemberId(memberReqDTO.getMemberId())
-                .orElseGet(() -> memberRepository.save(memberReqDTO.toEntity()));
+        Member savedMember = memberRepository.findByUsername(memberReqDTO.getUsername())
+                .orElseGet(() -> {
+                    Member newMember = memberRepository.save(memberReqDTO.toEntity());
+                    memberRepository.flush(); // ✅ 강제 동기화
+                    return newMember;
+                });
+
+        this.member = memberRepository.findByUsername(savedMember.getUsername()).orElse(null);
+
+        System.out.println("setup()에서 생성된 member: " + this.member);
+
+        if (this.member == null) {
+            throw new IllegalStateException("setup()에서 member가 정상적으로 생성되지 않았습니다.");
+        }
+
+        if (this.member == null) {
+            System.out.println("setup()에서 member가 정상적으로 생성되지 않음. 테스트 중단");
+            return;  //
+        }
 
         // ✅ 큐레이션 추가
         curationService.createCuration(
@@ -216,13 +232,14 @@ public class ApiV1MemberControllerTest {
     }
 
     @Test
-    @DisplayName("memberId 기반 큐레이터 정보 조회")
+    @DisplayName("username 기반 큐레이터 정보 조회")
     void getCuratorInfoTest() throws Exception {
-        // Given
-        long curationCount = curationService.countByMemberId(memberReqDTO.getMemberId()); // ✅ setup()에서 큐레이션 추가됨
+
+        Member savedMember = memberRepository.findByUsername(memberReqDTO.getUsername()).orElseThrow();
+        long curationCount = curationService.countByMember(savedMember);
 
         // When
-        mvc.perform(get("/api/v1/members/" + memberReqDTO.getMemberId()))
+        mvc.perform(get("/api/v1/members/" + memberReqDTO.getUsername()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-4"))
                 .andExpect(jsonPath("$.data.username").value("초보"))

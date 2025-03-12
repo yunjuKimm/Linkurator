@@ -3,6 +3,7 @@ package com.team8.project2.domain.member.controller;
 import java.util.Map;
 
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
