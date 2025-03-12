@@ -1,5 +1,6 @@
 package com.team8.project2.domain.curation.curation.service;
 
+import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
 import com.team8.project2.domain.curation.curation.entity.CurationTag;
