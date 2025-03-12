@@ -98,8 +98,8 @@ public class Rq {
         cookie.setDomain("localhost");
         cookie.setPath("/");
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setAttribute("SameSite", "Strict");
+        cookie.setSecure(false);
+        cookie.setAttribute("SameSite", "None");
         response.addCookie(cookie);
     }
 
