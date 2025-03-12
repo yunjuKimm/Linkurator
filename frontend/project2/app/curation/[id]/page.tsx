@@ -416,7 +416,7 @@ export default function CurationDetail() {
           </div>
 
           <div
-            className="prose prose-sm sm:prose lg:prose-lg max-w-none"
+            className="prose prose-sm sm:prose lg:prose-lg max-w-none ql-editor-content"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
 
@@ -485,6 +485,59 @@ export default function CurationDetail() {
           onClose={() => setShowPlaylistModal(false)}
         />
       )}
+      <style jsx global>{`
+        .ql-editor-content {
+          font-family: inherit;
+        }
+        .ql-editor-content h1,
+        .ql-editor-content h2,
+        .ql-editor-content h3,
+        .ql-editor-content h4,
+        .ql-editor-content h5,
+        .ql-editor-content h6 {
+          font-weight: bold;
+          margin-top: 1em;
+          margin-bottom: 0.5em;
+        }
+        .ql-editor-content h1 {
+          font-size: 2em;
+        }
+        .ql-editor-content h2 {
+          font-size: 1.5em;
+        }
+        .ql-editor-content h3 {
+          font-size: 1.17em;
+        }
+        .ql-editor-content p {
+          margin-bottom: 1em;
+        }
+        .ql-editor-content ul,
+        .ql-editor-content ol {
+          padding-left: 2em;
+          margin-bottom: 1em;
+        }
+        .ql-editor-content blockquote {
+          border-left: 4px solid #ccc;
+          padding-left: 16px;
+          margin: 0 0 1em;
+        }
+        .ql-editor-content pre {
+          background-color: #f0f0f0;
+          border-radius: 3px;
+          padding: 5px 10px;
+          margin-bottom: 1em;
+        }
+        .ql-editor-content code {
+          background-color: #f0f0f0;
+          padding: 2px 4px;
+          border-radius: 3px;
+          font-family: monospace;
+        }
+        .ql-editor-content img {
+          max-width: 100%;
+          height: auto;
+        }
+      `}</style>
     </main>
   );
 }

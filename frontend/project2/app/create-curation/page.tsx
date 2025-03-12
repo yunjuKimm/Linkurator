@@ -1,98 +1,103 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { X, Plus, ArrowLeft } from "lucide-react"
-import { toast } from "sonner"
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { X, Plus, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import QuillEditor, { type QuillEditorRef } from "../components/quill-editor";
 
 // 큐레이션 생성 요청 인터페이스
 interface CurationRequest {
-  title: string
-  content: string
-  linkReqDtos: { url: string }[]
-  tagReqDtos: { name: string }[]
+  title: string;
+  content: string;
+  linkReqDtos: { url: string }[];
+  tagReqDtos: { name: string }[];
 }
 
 export default function CreateCurationPage() {
-  const router = useRouter()
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState("")
-  const [links, setLinks] = useState<string[]>([""])
-  const [tags, setTags] = useState<string[]>([""])
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter();
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [links, setLinks] = useState<string[]>([""]);
+  const [tags, setTags] = useState<string[]>([""]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const editorRef = useRef<QuillEditorRef>(null);
 
   // 링크 입력 필드 추가
   const addLinkField = () => {
-    setLinks([...links, ""])
-  }
+    setLinks([...links, ""]);
+  };
 
   // 링크 입력 필드 제거
   const removeLinkField = (index: number) => {
-    const newLinks = [...links]
-    newLinks.splice(index, 1)
-    setLinks(newLinks)
-  }
+    const newLinks = [...links];
+    newLinks.splice(index, 1);
+    setLinks(newLinks);
+  };
 
   // 링크 값 변경
   const handleLinkChange = (index: number, value: string) => {
-    const newLinks = [...links]
-    newLinks[index] = value
-    setLinks(newLinks)
-  }
+    const newLinks = [...links];
+    newLinks[index] = value;
+    setLinks(newLinks);
+  };
 
   // 태그 입력 필드 추가
   const addTagField = () => {
-    setTags([...tags, ""])
-  }
+    setTags([...tags, ""]);
+  };
 
   // 태그 입력 필드 제거
   const removeTagField = (index: number) => {
-    const newTags = [...tags]
-    newTags.splice(index, 1)
-    setTags(newTags)
-  }
+    const newTags = [...tags];
+    newTags.splice(index, 1);
+    setTags(newTags);
+  };
 
   // 태그 값 변경
   const handleTagChange = (index: number, value: string) => {
-    const newTags = [...tags]
-    newTags[index] = value
-    setTags(newTags)
-  }
+    const newTags = [...tags];
+    newTags[index] = value;
+    setTags(newTags);
+  };
 
   // 폼 제출 처리
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     // 유효성 검사
     if (!title.trim()) {
-      toast.error("제목을 입력해주세요.")
-      return
+      toast.error("제목을 입력해주세요.");
+      return;
     }
 
-    if (!content.trim()) {
-      toast.error("내용을 입력해주세요.")
-      return
+    // Get the latest content from the editor
+    const currentContent = editorRef.current?.getContent() || content;
+
+    if (!currentContent.trim()) {
+      toast.error("내용을 입력해주세요.");
+      return;
     }
 
     // 빈 링크 필터링
-    const filteredLinks = links.filter((link) => link.trim() !== "")
+    const filteredLinks = links.filter((link) => link.trim() !== "");
 
     // 빈 태그 필터링
-    const filteredTags = tags.filter((tag) => tag.trim() !== "")
+    const filteredTags = tags.filter((tag) => tag.trim() !== "");
 
     try {
-      setIsSubmitting(true)
+      setIsSubmitting(true);
 
       // API 요청 데이터 구성
       const requestData: CurationRequest = {
         title,
-        content,
+        content: currentContent,
         linkReqDtos: filteredLinks.map((url) => ({ url })),
         tagReqDtos: filteredTags.map((name) => ({ name })),
-      }
+      };
 
       // API 호출
       const response = await fetch("http://localhost:8080/api/v1/curation", {
@@ -101,33 +106,36 @@ export default function CreateCurationPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestData),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("큐레이션 생성에 실패했습니다.")
+        throw new Error("큐레이션 생성에 실패했습니다.");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.code === "201-1") {
-        toast.success("큐레이션이 성공적으로 생성되었습니다.")
+        toast.success("큐레이션이 성공적으로 생성되었습니다.");
         // 생성된 큐레이션 상세 페이지로 이동
-        router.push(`/curation/${data.data.id}`)
+        router.push(`/curation/${data.data.id}`);
       } else {
-        throw new Error(data.msg || "큐레이션 생성에 실패했습니다.")
+        throw new Error(data.msg || "큐레이션 생성에 실패했습니다.");
       }
     } catch (error) {
-      console.error("큐레이션 생성 중 오류 발생:", error)
-      toast.error((error as Error).message)
+      console.error("큐레이션 생성 중 오류 발생:", error);
+      toast.error((error as Error).message);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <Link href="/" className="inline-flex items-center text-sm text-gray-500 hover:text-black">
+        <Link
+          href="/"
+          className="inline-flex items-center text-sm text-gray-500 hover:text-black"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           홈으로 돌아가기
         </Link>
@@ -152,27 +160,30 @@ export default function CreateCurationPage() {
           />
         </div>
 
-        {/* 내용 입력 */}
+        {/* 내용 입력 - 커스텀 Quill 에디터 */}
         <div>
           <label htmlFor="content" className="block text-sm font-medium mb-1">
             내용 <span className="text-red-500">*</span>
           </label>
-          <textarea
-            id="content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full rounded-md border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            placeholder="내용을 입력하세요"
-            rows={8}
-            required
-          />
+          <div className="quill-container">
+            <QuillEditor
+              ref={editorRef}
+              value={content}
+              onChange={setContent}
+              placeholder="내용을 입력하세요..."
+            />
+          </div>
         </div>
 
         {/* 링크 입력 */}
         <div>
           <div className="flex justify-between items-center mb-2">
             <label className="block text-sm font-medium">링크</label>
-            <button type="button" onClick={addLinkField} className="text-blue-600 text-sm flex items-center">
+            <button
+              type="button"
+              onClick={addLinkField}
+              className="text-blue-600 text-sm flex items-center"
+            >
               <Plus className="h-4 w-4 mr-1" /> 링크 추가
             </button>
           </div>
@@ -203,7 +214,11 @@ export default function CreateCurationPage() {
         <div>
           <div className="flex justify-between items-center mb-2">
             <label className="block text-sm font-medium">태그</label>
-            <button type="button" onClick={addTagField} className="text-blue-600 text-sm flex items-center">
+            <button
+              type="button"
+              onClick={addTagField}
+              className="text-blue-600 text-sm flex items-center"
+            >
               <Plus className="h-4 w-4 mr-1" /> 태그 추가
             </button>
           </div>
@@ -231,7 +246,7 @@ export default function CreateCurationPage() {
         </div>
 
         {/* 제출 버튼 */}
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 pt-4">
           <Link
             href="/"
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -247,7 +262,31 @@ export default function CreateCurationPage() {
           </button>
         </div>
       </form>
-    </div>
-  )
-}
 
+      {/* Quill 에디터 스타일 조정을 위한 CSS */}
+      <style jsx global>{`
+        .quill-container {
+          margin-bottom: 2rem;
+        }
+        .quill-editor-container {
+          width: 100%;
+        }
+        .ql-container {
+          min-height: 200px;
+          border-bottom-left-radius: 0.375rem;
+          border-bottom-right-radius: 0.375rem;
+          font-family: inherit;
+        }
+        .ql-toolbar {
+          border-top-left-radius: 0.375rem;
+          border-top-right-radius: 0.375rem;
+        }
+        .ql-editor {
+          min-height: 200px;
+          max-height: 500px;
+          overflow-y: auto;
+        }
+      `}</style>
+    </div>
+  );
+}
