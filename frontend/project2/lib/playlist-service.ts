@@ -44,7 +44,12 @@ export async function createPlaylist(data: {
 
 export async function updatePlaylist(
   id: number,
-  data: { title: string; description: string; thumbnailUrl?: string }
+  data: {
+    title: string;
+    description: string;
+    isPublic: boolean;
+    thumbnailUrl?: string;
+  }
 ): Promise<Playlist> {
   const response = await fetch(`http://localhost:8080/api/v1/playlists/${id}`, {
     method: "PATCH",

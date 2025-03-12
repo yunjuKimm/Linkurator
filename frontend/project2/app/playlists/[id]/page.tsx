@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Bookmark, Edit, LinkIcon, Share2 } from "lucide-react";
 
@@ -33,62 +34,72 @@ export default async function PlaylistDetailPage({
       </div>
 
       {/* 플레이리스트 정보 영역 */}
-      <div className="flex flex-col gap-4 mb-8">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">
-                {playlist.title}
-              </h1>
-              {playlist.tags && (
+      <div className="flex flex-col md:flex-row gap-6 mb-8">
+        {playlist.thumbnailUrl && (
+          <div className="w-full md:w-1/3 aspect-video relative overflow-hidden rounded-md">
+            <Image
+              src={playlist.thumbnailUrl}
+              alt={playlist.title}
+              fill
+              className="object-cover"
+            />
+          </div>
+        )}
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight">
+              {playlist.title}
+            </h1>
+            {playlist.tags &&
+              Array.isArray(playlist.tags) &&
+              playlist.tags.length > 0 && (
                 <Badge variant="secondary" className="ml-2">
-                  {playlist.tags}
+                  {Array.isArray(playlist.tags)
+                    ? playlist.tags.join(", ")
+                    : playlist.tags}
                 </Badge>
               )}
+          </div>
+          {playlist.description && (
+            <p className="text-muted-foreground mt-2">{playlist.description}</p>
+          )}
+          <div className="flex items-center text-sm text-muted-foreground mt-2">
+            <div className="flex items-center">
+              <Bookmark className="h-4 w-4 mr-1" />
+              <span>
+                {new Date(playlist.createdAt).toLocaleDateString("ko-KR", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}{" "}
+                생성
+              </span>
             </div>
-            {playlist.description && (
-              <p className="text-muted-foreground mt-2">
-                {playlist.description}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {/* 링크 추가 버튼 */}
-            <AddLinkButton playlistId={playlist.id} />
-            <Link href={`/playlists/${playlist.id}/edit`}>
-              <Button variant="outline" size="icon">
-                <Edit className="mr-2 h-4 w-4" />
-                <span className="sr-only">편집</span>
-              </Button>
-            </Link>
-            <Button variant="outline" size="icon">
-              <Share2 className="h-4 w-4" />
-              <span className="sr-only">공유</span>
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex items-center text-sm text-muted-foreground">
-          <div className="flex items-center">
-            <Bookmark className="h-4 w-4 mr-1" />
-            <span>
-              {new Date(playlist.createdAt).toLocaleDateString("ko-KR", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-              {"  "}생성
-            </span>
-          </div>
-          <div className="mx-2">•</div>
-          <div className="flex items-center">
-            <LinkIcon className="h-4 w-4 mr-1" />
-            <span>{playlist.items?.length || 0}개 링크</span>
+            <div className="mx-2">•</div>
+            <div className="flex items-center">
+              <LinkIcon className="h-4 w-4 mr-1" />
+              <span>{playlist.items?.length || 0}개 링크</span>
+            </div>
           </div>
         </div>
       </div>
 
       <Separator className="my-6" />
+
+      {/* 액션 버튼 영역 */}
+      <div className="flex items-center gap-2 mb-6">
+        <AddLinkButton playlistId={playlist.id} />
+        <Link href={`/playlists/${playlist.id}/edit`}>
+          <Button variant="outline" size="icon">
+            <Edit className="mr-2 h-4 w-4" />
+            <span className="sr-only">편집</span>
+          </Button>
+        </Link>
+        <Button variant="outline" size="icon">
+          <Share2 className="h-4 w-4" />
+          <span className="sr-only">공유</span>
+        </Button>
+      </div>
 
       {/* 하단 플레이리스트 항목 영역 */}
       {playlist.items && playlist.items.length > 0 ? (
