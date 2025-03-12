@@ -1,6 +1,5 @@
 package com.team8.project2.domain.curation.curation.service;
 
-import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
 import com.team8.project2.domain.curation.curation.entity.CurationTag;
@@ -12,21 +11,17 @@ import com.team8.project2.domain.curation.like.entity.Like;
 import com.team8.project2.domain.curation.like.repository.LikeRepository;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.domain.link.service.LinkService;
-import com.team8.project2.domain.member.entity.Follow;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.FollowRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
-
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,7 +40,11 @@ public class CurationService {
 	private final TagService tagService;
 	private final MemberRepository memberRepository;
     private final LikeRepository likeRepository;
+
+	private final RedisTemplate<String, Object> redisTemplate;
+	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
 	private final FollowRepository followRepository;
+
 
 	/**
 	 * ✅ 특정 큐레이터의 큐레이션 개수를 반환하는 메서드 추가
@@ -109,7 +108,7 @@ public class CurationService {
 	public Curation updateCuration(Long curationId, String title, String content, List<String> urls,
 		List<String> tags, Member member) {
 		Curation curation = curationRepository.findById(curationId)
-			.orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+			.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
 
 		if (!curation.getMember().getId().equals(member.getId())) {
 			throw new ServiceException("403", "권한이 없습니다.");
@@ -147,9 +146,14 @@ public class CurationService {
 	 * @param curationId 삭제할 큐레이션 ID
 	 */
 	@Transactional
-	public void deleteCuration(Long curationId) {
-		if (!curationRepository.existsById(curationId)) {
-			throw new ServiceException("404-1", "해당 글을 찾을 수 없습니다.");
+	public void deleteCuration(Long curationId, Long memberId) {
+		// 큐레이션이 존재하는지 확인
+		Curation curation = curationRepository.findById(curationId)
+				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+
+		// 삭제 권한이 있는지 확인 (작성자와 요청자가 같은지 확인)
+		if (!curation.getMember().getId().equals(memberId)) {
+			throw new ServiceException("403-1", "권한이 없습니다."); // 권한 없음
 		}
 		curationLinkRepository.deleteByCurationId(curationId);
 		curationTagRepository.deleteByCurationId(curationId);
@@ -161,12 +165,36 @@ public class CurationService {
 	 * @param curationId 조회할 큐레이션 ID
 	 * @return 조회된 큐레이션 객체
 	 */
-	public Curation getCuration(Long curationId) {
-		return curationRepository.findById(curationId)
-			.orElseThrow(() -> new ServiceException("404-1", "해당 글을 찾을 수 없습니다."));
+	public Curation getCuration(Long curationId, HttpServletRequest request) {
+		String ip = request.getRemoteAddr();  // 클라이언트 IP 주소 추출
+		String key = VIEW_COUNT_KEY + curationId + ":" + ip;
+
+		// Redis에 먼저 키 저장 (최초 요청만 true 반환, 10분 유지)
+		boolean isNewView = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(true), Duration.ofMinutes(10));
+		System.out.println("Redis Key Set? " + isNewView + " | Key: " + key);
+
+		// 큐레이션 조회
+		Curation curation = curationRepository.findById(curationId)
+				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+
+		// 새로운 조회일 때만 조회수 증가
+		if (isNewView) {
+			increaseViewCount(curation);
+			System.out.println("조회수 증가! 현재 조회수: " + curation.getViewCount());
+		} else {
+			System.out.println("조회수 증가 안 함 (이미 조회된 IP)");
+		}
+
+		return curation;
 	}
 
-    /**
+	@Transactional
+	public void increaseViewCount(Curation curation) {
+		curation.setViewCount(curation.getViewCount() + 1);
+		curationRepository.save(curation);
+	}
+
+	/**
      * 큐레이션을 검색합니다.
      * @param tags 태그 목록 (선택적)
      * @param title 제목 검색어 (선택적)
@@ -188,37 +216,73 @@ public class CurationService {
      * 큐레이션 좋아요 기능
      * @param curationId 좋아요를 추가할 큐레이션 ID
      */
-    @Transactional
-    public void likeCuration(Long curationId, Long memberId) {
-        Curation curation = curationRepository.findById(curationId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 큐레이션을 찾을 수 없습니다."));
+	@Transactional
+	public void likeCuration(Long curationId, Long memberId) {
+		String likeQueueKey = "like:queue:" + curationId;
+		String userLikeKey = "like:" + curationId + ":" + memberId;
 
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 멤버를 찾을 수 없습니다."));
+		// 여기에서 먼저 존재 여부 확인
+		Curation curation = curationRepository.findById(curationId)
+				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
 
-        likeRepository.findByCurationAndMember(curation, member).ifPresentOrElse(
-                // 이미 좋아요를 눌렀다면 삭제
-                like -> {
-                    likeRepository.delete(like);
-                    curation.setLikeCount(curation.getLikeCount() - 1);
-                },
-                // 좋아요를 누르지 않았다면 추가
-                () -> {
-                    Like newLike = new Like().setLike(curation, member);
-                    likeRepository.save(newLike);
-                    curation.setLikeCount(curation.getLikeCount() + 1);
-                }
-        );
-    }
+		Member member = memberRepository.findById(memberId)
+				.orElseThrow(() -> new ServiceException("404-1", "해당 멤버를 찾을 수 없습니다."));
 
+		// 좋아요 이벤트를 Redis 큐에 추가
+		redisTemplate.opsForList().leftPush(likeQueueKey, String.valueOf(memberId));
+		redisTemplate.opsForValue().set(userLikeKey, "liked", Duration.ofMinutes(10));
+
+		// 비동기 처리 실행
+		processLikeQueue(likeQueueKey, curation, member);
+	}
+
+	public void processLikeQueue(String likeQueueKey, Curation curation, Member member) {
+		// 큐에서 좋아요 이벤트를 하나씩 처리하는 로직
+		new Thread(() -> {
+			try {
+				// 큐에서 멤버 아이디를 하나씩 꺼내서 처리
+				while (true) {
+					String memberId = (String) redisTemplate.opsForList().rightPop(likeQueueKey, Duration.ofSeconds(10)); // 큐에서 하나씩 꺼냄
+
+					if (memberId == null) {
+						break; // 큐에 더 이상 처리할 데이터가 없으면 종료
+					}
+
+
+					// 좋아요 처리
+					likeRepository.findByCurationAndMember(curation, member).ifPresentOrElse(
+							like -> {
+								// 이미 좋아요가 있으면 삭제
+								likeRepository.delete(like);
+								curation.setLikeCount(curation.getLikeCount() - 1);
+							},
+							() -> {
+								// 좋아요가 없으면 추가
+								Like newLike = new Like().setLike(curation, member);
+								likeRepository.save(newLike);
+								curation.setLikeCount(curation.getLikeCount() + 1);
+							}
+					);
+
+					// 변경 사항 저장
+					curationRepository.save(curation);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}).start(); // 비동기 작업을 별도의 스레드에서 실행
+	}
+
+	/**
+	 * ✅ 특정 멤버가 팔로우하는 큐레이션 목록을 조회하는 메서드 추가
+	 * @param member 팔로우한 멤버
+	 * @return 팔로우한 멤버의 큐레이션 목록
+	 */
 	public List<CurationResDto> getFollowingCurations(Member member) {
 		List<Curation> followingCurations = curationRepository.findFollowingCurations(member.getId());
 		return followingCurations.stream()
-			.map(CurationResDto::new)
-			.collect(Collectors.toList());
+				.map(CurationResDto::new)
+				.collect(Collectors.toList());
 	}
 
-	public long countByMemberId(String memberId) {
-		return curationRepository.countByMemberId(memberId);
-	}
 }

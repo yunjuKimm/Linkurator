@@ -42,12 +42,11 @@ public class ApiV1CurationControllerTest {
 	private CurationService curationService; // 실제 서비스 사용
 
 	@Autowired
-	private AuthTokenService authTokenService;
-
-	@Autowired
 	private CurationRepository curationRepository;
 	@Autowired
 	private MemberRepository memberRepository;
+	@Autowired
+	private AuthTokenService authTokenService;
 
 	private CurationReqDTO curationReqDTO;
 
@@ -423,4 +422,5 @@ public class ApiV1CurationControllerTest {
 			.andExpect(jsonPath("$.code").value("401-1"))
 			.andExpect(jsonPath("$.msg").value("접근이 거부되었습니다. 로그인 상태를 확인해 주세요."));
 	}
+
 }
