@@ -9,6 +9,7 @@ import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -88,9 +89,11 @@ public class ApiV1CurationController {
      */
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
-    public RsData<CurationDetailResDto> getCuration(@PathVariable Long id) {
-        Member member = rq.getActor(); // 현재 로그인한 사용자
-        Curation curation = curationService.getCuration(id, member.getId());
+    public RsData<CurationDetailResDto> getCuration(@PathVariable Long id, HttpServletRequest request) {
+
+        // 큐레이션 서비스 호출 시 IP를 전달
+        Curation curation = curationService.getCuration(id, request);
+
         return new RsData<>("200-1", "조회 성공", CurationDetailResDto.fromEntity(curation));
     }
 

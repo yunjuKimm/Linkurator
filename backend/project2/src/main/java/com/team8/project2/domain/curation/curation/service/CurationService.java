@@ -14,6 +14,7 @@ import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -159,11 +160,12 @@ public class CurationService {
 	 * @param curationId 조회할 큐레이션 ID
 	 * @return 조회된 큐레이션 객체
 	 */
-	public Curation getCuration(Long curationId, Long memberId) {
-		String key = VIEW_COUNT_KEY + curationId + ":" + memberId;
+	public Curation getCuration(Long curationId, HttpServletRequest request) {
+		String ip = request.getRemoteAddr();  // 클라이언트 IP 주소 추출
+		String key = VIEW_COUNT_KEY + curationId + ":" + ip;
 
 		// Redis에 먼저 키 저장 (최초 요청만 true 반환, 10분 유지)
-		boolean isNewView = redisTemplate.opsForValue().setIfAbsent(key, true, Duration.ofMinutes(10));
+		boolean isNewView = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(true), Duration.ofMinutes(10));
 		System.out.println("Redis Key Set? " + isNewView + " | Key: " + key);
 
 		// 큐레이션 조회
@@ -175,7 +177,7 @@ public class CurationService {
 			increaseViewCount(curation);
 			System.out.println("조회수 증가! 현재 조회수: " + curation.getViewCount());
 		} else {
-			System.out.println("조회수 증가 안 함 (이미 조회된 사용자)");
+			System.out.println("조회수 증가 안 함 (이미 조회된 IP)");
 		}
 
 		return curation;
@@ -222,14 +224,14 @@ public class CurationService {
 				.orElseThrow(() -> new ServiceException("404-1", "해당 멤버를 찾을 수 없습니다."));
 
 		// 좋아요 이벤트를 Redis 큐에 추가
-		redisTemplate.opsForList().leftPush(likeQueueKey, memberId);
+		redisTemplate.opsForList().leftPush(likeQueueKey, String.valueOf(memberId));
 		redisTemplate.opsForValue().set(userLikeKey, "liked", Duration.ofMinutes(10));
 
 		// 비동기 처리 실행
-		processLikeQueue(curationId, likeQueueKey, curation, member);
+		processLikeQueue(likeQueueKey, curation, member);
 	}
 
-	public void processLikeQueue(Long curationId, String likeQueueKey, Curation curation, Member member) {
+	public void processLikeQueue(String likeQueueKey, Curation curation, Member member) {
 		// 큐에서 좋아요 이벤트를 하나씩 처리하는 로직
 		new Thread(() -> {
 			try {
