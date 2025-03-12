@@ -313,8 +313,8 @@ class PlaylistServiceTest {
         when(valueOperations.get("playlist:recommend:" + playlistId)).thenReturn(cachedPlaylistIds);
         when(playlistRepository.findAllById(cachedPlaylistIds))
                 .thenReturn(Arrays.asList(
-                        Playlist.builder().id(2L).title("추천1").description("설명1").build(),
-                        Playlist.builder().id(3L).title("추천2").description("설명2").build()
+                        Playlist.builder().id(2L).title("추천1").description("설명1").tags(new HashSet<>()).build(), // tag 초기화
+                        Playlist.builder().id(3L).title("추천2").description("설명2").tags(new HashSet<>()).build()  // tag 초기화
                 ));
 
         // When
@@ -334,9 +334,24 @@ class PlaylistServiceTest {
         Set<Object> trendingPlaylists = new HashSet<>(Arrays.asList("2", "3"));
         Set<Object> popularPlaylists = new HashSet<>(Arrays.asList("3", "4"));
 
-        when(valueOperations.get("playlist:recommend:" + playlistId)).thenReturn(null); // 캐시 없음
+        // ✅ Redis 캐시가 없다고 설정
+        when(valueOperations.get("playlist:recommend:" + playlistId)).thenReturn(null);
+
+        // ✅ Redis에서 조회수/좋아요 기반 추천 데이터를 반환하도록 Mocking
         when(zSetOperations.reverseRange("playlist:view_count", 0, 9)).thenReturn(trendingPlaylists);
         when(zSetOperations.reverseRange("playlist:like_count", 0, 9)).thenReturn(popularPlaylists);
+
+        // ✅ Mock된 플레이리스트 데이터 준비 (ID를 숫자로 변환)
+        List<Playlist> mockPlaylists = Arrays.asList(
+                Playlist.builder().id(2L).title("추천1").description("설명1").tags(new HashSet<>()).build(),
+                Playlist.builder().id(3L).title("추천2").description("설명2").tags(new HashSet<>()).build(),
+                Playlist.builder().id(4L).title("추천3").description("설명3").tags(new HashSet<>()).build()
+        );
+
+        // ✅ `findAllById()`가 실제 추천 리스트를 반환하도록 설정
+        when(playlistRepository.findAllById(Arrays.asList(2L, 3L, 4L))).thenReturn(mockPlaylists);
+
+        // ✅ 플레이리스트 존재 확인
         when(playlistRepository.findById(playlistId)).thenReturn(Optional.of(samplePlaylist));
         when(playlistRepository.findByTags(any(), eq(playlistId))).thenReturn(Collections.emptyList());
 
@@ -344,7 +359,7 @@ class PlaylistServiceTest {
         List<PlaylistDto> recommendations = playlistService.recommendPlaylist(playlistId);
 
         // Then
-        assertEquals(3, recommendations.size()); // "2", "3", "4"
+        assertEquals(3, recommendations.size()); // "2", "3", "4" => 중복 없이 추천됨
         verify(valueOperations, times(1)).set(eq("playlist:recommend:" + playlistId), any(), any());
     }
 }
