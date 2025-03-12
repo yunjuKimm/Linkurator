@@ -4,6 +4,7 @@ import com.team8.project2.domain.playlist.entity.Playlist;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,6 +38,7 @@ public class PlaylistDto {
     private List<PlaylistItemDto> items;
 
     private Set<String> tags;
+    private LocalDateTime createdAt;
 
     /**
      * 플레이리스트 엔티티를 DTO로 변환합니다.
@@ -54,6 +56,7 @@ public class PlaylistDto {
                 .tags(playlist.getTags().stream()
                         .map(tag -> tag.getName())
                         .collect(Collectors.toSet()))
+                .createdAt(playlist.getCreatedAt())
                 .build();
     }
 

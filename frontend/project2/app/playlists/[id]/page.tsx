@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Bookmark, Edit, LinkIcon, Share2 } from "lucide-react";
 
@@ -35,16 +34,6 @@ export default async function PlaylistDetailPage({
 
       {/* 플레이리스트 정보 영역 */}
       <div className="flex flex-col md:flex-row gap-6 mb-8">
-        {playlist.thumbnailUrl && (
-          <div className="w-full md:w-1/3 aspect-video relative overflow-hidden rounded-md">
-            <Image
-              src={playlist.thumbnailUrl}
-              alt={playlist.title}
-              fill
-              className="object-cover"
-            />
-          </div>
-        )}
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight">

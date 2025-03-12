@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Play } from "lucide-react";
 
 interface Playlist {
@@ -11,6 +10,19 @@ interface Playlist {
   thumbnailUrl?: string;
   createdAt: string;
 }
+
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return "유효하지 않은 날짜";
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
+};
 
 export default function PlaylistGrid() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -56,25 +68,12 @@ export default function PlaylistGrid() {
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
       {playlists.map((playlist) => (
         <Link key={playlist.id} href={`/playlists/${playlist.id}`}>
-          <div className="border rounded-lg overflow-hidden hover:shadow-md transition">
-            <div className="relative aspect-video bg-muted">
-              {playlist.thumbnailUrl ? (
-                <Image
-                  src={playlist.thumbnailUrl}
-                  alt={playlist.title}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <Play className="h-12 w-12 text-gray-500" />
-                </div>
-              )}
-            </div>
+          <div className="border rounded-lg overflow-hidden hover:shadow-md">
             <div className="p-4">
               <h3 className="font-medium line-clamp-1">{playlist.title}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {new Date(playlist.createdAt).toLocaleDateString("ko-KR")}
+                {/* **수정사항 2: formatDate 함수 사용 */}
+                {formatDate(playlist.createdAt)}
               </p>
             </div>
           </div>
