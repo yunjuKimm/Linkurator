@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react";
 import CurationSkeleton from "./skeleton/curation-skeleton";
+// Add the import for the stripHtml function
+import { stripHtml } from "@/lib/html-utils";
 
 // Curation 데이터 인터페이스 정의
 interface Curation {
@@ -334,10 +336,9 @@ export default function PostList() {
                       {curation.title}
                     </h2>
                   </Link>
+                  {/* Replace the content rendering in the curations.map section with: */}
                   <p className="mt-2 text-gray-600">
-                    {curation.content.length > 100
-                      ? `${curation.content.substring(0, 100)}...`
-                      : curation.content}
+                    {curation.content ? stripHtml(curation.content, 100) : ""}
                   </p>
                   <button className="mt-2 text-sm font-medium text-blue-600">
                     더보기
