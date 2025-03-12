@@ -222,7 +222,7 @@ public class ApiV1MemberControllerTest {
         long curationCount = curationService.countByMemberId(memberReqDTO.getMemberId()); // ✅ setup()에서 큐레이션 추가됨
 
         // When
-        mvc.perform(get("/api/v1/members/" + memberReqDTO.getMemberId()))
+        mvc.perform(get("/api/v1/members/" + memberReqDTO.getUsername()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-4"))
                 .andExpect(jsonPath("$.data.username").value("초보"))
