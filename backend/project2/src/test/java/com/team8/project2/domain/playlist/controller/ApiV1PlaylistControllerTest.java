@@ -151,4 +151,43 @@ class ApiV1PlaylistControllerTest {
                 .andExpect(jsonPath("$.data[1].id").value(3));
     }
 
+    /** ✅ 조회수 증가 API 테스트 */
+    @Test
+    @DisplayName("조회수 증가 API가 정상적으로 호출되어야 한다.")
+    void shouldIncreaseViewCount() throws Exception {
+        Long playlistId = 1L;
+
+        mockMvc.perform(post("/api/v1/playlists/{id}/view", playlistId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.msg").value("조회수가 증가되었습니다."));
+
+        verify(playlistService, times(1)).recordPlaylistView(playlistId);
+    }
+
+    /** ✅ 좋아요 증가 API 테스트 */
+    @Test
+    @DisplayName("좋아요 증가 API가 정상적으로 호출되어야 한다.")
+    void shouldIncreaseLikeCount() throws Exception {
+        Long playlistId = 1L;
+
+        mockMvc.perform(post("/api/v1/playlists/{id}/like", playlistId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.msg").value("좋아요가 증가되었습니다."));
+
+        verify(playlistService, times(1)).likePlaylist(playlistId);
+    }
+
+    /** ✅ 추천 API 테스트 */
+    @Test
+    @DisplayName("추천 API가 정상적으로 동작해야 한다.")
+    void shouldReturnRecommendedPlaylists() throws Exception {
+        Long playlistId = 1L;
+        when(playlistService.recommendPlaylist(playlistId)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/playlists/{id}/recommendation", playlistId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.msg").value("추천 플레이리스트 목록을 조회하였습니다."));
+
+        verify(playlistService, times(1)).recommendPlaylist(playlistId);
+    }
 }
