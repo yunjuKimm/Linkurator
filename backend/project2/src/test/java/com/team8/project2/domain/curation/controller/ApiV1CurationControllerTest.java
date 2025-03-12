@@ -39,13 +39,14 @@ public class ApiV1CurationControllerTest {
 
 	@Autowired
 	private CurationService curationService; // 실제 서비스 사용
-
-	private CurationReqDTO curationReqDTO;
 	@Autowired
 	private CurationRepository curationRepository;
 	@Autowired
 	private MemberRepository memberRepository;
+	@Autowired
+	private AuthTokenService authTokenService;
 
+	private CurationReqDTO curationReqDTO;
 	String memberAccessKey;
 	Member member;
 
@@ -400,6 +401,4 @@ public class ApiV1CurationControllerTest {
 		curationRepository.save(curation);
 	}
 
-    @Autowired
-    private AuthTokenService authTokenService;
 }

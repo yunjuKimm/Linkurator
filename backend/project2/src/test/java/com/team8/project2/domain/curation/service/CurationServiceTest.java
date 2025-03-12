@@ -17,6 +17,7 @@ import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
@@ -26,7 +27,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -226,12 +227,17 @@ class CurationServiceTest {
 	@Test
 	@DisplayName("큐레이션을 조회할 수 있다")
 	void GetCuration() {
+		// HttpServletRequest 모킹
+		HttpServletRequest request = mock(HttpServletRequest.class);
+		when(request.getRemoteAddr()).thenReturn("192.168.0.1");  // IP를 임의로 설정
+
 		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
 		// Mocking repository to return a Curation
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
 
-		Curation retrievedCuration = curationService.getCuration(1L, member.getId());
+		Curation retrievedCuration = curationService.getCuration(1L, request);
 
 		// Verify the result
 		assert retrievedCuration != null;
@@ -241,12 +247,18 @@ class CurationServiceTest {
 	@Test
 	@DisplayName("큐레이션 조회수는 한 번만 증가해야 한다")
 	void GetCurationMultipleTimes() {
+
+
+		// HttpServletRequest 모킹
+		HttpServletRequest request = mock(HttpServletRequest.class);
+		when(request.getRemoteAddr()).thenReturn("192.168.0.1");  // IP를 임의로 설정
+
 		// Given: Redis와 큐레이션 관련 의존성 준비
 		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
 		// 첫 번째 조회에서만 true 반환하고, 그 이후에는 false 반환하도록 설정
-		when(valueOperations.setIfAbsent(anyString(), eq(true), eq(Duration.ofMinutes(10))))
+		when(valueOperations.setIfAbsent(anyString(), eq("true"), eq(Duration.ofMinutes(10))))
 				.thenReturn(true)  // 첫 번째 조회에서는 키가 없으므로 true 반환
 				.thenReturn(false); // 두 번째 이후의 조회에서는 키가 이미 있으므로 false 반환
 
@@ -257,27 +269,30 @@ class CurationServiceTest {
 		Long initialViewCount = curation.getViewCount();
 
 		// When: 큐레이션을 여러 번 조회한다
-		curationService.getCuration(1L, member.getId());  // 첫 번째 조회
-		curationService.getCuration(1L, member.getId());  // 두 번째 조회
-		curationService.getCuration(1L, member.getId());  // 세 번째 조회
+		curationService.getCuration(1L, request);  // 첫 번째 조회
+		curationService.getCuration(1L, request);  // 두 번째 조회
+		curationService.getCuration(1L, request);  // 세 번째 조회
 
 		// Then: 조회수는 한 번만 증가해야 한다
 		assertEquals(initialViewCount + 1, curation.getViewCount()); // 조회수가 1만 증가해야 한다.
 	}
 
-
 	@Test
 	@DisplayName("실패 - 존재하지 않는 큐레이션을 조회하면 실패한다")
 	void GetCurationNotFound() {
+		// HttpServletRequest 모킹
+		HttpServletRequest request = mock(HttpServletRequest.class);
+		when(request.getRemoteAddr()).thenReturn("192.168.0.1");  // IP를 임의로 설정
+
 		ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
 		// Mocking repository to return empty Optional
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-
 		// Check if exception is thrown
 		try {
-			curationService.getCuration(1L, member.getId());
+			curationService.getCuration(1L, request);
 		} catch (ServiceException e) {
 			assert e.getMessage().contains("해당 큐레이션을 찾을 수 없습니다.");
 		}
@@ -299,7 +314,7 @@ class CurationServiceTest {
 
 
 
-	@Transactional
+
 	@Test
 	@DisplayName("큐레이션 좋아요 기능을 테스트합니다.")
 	void likeCuration() {
@@ -321,13 +336,18 @@ class CurationServiceTest {
 
 		curationService.likeCuration(1L, expectedId);
 
-		verify(curationRepository, times(1)).findById(anyLong());
-		verify(memberRepository, times(1)).findById(anyLong());
-		verify(likeRepository, times(1)).findByCurationAndMember(any(Curation.class), any(Member.class));
-		verify(likeRepository, times(1)).save(any(Like.class));
+		await().atMost(Duration.ofSeconds(5)).until(() -> {
+			// verify를 await() 안에 넣어서 특정 조건이 만족될 때까지 기다립니다.
+			verify(curationRepository, times(1)).findById(anyLong());
+			verify(memberRepository, times(1)).findById(anyLong());
+			verify(likeRepository, times(1)).findByCurationAndMember(any(Curation.class), any(Member.class));
+			verify(likeRepository, times(1)).save(any(Like.class));
+			return true;  // 모든 verify가 실행되었음을 확인하고 종료
+		});
+
 	}
 
-	@Transactional
+
 	@Test
 	@DisplayName("큐레이션 좋아요를 한 번 더 누르면 취소되고 카운트가 감소해야 합니다.")
 	void likeCurationWithCancel() {
@@ -350,15 +370,17 @@ class CurationServiceTest {
 
 		curationService.likeCuration(1L, expectedId);
 
-		// Verify that the like was deleted (cancelled)
-		verify(likeRepository, times(1)).findByCurationAndMember(any(), any());
-		verify(likeRepository, times(1)).delete(any(Like.class));
+		await().atMost(Duration.ofSeconds(5)).until(() -> {
+			// Verify that the like was deleted (cancelled)
+			verify(likeRepository, times(1)).findByCurationAndMember(any(), any());
+			verify(likeRepository, times(1)).delete(any(Like.class));
 
-		// Verify that the like count was decreased
-		verify(curationRepository, times(1)).save(any(Curation.class)); // Just verify the save method was called
+			// Verify that the like count was decreased
+			verify(curationRepository, times(1)).save(any(Curation.class)); // Just verify the save method was called
+			return true;  // 모든 verify가 실행되었음을 확인하고 종료
+		});
+
 	}
-
-
 
 	@Test
 	@DisplayName("존재하지 않는 큐레이션에 좋아요를 누르면 예외가 발생해야 합니다.")
