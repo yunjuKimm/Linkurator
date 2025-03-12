@@ -49,11 +49,11 @@ class PlaylistServiceTest {
         samplePlaylist = Playlist.builder()
                 .id(1L)
                 .title("테스트 플레이리스트")
-                .tags(Set.of())
+                .tags(new HashSet<>())
                 .description("테스트 설명")
                 .build();
-        when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }
 
     @Test
