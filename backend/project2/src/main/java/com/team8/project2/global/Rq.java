@@ -8,6 +8,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.annotation.RequestScope;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 @RequestScope
@@ -52,6 +54,8 @@ public class Rq {
 
         Object principal = authentication.getPrincipal();
         if (!(principal instanceof SecurityUser)) {
+            log.info("[principal] : "+ principal.getClass().toString());
+            log.info("[principal] : "+ principal);
             throw new ServiceException("401-3", "잘못된 인증 정보입니다.");
         }
 

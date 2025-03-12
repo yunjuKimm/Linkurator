@@ -2,6 +2,7 @@ package com.team8.project2.domain.member.controller;
 
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +27,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/members")
 @RequiredArgsConstructor
@@ -74,6 +76,7 @@ public class ApiV1MemberController {
         }
 
         String accessToken = memberService.genAccessToken(member);
+        log.info("[accessToken]:" + accessToken);
 
         rq.addCookie("accessToken", accessToken);
         return new RsData<>(
@@ -87,8 +90,27 @@ public class ApiV1MemberController {
     }
     @GetMapping("/me")
     public RsData<MemberResDTO> getMyInfo() {
-        Member member = rq.getActor();  // JWT에서 인증된 사용자 정보 가져오기
-        return new RsData<>("200-2", "내 정보 조회 성공", MemberResDTO.fromEntity(member));
+        log.info("🔍 [/me] 요청 수신됨");
+
+        // ✅ JWT에서 사용자 정보 가져오기
+        Member member = rq.getActor();
+
+        if (member == null) {
+            log.warn("⚠️ [/me] 인증된 사용자 정보 없음 (rq.getActor() == null)");
+            throw new ServiceException("401-3", "유효하지 않은 인증 정보입니다.");
+        }
+
+        log.info("✅ [/me] 사용자 인증 성공 - ID: {}, Username: {}", member.getId(), member.getUsername());
+
+        try {
+            MemberResDTO memberResDTO = MemberResDTO.fromEntity(member);
+            log.info("📌 [/me] MemberResDTO 변환 성공: {}", memberResDTO);
+            return new RsData<>("200-2", "내 정보 조회 성공", memberResDTO);
+        } catch (Exception e) {
+            log.error("🚨 [/me] MemberResDTO 변환 중 오류 발생: ", e);
+            throw new ServiceException("500-1", "사용자 정보 변환 중 오류 발생");
+        }
+        // return new RsData<>("200-2", "내 정보 조회 성공", MemberResDTO.fromEntity(member));
     }
     @PostMapping("/logout")
     public RsData<Void> logout() {
