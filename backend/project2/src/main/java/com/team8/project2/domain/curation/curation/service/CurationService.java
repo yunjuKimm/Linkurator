@@ -19,6 +19,8 @@ import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -214,5 +216,9 @@ public class CurationService {
 		return followingCurations.stream()
 			.map(CurationResDto::new)
 			.collect(Collectors.toList());
+	}
+
+	public long countByMemberId(String memberId) {
+		return curationRepository.countByMemberId(memberId);
 	}
 }
