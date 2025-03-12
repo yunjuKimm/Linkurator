@@ -1,5 +1,6 @@
 package com.team8.project2.domain.curation.curation.service;
 
+import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
 import com.team8.project2.domain.curation.curation.entity.CurationTag;
@@ -11,16 +12,25 @@ import com.team8.project2.domain.curation.like.entity.Like;
 import com.team8.project2.domain.curation.like.repository.LikeRepository;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.domain.link.service.LinkService;
+import com.team8.project2.domain.member.entity.Follow;
 import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.FollowRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
+
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,16 +49,20 @@ public class CurationService {
 	private final TagService tagService;
 	private final MemberRepository memberRepository;
     private final LikeRepository likeRepository;
+
 	private final RedisTemplate<String, Object> redisTemplate;
 	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
+	private final FollowRepository followRepository;
+
 
 	/**
 	 * ✅ 특정 큐레이터의 큐레이션 개수를 반환하는 메서드 추가
-	 * @param memberId 조회할 큐레이터의 memberId
+	 * @param member 조회할 큐레이터의 memberId
 	 * @return 해당 큐레이터가 작성한 큐레이션 개수
 	 */
-	public long countByMemberId(String memberId) {
-		return curationRepository.countByMemberId(memberId);
+	@Transactional
+	public long countByMember(Member member) {
+		return curationRepository.countByMemberId(member.getMemberId());
 	}
 
 	/**
@@ -267,6 +281,5 @@ public class CurationService {
 			}
 		}).start(); // 비동기 작업을 별도의 스레드에서 실행
 	}
-
 
 }

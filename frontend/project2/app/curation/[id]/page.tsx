@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation"; // useParams import 추가
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -17,6 +17,8 @@ import {
 import RightSidebar from "@/app/components/right-sidebar";
 import CommentSection from "@/app/components/comment-section";
 import AddToPlaylistModal from "@/app/components/add-to-playlist-modal";
+import SidebarSkeleton from "@/app/components/skeleton/sidebar-skeleton";
+import CurationDetailSkeleton from "@/app/components/skeleton/curation-detail";
 
 // 큐레이션 데이터 타입
 interface CurationData {
@@ -42,7 +44,7 @@ interface LinkMetaData {
 }
 
 export default function CurationDetail() {
-  const { id } = useParams(); // useParams 훅으로 id 가져오기
+  const { id } = useParams();
   const [post, setPost] = useState<CurationData | null>(null);
   const [linksMetaData, setLinksMetaData] = useState<Map<string, LinkMetaData>>(
     new Map()
@@ -54,14 +56,16 @@ export default function CurationDetail() {
 
   // API 데이터 호출
   useEffect(() => {
-    if (!id) return; // id가 없으면 fetch 실행하지 않음
+    if (!id) return;
 
     async function fetchData() {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`);
+        const response = await fetch(
+          `http://localhost:8080/api/v1/curation/${id}`
+        );
 
         if (!response.ok) {
           throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.");
@@ -73,12 +77,15 @@ export default function CurationDetail() {
         setError((err as Error).message);
         console.error("Error fetching curation data:", err);
       } finally {
-        setLoading(false);
+        // 스켈레톤 UI가 잠시 보이도록 약간의 지연 추가 (실제 환경에서는 제거 가능)
+        setTimeout(() => {
+          setLoading(false);
+        }, 500);
       }
     }
 
     fetchData();
-  }, [id]); // ✅ id를 의존성으로 추가
+  }, [id]);
 
   // 모든 링크의 메타데이터 가져오기
   useEffect(() => {
@@ -90,7 +97,7 @@ export default function CurationDetail() {
 
       // 모든 URL에 대해 병렬로 메타데이터 가져오기
       await Promise.all(
-        post!.urls.map(async ({ url }) => {
+        post.urls.map(async ({ url }) => {
           try {
             const response = await fetch(
               `http://localhost:8080/api/v1/link/preview`,
@@ -178,12 +185,28 @@ export default function CurationDetail() {
     }
   };
 
-  // 로딩 상태 처리
+  // 로딩 상태 처리 - 스켈레톤 UI로 대체
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+      <main className="container grid grid-cols-12 gap-6 px-4 py-6">
+        <div className="col-span-12 lg:col-span-9">
+          <div className="mb-6 flex justify-between items-center">
+            <Link
+              href="/"
+              className="inline-flex items-center text-sm text-gray-500 hover:text-black"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              홈으로 돌아가기
+            </Link>
+          </div>
+          <CurationDetailSkeleton />
+        </div>
+        <div className="col-span-12 lg:col-span-3">
+          <div className="sticky top-6 space-y-6">
+            <SidebarSkeleton />
+          </div>
+        </div>
+      </main>
     );
   }
 
