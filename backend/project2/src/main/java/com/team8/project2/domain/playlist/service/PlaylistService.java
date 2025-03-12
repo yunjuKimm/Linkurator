@@ -11,6 +11,7 @@ import com.team8.project2.domain.playlist.repository.PlaylistRepository;
 import com.team8.project2.domain.curation.tag.entity.Tag;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 public class PlaylistService {
 
     private final PlaylistRepository playlistRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 새로운 플레이리스트를 생성합니다.
@@ -109,21 +111,6 @@ public class PlaylistService {
         playlistRepository.deleteById(id);
     }
 
-    /**
-     * 플레이리스트 제목과 설명의 유효성을 검사합니다.
-     *
-     * @param title 제목
-     * @param description 설명
-     */
-    // ✅ 삭제: Bean Validation 적용으로 인해 해당 검증 메서드가 더 이상 필요하지 않습니다.
-//    private void validatePlaylistData(String title, String description) {
-//        if (title == null || title.trim().isEmpty()) {
-//            throw new BadRequestException("플레이리스트 제목은 필수 입력 사항입니다.");
-//        }
-//        if (description == null || description.trim().isEmpty()) {
-//            throw new BadRequestException("플레이리스트 설명은 필수 입력 사항입니다.");
-//        }
-//    }
 
     /** 플레이리스트 아이템 추가 */
     public PlaylistDto addPlaylistItem(Long playlistId, Long itemId, PlaylistItem.PlaylistItemType itemType) {
