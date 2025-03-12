@@ -1,5 +1,6 @@
 package com.team8.project2.domain.playlist.entity;
 
+import com.team8.project2.domain.curation.curation.entity.CurationTag;
 import com.team8.project2.domain.curation.tag.entity.Tag;
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 플레이리스트(Playlist) 엔티티 클래스입니다.
@@ -75,5 +77,16 @@ public class Playlist {
             joinColumns = @JoinColumn(name="playlist_id"),
             inverseJoinColumns = @JoinColumn(name="tag_id")
     )
+
+    @ElementCollection
     private Set<Tag> tags = new HashSet<>();
+
+    public Set<String> getTags() {
+        return this.items.stream()
+                .filter(item -> item.getCuration() != null) // ✅ Curation이 존재하는 경우만 처리
+                .flatMap(item -> item.getCuration().getTags().stream().map(curationTag -> curationTag.getTag().getName())) // ✅ `Tag`의 이름 가져오기
+                .collect(Collectors.toSet());
+    }
+
+
 }

@@ -1,5 +1,6 @@
 package com.team8.project2.domain.playlist.entity;
 
+import com.team8.project2.domain.curation.curation.entity.Curation;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,6 +43,13 @@ public class PlaylistItem {
     @ManyToOne
     @JoinColumn(name = "playlist_id", nullable = false) // NULL 허용 안 함 (반드시 Playlist와 연결)
     private Playlist playlist;
+
+    /**
+     * 해당 항목이 속한 큐레이션 (N:1 관계)
+     */
+    @ManyToOne
+    @JoinColumn(name = "curation_id", nullable = true) // NULL 허용
+    private Curation curation;
 
     /**
      * 아이템 순서
