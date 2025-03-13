@@ -30,5 +30,6 @@ export default function SidebarSkeleton() {
         <div className="mt-3 h-8 w-full bg-gray-200 rounded-md"></div>
       </div>
     </div>
-  );
+  )
 }
+

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import com.team8.project2.global.exception.ServiceException;
 
 import lombok.RequiredArgsConstructor;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MemberService {
@@ -88,7 +90,7 @@ public class MemberService {
 	@Transactional
 	public Optional<Member> getMemberByAccessToken(String accessToken) {
 		Map<String, Object> payload = authTokenService.getPayload(accessToken);
-
+		log.info("[JWT PAYLOAD] :"+payload);
 		if (payload == null) {
 			return Optional.empty();
 		}
@@ -99,7 +101,6 @@ public class MemberService {
 		return Optional.of(Member.builder().id(id).memberId(memberId).build());
 	}
 
-	@Transactional
 	public String genAccessToken(Member member) {
 		return authTokenService.genAccessToken(member);
 	}

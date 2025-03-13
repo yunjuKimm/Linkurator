@@ -1,8 +1,8 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import LeftSidebar from "./components/left-sidebar";
-import PostList from "./components/post-list";
-import RightSidebar from "./components/right-sidebar";
-import FollowingCurations from "./curation/following/page";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import LeftSidebar from "./components/left-sidebar"
+import PostList from "./components/post-list"
+import RightSidebar from "./components/right-sidebar"
+import FollowingCurations from "./curation/following/page"
 
 export default function Home() {
   return (
@@ -32,5 +32,6 @@ export default function Home() {
         <RightSidebar />
       </div>
     </main>
-  );
+  )
 }
+
