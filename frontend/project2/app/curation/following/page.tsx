@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react";
 import CurationSkeleton from "@/app/components/skeleton/curation-skeleton";
+import { stripHtml } from "@/lib/htmlutils";
 // Add the import for the stripHtml function
-import { stripHtml } from "@/lib/html-utils";
 
 // Curation 데이터 인터페이스 정의
 interface Curation {

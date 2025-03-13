@@ -11,8 +11,8 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { ClipLoader } from "react-spinners";
+import { stripHtml } from "@/lib/htmlutils";
 // Add the import for the stripHtml function
-import { stripHtml } from "@/lib/html-utils";
 
 // Curator 데이터 인터페이스 정의
 interface Curator {
