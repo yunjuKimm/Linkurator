@@ -36,8 +36,7 @@ public class S3Uploader {
 
 		s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-		// Presigned URL 생성 (선택 사항)
-		return getPresignedUrl(fileName);
+		return "https://" + bucketName + ".s3.amazonaws.com/" + fileName;
 	}
 
 	private String getPresignedUrl(String fileName) {
