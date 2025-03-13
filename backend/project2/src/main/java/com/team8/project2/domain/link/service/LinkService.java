@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
 
 /**
@@ -26,6 +28,7 @@ import java.time.Duration;
 public class LinkService {
 
     private final LinkRepository linkRepository;
+    private final LinkClickService linkClickService;
     private final RedisTemplate<String, String> redisTemplate; // RedisTemplate 추가
     private static final String CLICK_KEY = "link:click:"; // Redis 키 접두사
     /**
@@ -37,7 +40,44 @@ public class LinkService {
      */
     @Transactional
     public Link getLinkAndIncrementClick(Long linkId, HttpServletRequest request) {
-        String ip = request.getRemoteAddr();  // 클라이언트 IP 주소 추출
+        String ip = request.getHeader("X-Forwarded-For");
+
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        }
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        }
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-RealIP");
+        }
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("REMOTE_ADDR");
+        }
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+
+        if(ip.equals("0:0:0:0:0:0:0:1") || ip.equals("127.0.0.1"))
+        {
+            InetAddress address = null;
+            try {
+                address = InetAddress.getLocalHost();
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            }
+            ip = address.getHostName() + "/" + address.getHostAddress();
+        }
+
         String key = CLICK_KEY + linkId + ":" + ip;
 
         // Redis에 먼저 키 저장 (최초 요청만 true 반환, 10분 유지)
@@ -50,25 +90,15 @@ public class LinkService {
 
         // 새로운 조회일 때만 클릭수 증가
         if (isNewClick) {
-            increaseClickCount(link);
-            System.out.println("조회수 증가! 현재 조회수: " + link.getClick());
+            linkClickService.increaseClickCount(link);
+            System.out.println("클릭수 증가! 현재 조회수: " + link.getClick());
         } else {
-            System.out.println("조회수 증가 안 함 (이미 조회된 IP)");
+            System.out.println("클릭수 증가 안 함 (이미 조회된 IP)");
         }
 
         return link;
     }
 
-    /**
-     * 링크의 클릭수를 증가시킵니다.
-     *
-     * @param link 클릭수 증가 대상 링크
-     */
-    @Transactional
-    public void increaseClickCount(Link link) {
-        link.setClick(link.getClick() + 1);
-        linkRepository.save(link);
-    }
 
     /**
      * 새로운 링크를 추가합니다.
@@ -157,6 +187,8 @@ public class LinkService {
             linkResDTO.setTitle(title);
             linkResDTO.setDescription(description);
             linkResDTO.setImage(image);
+            linkResDTO.setClick(getLink(url).getClick());
+            linkResDTO.setLinkId(getLink(url).getId());
 
             return linkResDTO;
         } catch (IOException e) {
