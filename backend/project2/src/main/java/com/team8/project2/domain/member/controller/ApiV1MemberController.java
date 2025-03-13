@@ -116,6 +116,7 @@ public class ApiV1MemberController {
     @PostMapping("/logout")
     public RsData<Void> logout() {
         rq.removeCookie("accessToken"); // JWT 삭제
+
         return new RsData<>("200-3", "로그아웃 되었습니다.");
     }
 

@@ -67,7 +67,7 @@ export default function SignupPage() {
         toast({
           title: "회원가입 완료",
           description: "회원가입이 성공적으로 완료되었습니다!",
-        })
+        }) run
         router.push("/auth/login")
       } else {
         const errorData = await response.json()

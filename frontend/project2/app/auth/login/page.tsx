@@ -3,6 +3,8 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,7 +33,7 @@ export default function LoginPage() {
         })
         if (res.ok) {
           // ✅ 이미 로그인된 상태면 홈으로 이동
-          router.push("/")
+          router.push("/index")
         }
       } catch (error) {
         console.error("로그인 상태 확인 오류:", error)
@@ -73,7 +75,7 @@ export default function LoginPage() {
           console.log("✅ /me 요청 성공, 로그인 유지됨");
           window.dispatchEvent(new Event("login")); // ✅ 헤더 업데이트 이벤트 실행
           sessionStorage.setItem("isLoggedIn", "true");
-          router.push("/");
+          router.push("/index");
         } else {
           console.warn("⚠️ /me 요청 실패 (401 가능성 있음)", meResponse.status);
         }
