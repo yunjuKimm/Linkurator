@@ -379,6 +379,10 @@ export default function EditPostPage() {
           max-height: 500px;
           overflow-y: auto;
         }
+        .ql-editor img {
+          max-width: 100%;
+          height: auto;
+        }
       `}</style>
     </div>
   );
