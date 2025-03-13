@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { useParams } from "next/navigation"; // useParams import 추가
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -25,8 +24,7 @@ interface CurationData {
   tags: { name: string }[]
 }
 
-export default function EditPostPage() {
-  const { id } = useParams(); // useParams 훅으로 id 가져오기
+export default function EditPostPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
@@ -43,7 +41,7 @@ export default function EditPostPage() {
         setIsLoading(true)
         setError(null)
 
-        const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`)
+        const response = await fetch(`http://localhost:8080/api/v1/curation/${params.id}`)
 
         if (!response.ok) {
           throw new Error("큐레이션 데이터를 불러오는 데 실패했습니다.")
@@ -78,7 +76,7 @@ export default function EditPostPage() {
     }
 
     fetchCurationData()
-  }, [id])
+  }, [params.id])
 
   // 링크 입력 필드 추가
   const addLinkField = () => {
@@ -151,14 +149,14 @@ export default function EditPostPage() {
       }
 
       // API 호출
-      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
+      const response = await fetch(`http://localhost:8080/api/v1/curation/${params.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestData),
       })
-      
+
       if (!response.ok) {
         throw new Error("큐레이션 수정에 실패했습니다.")
       }
@@ -168,7 +166,7 @@ export default function EditPostPage() {
       if (data.code === "200-1") {
         toast.success("큐레이션이 성공적으로 수정되었습니다.")
         // 수정된 큐레이션 상세 페이지로 이동
-        router.push(`/curation/${id}`)
+        router.push(`/curation/${params.id}`)
       } else {
         throw new Error(data.msg || "큐레이션 수정에 실패했습니다.")
       }
@@ -209,7 +207,7 @@ export default function EditPostPage() {
     <div className="container max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6">
         <Link
-          href={`/curation/${id}`}
+          href={`/curation/${params.id}`}
           className="inline-flex items-center text-sm text-gray-500 hover:text-black"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -317,7 +315,7 @@ export default function EditPostPage() {
         {/* 제출 버튼 */}
         <div className="flex justify-end gap-3">
           <Link
-            href={`/curation/${id}`}
+            href={`/curation/${params.id}`}
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             취소

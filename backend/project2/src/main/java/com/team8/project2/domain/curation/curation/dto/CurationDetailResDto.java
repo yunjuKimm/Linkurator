@@ -1,19 +1,18 @@
 package com.team8.project2.domain.curation.curation.dto;
 
-import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import com.team8.project2.domain.comment.entity.Comment;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.tag.entity.Tag;
 import com.team8.project2.domain.link.entity.Link;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Getter
 @Builder
@@ -49,6 +48,12 @@ public class CurationDetailResDto {
 
 	/** 마지막 큐레이션 변경 시각 */
 	private LocalDateTime modifiedAt;
+
+	/** 좋아요 수 */
+	private Long likeCount;
+
+	/** 조회수 */
+	private Long viewCount;
 
 	/**
 	 * 링크 정보를 포함하는 내부 DTO 클래스
@@ -92,6 +97,7 @@ public class CurationDetailResDto {
 			this.content = comment.getContent();
 			this.createdAt = comment.getCreatedAt();
 			this.modifiedAt = comment.getModifiedAt();
+
 		}
 	}
 
@@ -120,6 +126,8 @@ public class CurationDetailResDto {
 				.collect(Collectors.toList()))
 			.createdAt(curation.getCreatedAt())
 			.modifiedAt(curation.getModifiedAt())
+			.likeCount(curation.getLikeCount())
+			.viewCount(curation.getViewCount())
 			.build();
 	}
 }

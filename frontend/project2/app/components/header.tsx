@@ -20,7 +20,7 @@ export default function Header() {
         </div>
         <div className="ml-auto flex items-center space-x-4">
           <Link
-            href="/create-curation"
+            href="/create-post"
             className="inline-flex h-9 items-center justify-center rounded-md bg-black px-3 text-sm font-medium text-white shadow hover:bg-gray-800"
           >
             새 글쓰기

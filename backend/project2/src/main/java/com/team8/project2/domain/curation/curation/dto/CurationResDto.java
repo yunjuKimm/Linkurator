@@ -25,6 +25,9 @@ public class CurationResDto {
     /** 큐레이션 내용 */
     private String content;
 
+    /** 조회수 */
+    private Long viewCount;
+
     /** 큐레이션에 포함된 링크 목록 */
     private List<LinkResDto> urls;
 
@@ -77,5 +80,6 @@ public class CurationResDto {
         this.createdAt = curation.getCreatedAt();
         this.modifiedAt = curation.getModifiedAt();
         this.likeCount = curation.getLikeCount();
+        this.viewCount = curation.getViewCount();
     }
 }
