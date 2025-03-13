@@ -110,7 +110,7 @@ public class PlaylistService {
      * - 좋아요 순, 조회수 순, 복합 점수 순
      */
     private List<PlaylistDto> getSortedPlaylists(List<Long> playlistIds, String sortType) {
-        List<Playlist> playlists = playlistRepository.findAllById(playlistIds);
+        List<Playlist> playlists = new ArrayList<>(playlistRepository.findAllById(playlistIds));
 
         switch (sortType) {
             case "likes":
