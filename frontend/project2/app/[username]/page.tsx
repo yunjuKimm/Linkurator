@@ -41,7 +41,8 @@ interface LinkMetaData {
   image: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// API_URL 변수를 직접 설정하여 환경 변수 문제 해결
+const API_URL = "http://localhost:8080";
 
 export default function CuratorProfile({
   params,
