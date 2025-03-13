@@ -100,16 +100,13 @@ export default function CreateCurationPage() {
       };
 
       // API 호출
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/curation`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestData),
-        }
-      );
+      const response = await fetch("http://localhost:8080/api/v1/curation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      });
 
       if (!response.ok) {
         throw new Error("큐레이션 생성에 실패했습니다.");

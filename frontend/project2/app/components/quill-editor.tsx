@@ -82,13 +82,12 @@ const QuillEditor = forwardRef<QuillEditorRef, QuillEditorProps>(
                 formData.append("file", file);
 
                 // 서버에 이미지 업로드 요청
-                const response = await fetch(
-                  `${process.env.NEXT_PUBLIC_API_URL}/api/v1/images/upload`,
-                  {
-                    method: "POST",
-                    body: formData,
-                  }
-                );
+                const apiUrl =
+                  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+                const response = await fetch(`${apiUrl}/api/v1/images/upload`, {
+                  method: "POST",
+                  body: formData,
+                });
 
                 if (!response.ok) {
                   throw new Error("이미지 업로드에 실패했습니다.");
