@@ -35,6 +35,7 @@ public class PlaylistService {
     private static final String LIKE_COUNT_KEY = "playlist:like_count"; // 좋아요 수 저장
     private static final String RECOMMEND_KEY = "playlist:recommend:"; // 추천 캐싱
 
+
     /**
      * ✅ 플레이리스트 추천 로직
      * - 24시간 내 인기 추천 포함
@@ -87,8 +88,8 @@ public class PlaylistService {
 
         for (Playlist other : allPlaylists) {
             if (!other.getId().equals(currentPlaylist.getId())) {
-                Set<String> commonTags = new HashSet<>(currentPlaylist.getTags());
-                commonTags.retainAll(other.getTags());
+                Set<String> commonTags = new HashSet<>(currentPlaylist.getTagNames()); // ✅ 수정
+                commonTags.retainAll(other.getTagNames()); // ✅ 수정
 
                 if (commonTags.size() >= 3) {
                     similarPlaylists.add(other);
@@ -97,7 +98,6 @@ public class PlaylistService {
         }
 
         if (similarPlaylists.isEmpty()) {
-            // 태그가 3개 미만인 경우 랜덤 추천
             Collections.shuffle(allPlaylists);
             return allPlaylists.stream().limit(5).collect(Collectors.toList());
         }
@@ -120,7 +120,7 @@ public class PlaylistService {
                 playlists.sort(Comparator.comparingLong(Playlist::getViewCount).reversed());
                 break;
             case "combined":
-                playlists.sort(Comparator.comparingLong(p -> (p.getViewCount() + p.getLikeCount())).reversed());
+                playlists.sort(Comparator.comparingLong((Playlist p) -> p.getViewCount() + p.getLikeCount()).reversed());
                 break;
             default:
                 break;
