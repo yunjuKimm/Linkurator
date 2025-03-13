@@ -304,7 +304,7 @@ class PlaylistServiceTest {
 
     /** ✅ 추천 플레이리스트 조회 테스트 (Redis 캐싱 적용) */
     @Test
-    @DisplayName("추천 플레이리스트를 조회할 때 Redis 캐싱을 확인해야 한다.")
+    @DisplayName("추천 API가 Redis 캐싱을 사용하여 정상적으로 동작해야 한다.")
     void shouldRetrieveRecommendedPlaylistsFromCache() {
         Long playlistId = 1L;
         List<Long> cachedPlaylistIds = Arrays.asList(2L, 3L);
@@ -313,12 +313,12 @@ class PlaylistServiceTest {
         when(valueOperations.get("playlist:recommend:" + playlistId)).thenReturn(cachedPlaylistIds);
         when(playlistRepository.findAllById(cachedPlaylistIds))
                 .thenReturn(Arrays.asList(
-                        Playlist.builder().id(2L).title("추천1").description("설명1").tags(new HashSet<>()).build(), // tag 초기화
-                        Playlist.builder().id(3L).title("추천2").description("설명2").tags(new HashSet<>()).build()  // tag 초기화
+                        Playlist.builder().id(2L).title("추천1").description("설명1").tags(new HashSet<>()).build(),
+                        Playlist.builder().id(3L).title("추천2").description("설명2").tags(new HashSet<>()).build()
                 ));
 
         // When
-        List<PlaylistDto> recommendations = playlistService.recommendPlaylist(playlistId);
+        List<PlaylistDto> recommendations = playlistService.recommendPlaylist(playlistId, "likes");
 
         // Then
         assertEquals(2, recommendations.size());
@@ -326,22 +326,80 @@ class PlaylistServiceTest {
         verify(playlistRepository, times(1)).findAllById(cachedPlaylistIds);
     }
 
+    /** ✅ 정렬별 추천 테스트 */
+    @Test
+    @DisplayName("추천 플레이리스트가 좋아요 순으로 정렬되어야 한다.")
+    void shouldSortRecommendedPlaylistsByLikes() {
+        Long playlistId = 1L;
+        List<Playlist> playlists = Arrays.asList(
+                Playlist.builder().id(2L).title("추천1").description("설명1").tags(new HashSet<>()).build(),
+                Playlist.builder().id(3L).title("추천2").description("설명2").tags(new HashSet<>()).build()
+        );
+
+        when(playlistRepository.findAllById(any())).thenReturn(playlists);
+
+        List<PlaylistDto> recommendations = playlistService.recommendPlaylist(playlistId, "likes");
+
+        // Then
+        assertNotNull(recommendations);
+        assertEquals(2, recommendations.size());
+    }
+
+    @Test
+    @DisplayName("추천 플레이리스트가 조회수 순으로 정렬되어야 한다.")
+    void shouldSortRecommendedPlaylistsByViews() {
+        Long playlistId = 1L;
+        List<Playlist> playlists = Arrays.asList(
+                Playlist.builder().id(2L).title("추천1").description("설명1").tags(new HashSet<>()).build(),
+                Playlist.builder().id(3L).title("추천2").description("설명2").tags(new HashSet<>()).build()
+        );
+
+        when(playlistRepository.findAllById(any())).thenReturn(playlists);
+
+        List<PlaylistDto> recommendations = playlistService.recommendPlaylist(playlistId, "views");
+
+        // Then
+        assertNotNull(recommendations);
+        assertEquals(2, recommendations.size());
+    }
+
+    @Test
+    @DisplayName("추천 플레이리스트가 좋아요+조회수 복합 점수 순으로 정렬되어야 한다.")
+    void shouldSortRecommendedPlaylistsByCombined() {
+        Long playlistId = 1L;
+        List<Playlist> playlists = Arrays.asList(
+                Playlist.builder().id(2L).title("추천1").description("설명1").tags(new HashSet<>()).build(),
+                Playlist.builder().id(3L).title("추천2").description("설명2").tags(new HashSet<>()).build()
+        );
+
+        when(playlistRepository.findAllById(any())).thenReturn(playlists);
+
+        List<PlaylistDto> recommendations = playlistService.recommendPlaylist(playlistId, "combined");
+
+        // Then
+        assertNotNull(recommendations);
+        assertEquals(2, recommendations.size());
+    }
+
     /** ✅ Redis 캐싱이 없는 경우 추천 알고리즘 실행 */
     @Test
     @DisplayName("Redis 캐싱이 없을 때 추천 알고리즘을 실행해야 한다.")
     void shouldRunRecommendationAlgorithmIfCacheMiss() {
         Long playlistId = 1L;
-        Set<Object> trendingPlaylists = new HashSet<>(Arrays.asList("2", "3"));
-        Set<Object> popularPlaylists = new HashSet<>(Arrays.asList("3", "4"));
 
-        // ✅ Redis 캐시가 없다고 설정
+        // ✅ Redis 캐시 없음
         when(valueOperations.get("playlist:recommend:" + playlistId)).thenReturn(null);
 
-        // ✅ Redis에서 조회수/좋아요 기반 추천 데이터를 반환하도록 Mocking
-        when(zSetOperations.reverseRange("playlist:view_count", 0, 9)).thenReturn(trendingPlaylists);
-        when(zSetOperations.reverseRange("playlist:like_count", 0, 9)).thenReturn(popularPlaylists);
+        // ✅ Redis에서 조회수/좋아요 기반 추천 데이터를 반환하도록 Mocking (String → Long 변환)
+        Set<String> trendingPlaylists = new HashSet<>(Arrays.asList("2", "3"));
+        Set<String> popularPlaylists = new HashSet<>(Arrays.asList("3", "4"));
+
+        // ✅ Mocking: Redis에서 조회수/좋아요 높은 플레이리스트 ID 반환
+        when(zSetOperations.reverseRange("playlist:view_count", 0, 9)).thenReturn(new HashSet<>(trendingPlaylists));
+        when(zSetOperations.reverseRange("playlist:like_count", 0, 9)).thenReturn(new HashSet<>(popularPlaylists));
 
         // ✅ Mock된 플레이리스트 데이터 준비 (ID를 숫자로 변환)
+        List<Long> recommendedPlaylistIds = Arrays.asList(2L, 3L, 4L);
         List<Playlist> mockPlaylists = Arrays.asList(
                 Playlist.builder().id(2L).title("추천1").description("설명1").tags(new HashSet<>()).build(),
                 Playlist.builder().id(3L).title("추천2").description("설명2").tags(new HashSet<>()).build(),
@@ -349,17 +407,19 @@ class PlaylistServiceTest {
         );
 
         // ✅ `findAllById()`가 실제 추천 리스트를 반환하도록 설정
-        when(playlistRepository.findAllById(Arrays.asList(2L, 3L, 4L))).thenReturn(mockPlaylists);
+        when(playlistRepository.findAllById(recommendedPlaylistIds)).thenReturn(mockPlaylists);
 
         // ✅ 플레이리스트 존재 확인
         when(playlistRepository.findById(playlistId)).thenReturn(Optional.of(samplePlaylist));
         when(playlistRepository.findByTags(any(), eq(playlistId))).thenReturn(Collections.emptyList());
 
-        // When
-        List<PlaylistDto> recommendations = playlistService.recommendPlaylist(playlistId);
+        // ✅ 실행
+        List<PlaylistDto> recommendations = playlistService.recommendPlaylist(playlistId, "combined");
 
-        // Then
+        // ✅ 검증: 추천된 플레이리스트 개수 확인
         assertEquals(3, recommendations.size()); // "2", "3", "4" => 중복 없이 추천됨
+
+        // ✅ Redis에 새로운 추천 리스트가 캐싱되었는지 검증
         verify(valueOperations, times(1)).set(eq("playlist:recommend:" + playlistId), any(), any());
     }
 }
