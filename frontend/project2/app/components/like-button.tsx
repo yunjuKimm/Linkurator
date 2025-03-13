@@ -1,52 +1,73 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 
 interface LikeButtonProps {
   playlistId: number;
   initialLikes: number;
-  size?: "default" | "sm";
   onUnlike?: () => void;
 }
 
 export default function LikeButton({
   playlistId,
   initialLikes,
-  size = "default",
   onUnlike,
 }: LikeButtonProps) {
   const [likes, setLikes] = useState(initialLikes);
   const [isLiked, setIsLiked] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchLikedState() {
       try {
         const res = await fetch(
-          `http://localhost:8080/api/v1/playlists/${playlistId}/like-status`
+          `http://localhost:8080/api/v1/playlists/${playlistId}/like/status`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          }
         );
+
+        if (!res.ok) {
+          throw new Error("좋아요 상태 조회 실패");
+        }
+
         const data = await res.json();
-        setIsLiked(data.isLiked);
+        setIsLiked(data.data);
+
+        const countRes = await fetch(
+          `http://localhost:8080/api/v1/playlists/${playlistId}/like/count`
+        );
+        if (countRes.ok) {
+          const countData = await countRes.json();
+          setLikes(countData.data);
+        }
       } catch (error) {
         console.error("좋아요 상태 불러오기 실패", error);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     }
     fetchLikedState();
   }, [playlistId]);
 
   const handleToggleLike = async () => {
-    if (isLoading) return;
+    if (loading) return;
 
-    setIsLoading(true);
+    setLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:8080/api/v1/playlists/${playlistId}/likes`,
+        `http://localhost:8080/api/v1/playlists/${playlistId}/like`,
         {
           method: isLiked ? "DELETE" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
         }
       );
 
@@ -63,37 +84,21 @@ export default function LikeButton({
     } catch (error) {
       console.error("좋아요 요청 처리 실패", error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  if (size === "sm") {
-    return (
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleToggleLike();
-        }}
-        className={`flex items-center gap-1 text-xs ${
-          isLiked ? "text-rose-500" : "text-muted-foreground"
-        }`}
-      >
-        <Heart className={`h-4 w-4 ${isLiked ? "fill-rose-500" : ""}`} />
-        <span>{likes.toLocaleString()}</span>
-      </button>
-    );
-  }
-
   return (
     <button
-      onClick={handleToggleLike}
-      className={`flex items-center gap-1 px-2 py-1 border rounded ${
-        isLiked
-          ? "border-rose-500 text-rose-500"
-          : "border-gray-300 text-muted-foreground"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleToggleLike();
+      }}
+      disabled={loading}
+      className={`flex items-center gap-1 ${
+        isLiked ? "text-rose-500" : "text-gray-500"
       }`}
-      disabled={isLoading}
     >
       <Heart className={`w-4 h-4 ${isLiked ? "fill-rose-500" : ""}`} />
       <span>{likes.toLocaleString()}</span>

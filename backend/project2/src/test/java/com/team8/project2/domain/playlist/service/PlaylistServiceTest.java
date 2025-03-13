@@ -1,10 +1,13 @@
 package com.team8.project2.domain.playlist.service;
 
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
+import com.team8.project2.domain.playlist.repository.PlaylistLikeRepository;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
 import com.team8.project2.global.exception.BadRequestException;
 import com.team8.project2.global.exception.NotFoundException;
@@ -34,6 +37,12 @@ class PlaylistServiceTest {
     private PlaylistRepository playlistRepository;
 
     @Mock
+    private MemberRepository memberRepository;
+
+    @Mock
+    private PlaylistLikeRepository playlistLikeRepository;
+
+    @Mock
     private RedisTemplate<String, Object> redisTemplate;
 
     @Mock
@@ -44,6 +53,8 @@ class PlaylistServiceTest {
 
     private Playlist samplePlaylist;
 
+    private Member sampleMember;
+
     @BeforeEach
     void setUp() {
         samplePlaylist = Playlist.builder()
@@ -51,7 +62,18 @@ class PlaylistServiceTest {
                 .title("테스트 플레이리스트")
                 .tags(new HashSet<>())
                 .description("테스트 설명")
+                .likeCount(0L)
                 .build();
+
+        sampleMember = Member.builder()
+                .id(1L)
+                .username("테스트 유저")
+                .email("test@example.com")
+                .build();
+
+        lenient().when(memberRepository.findById(sampleMember.getId())).thenReturn(Optional.of(sampleMember));
+        lenient().when(playlistRepository.findById(samplePlaylist.getId())).thenReturn(Optional.of(samplePlaylist));
+
         lenient().when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }
@@ -294,12 +316,20 @@ class PlaylistServiceTest {
     @DisplayName("좋아요가 Redis에서 정상적으로 증가해야 한다.")
     void shouldIncreaseLikeCountInRedis() {
         Long playlistId = 1L;
+        Long memberId = 1L;
+
+        // Given
+        when(zSetOperations.score("playlist:like_count", playlistId.toString()))
+                .thenReturn(1.0);
+        when(redisTemplate.opsForZSet().incrementScore("playlist:like_count", playlistId.toString(), 1))
+                .thenReturn(1.0);
 
         // When
-        playlistService.likePlaylist(playlistId);
+        playlistService.likePlaylist(playlistId, memberId);
 
         // Then
         verify(zSetOperations, times(1)).incrementScore("playlist:like_count", playlistId.toString(), 1);
+        assertEquals(1L, samplePlaylist.getLikeCount());
     }
 
     /** ✅ 추천 플레이리스트 조회 테스트 (Redis 캐싱 적용) */

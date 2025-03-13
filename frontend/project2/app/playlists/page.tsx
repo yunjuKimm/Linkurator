@@ -14,7 +14,6 @@ export default function PlaylistsPage() {
           </button>
         </Link>
       </header>
-      {/* **수정사항 3: PlaylistGrid 컴포넌트 추가 */}
       <PlaylistGrid />
     </div>
   );

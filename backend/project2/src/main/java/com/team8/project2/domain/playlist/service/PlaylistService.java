@@ -1,10 +1,14 @@
 package com.team8.project2.domain.playlist.service;
 
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
+import com.team8.project2.domain.playlist.dto.PlaylistLike;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
+import com.team8.project2.domain.playlist.repository.PlaylistLikeRepository;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
 import com.team8.project2.global.exception.BadRequestException;
 import com.team8.project2.global.exception.NotFoundException;
@@ -29,6 +33,8 @@ public class PlaylistService {
 
     private final PlaylistRepository playlistRepository;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final MemberRepository memberRepository;
+    private final PlaylistLikeRepository playlistLikeRepository;
     private static final String VIEW_COUNT_KEY = "playlist:view_count"; // 조회수 저장
     private static final String LIKE_COUNT_KEY = "playlist:like_count"; // 좋아요 수 저장
     private static final String RECOMMEND_KEY = "playlist:recommend:"; // 추천 캐싱
@@ -138,9 +144,83 @@ public class PlaylistService {
         redisTemplate.opsForZSet().incrementScore(VIEW_COUNT_KEY, playlistId.toString(), 1);
     }
 
-    /** ✅ 좋아요 증가 */
-    public void likePlaylist(Long playlistId) {
-        redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, playlistId.toString(), 1);
+    /** ✅ 조회수 증가 (10분 제한) */
+//    public void recordPlaylistView(Long playlistId, Long memberId) {
+//        String viewKey = "viewed:" + memberId + ":" + playlistId; // Redis 키 생성
+//
+//        // Redis에 해당 키가 있는지 확인 (이미 조회한 경우)
+//        Boolean isViewed = redisTemplate.hasKey(viewKey);
+//        if (Boolean.TRUE.equals(isViewed)) {
+//            return; // 10분 내에 조회한 경우, 조회수를 증가시키지 않음
+//        }
+//
+//        // Redis에 조회 기록 저장 (10분 TTL)
+//        redisTemplate.opsForValue().set(viewKey, "true", Duration.ofMinutes(10));
+//
+//        // 조회수 증가
+//        redisTemplate.opsForZSet().incrementScore(VIEW_COUNT_KEY, playlistId.toString(), 1);
+//
+//        // DB에서도 조회수 반영 (선택적)
+//        Playlist playlist = playlistRepository.findById(playlistId)
+//                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+//        playlist.incrementViewCount();
+//        playlistRepository.save(playlist);
+//    }
+
+
+//    /** ✅ 좋아요 증가 */
+//    public void likePlaylist(Long playlistId) {
+//        redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, playlistId.toString(), 1);
+//    }
+
+    @Transactional
+    public void likePlaylist(Long playlistId, Long memberId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new NotFoundException("해당 사용자를 찾을 수 없습니다."));
+
+        Optional<PlaylistLike> existingLike = playlistLikeRepository.findByPlaylistAndMember(playlist, member);
+
+        if (existingLike.isPresent()) {
+            playlistLikeRepository.delete(existingLike.get());
+
+            Double currentLikes = redisTemplate.opsForZSet().score(LIKE_COUNT_KEY, playlistId.toString());
+            if (currentLikes != null && currentLikes > 0) {
+                redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, playlistId.toString(), -1);
+                playlist.setLikeCount(currentLikes.longValue() - 1);
+            } else {
+                playlist.setLikeCount(0L);
+            }
+
+        } else {
+            PlaylistLike newLike = PlaylistLike.createLike(playlist, member);
+            playlistLikeRepository.save(newLike);
+
+            redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, playlistId.toString(), 1);
+            playlist.setLikeCount(redisTemplate.opsForZSet().score(LIKE_COUNT_KEY, playlistId.toString()).longValue());
+        }
+
+        playlistRepository.save(playlist);
+    }
+
+
+    /** ✅ 좋아요 취소 */
+    @Transactional
+    public void unlikePlaylist(Long playlistId, Long memberId) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new NotFoundException("해당 사용자를 찾을 수 없습니다."));
+
+        Optional<PlaylistLike> existingLike = playlistLikeRepository.findByPlaylistAndMember(playlist, member);
+
+        if (existingLike.isPresent()) {
+            playlistLikeRepository.delete(existingLike.get());
+            redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, playlistId.toString(), -1);
+        }
     }
 
     /** ✅ 추천 리스트 병합 */

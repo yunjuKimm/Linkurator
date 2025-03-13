@@ -1,10 +1,12 @@
 package com.team8.project2.domain.playlist.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.service.PlaylistService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,7 +14,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -24,7 +29,8 @@ import java.util.Map;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 class ApiV1PlaylistControllerTest {
@@ -37,6 +43,9 @@ class ApiV1PlaylistControllerTest {
 
     @Mock
     private PlaylistService playlistService;
+
+    @Autowired
+    private MemberRepository memberRepository;
 
     @BeforeEach
     void setUp() {
@@ -148,11 +157,19 @@ class ApiV1PlaylistControllerTest {
     void shouldIncreaseLikeCount() throws Exception {
         Long playlistId = 1L;
 
+        Member mockMember = new Member();
+        mockMember.setUsername("testUser");
+        Member savedMember = memberRepository.save(mockMember);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(savedMember, null)
+        );
+
         mockMvc.perform(post("/api/v1/playlists/{id}/like", playlistId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.msg").value("좋아요가 증가되었습니다."));
 
-        verify(playlistService, times(1)).likePlaylist(playlistId);
+        verify(playlistService, times(1)).likePlaylist(playlistId,  savedMember.getId());
     }
 
     /** ✅ 추천 API 테스트 */

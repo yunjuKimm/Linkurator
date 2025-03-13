@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, Heart, LinkIcon } from "lucide-react";
+import { Eye, LinkIcon } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Playlist } from "@/types/playlist";
+import LikeButton from "@/app/components/like-button";
 
 interface LikedPlaylistGridProps {
   playlists: Playlist[];
@@ -23,10 +24,6 @@ const formatDate = (dateString: string): string => {
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
 };
-
-interface LikedPlaylistGridProps {
-  playlists: Playlist[];
-}
 
 export default function LikedPlaylistGrid({
   playlists,
@@ -51,22 +48,24 @@ export default function LikedPlaylistGrid({
             <CardContent className="p-4">
               <h3 className="text-lg font-bold truncate">{playlist.title}</h3>
 
-              {playlist.description && (
-                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                  {playlist.description}
-                </p>
-              )}
-
               <div className="flex items-center gap-3 mt-3 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Eye className="h-4 w-4" />
                   <span>{playlist.viewCount || 0}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Heart className="h-4 w-4 text-rose-500" />
-                  <span>{playlist.likeCount || 0}</span>
-                </div>
-                <Badge variant="outline" className="ml-2">
+
+                {/* 좋아요 버튼 -> 취소하면 목록에서 제거 */}
+                <LikeButton
+                  playlistId={playlist.id}
+                  initialLikes={playlist.likeCount}
+                  onUnlike={() =>
+                    setLikedPlaylists((prev) =>
+                      prev.filter((p) => p.id !== playlist.id)
+                    )
+                  }
+                />
+
+                <Badge variant="outline">
                   <LinkIcon className="w-4 h-4" />
                   <span>{playlist.items?.length || 0}</span>
                 </Badge>
