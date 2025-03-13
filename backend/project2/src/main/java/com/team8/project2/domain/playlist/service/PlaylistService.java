@@ -1,15 +1,13 @@
 package com.team8.project2.domain.playlist.service;
 
-import com.team8.project2.domain.playlist.entity.PlaylistItem;
-import com.team8.project2.global.exception.BadRequestException;
-import com.team8.project2.global.exception.NotFoundException;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
 import com.team8.project2.domain.playlist.entity.Playlist;
+import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
-import com.team8.project2.domain.curation.tag.entity.Tag;
-
+import com.team8.project2.global.exception.BadRequestException;
+import com.team8.project2.global.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -182,6 +180,10 @@ public class PlaylistService {
     public PlaylistDto getPlaylist(Long id) {
         Playlist playlist = playlistRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        playlist.incrementViewCount();
+        playlistRepository.save(playlist);
+
         return PlaylistDto.fromEntity(playlist);
     }
 

@@ -18,6 +18,8 @@ export interface Playlist {
   createdAt: string;
   items?: PlaylistItem[];
   tags?: string[];
+  viewCount: number;
+  likeCount: number;
 }
 export interface LinkData {
   title: string;

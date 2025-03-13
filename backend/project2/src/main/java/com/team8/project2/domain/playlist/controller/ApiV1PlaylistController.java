@@ -9,8 +9,10 @@ import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.service.PlaylistService;
 import com.team8.project2.global.dto.RsData;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -47,7 +49,9 @@ public class ApiV1PlaylistController {
      * @return 조회된 플레이리스트 정보
      */
     @GetMapping("/{id}")
-    public RsData<PlaylistDto> getPlaylist(@PathVariable Long id) {
+    public RsData<PlaylistDto> getPlaylist(@PathVariable Long id, HttpServletRequest request) {
+        playlistService.recordPlaylistView(id);
+
         PlaylistDto playlist = playlistService.getPlaylist(id);
         return RsData.success("플레이리스트 조회 성공", playlist);
     }
@@ -185,4 +189,13 @@ public class ApiV1PlaylistController {
     }
 
     private final LinkService linkService;
+
+    /** ✅ 좋아요 상태 조회 API 추가 */
+    @GetMapping("/{id}/like/status")
+    public RsData<Boolean> isLikedByUser(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        boolean liked = playlistService.isLikedByUser(id, user.getId());
+        return RsData.success("좋아요 상태 조회 성공", liked);
+    }
+
+
 }
