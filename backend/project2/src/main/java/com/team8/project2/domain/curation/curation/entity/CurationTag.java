@@ -37,6 +37,7 @@ public class CurationTag {
     @JoinColumn(name = "tagId", insertable = false, updatable = false)
     private Tag tag;
 
+
     /**
      * 큐레이션과 태그의 복합 키를 정의하는 내부 클래스
      */

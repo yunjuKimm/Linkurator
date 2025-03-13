@@ -68,6 +68,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/playlists/{id}/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["recordPlaylistView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/playlists/{id}/like": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["likePlaylist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/playlists/{id}/items/link": {
         parameters: {
             query?: never;
@@ -94,6 +126,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["addCurationToPlaylist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/{memberId}/unfollow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["unfollow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/{memberId}/follow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["follow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -260,7 +324,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/members/{memberId}": {
+    "/api/v1/members/{username}": {
         parameters: {
             query?: never;
             header?: never;
@@ -284,6 +348,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getMyInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/following": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["following"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/curation/following": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["followingCuration"];
         put?: never;
         post?: never;
         delete?: never;
@@ -330,8 +426,8 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             modifiedAt?: string;
-            authorImgUrl?: string;
             authorName?: string;
+            authorImgUrl?: string;
             /** Format: int64 */
             authorId?: number;
         };
@@ -346,14 +442,16 @@ export interface components {
             modifiedAt?: string;
             /** Format: int64 */
             likeCount?: number;
+            /** Format: int64 */
+            viewCount?: number;
             member?: components["schemas"]["Member"];
             curationLinks?: components["schemas"]["CurationLink"][];
             tags?: components["schemas"]["CurationTag"][];
             comments?: components["schemas"]["Comment"][];
             memberName?: string;
-            memberImgUrl?: string;
             /** Format: int64 */
             memberId?: number;
+            memberImgUrl?: string;
         };
         CurationLink: {
             id?: components["schemas"]["CurationLinkId"];
@@ -405,10 +503,10 @@ export interface components {
             profileImage?: string;
             email?: string;
             introduce?: string;
-            memberAuthoritesAsString?: string[];
+            authorities?: components["schemas"]["GrantedAuthority"][];
             admin?: boolean;
             member?: boolean;
-            authorities?: components["schemas"]["GrantedAuthority"][];
+            memberAuthoritesAsString?: string[];
         };
         RsDataLink: {
             code?: string;
@@ -495,6 +593,24 @@ export interface components {
             msg?: string;
             data?: components["schemas"]["PlaylistDto"];
         };
+        RsDataUnfollowResDto: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["UnfollowResDto"];
+        };
+        UnfollowResDto: {
+            followee?: string;
+        };
+        FollowResDto: {
+            followee?: string;
+            /** Format: date-time */
+            followedAt?: string;
+        };
+        RsDataFollowResDto: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["FollowResDto"];
+        };
         LoginReqBody: {
             username: string;
             password: string;
@@ -566,6 +682,14 @@ export interface components {
             code?: string;
             msg?: string;
             data?: components["schemas"]["MemberResDTO"];
+        };
+        FollowingResDto: {
+            following?: components["schemas"]["FollowResDto"][];
+        };
+        RsDataFollowingResDto: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["FollowingResDto"];
         };
         RsDataListCommentDto: {
             code?: string;
@@ -821,9 +945,7 @@ export interface operations {
     };
     likeCuration: {
         parameters: {
-            query: {
-                memberId: number;
-            };
+            query?: never;
             header?: never;
             path: {
                 id: number;
@@ -945,6 +1067,68 @@ export interface operations {
             };
         };
     };
+    recordPlaylistView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
+    likePlaylist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
     addLinkToPlaylist: {
         parameters: {
             query?: never;
@@ -1006,6 +1190,68 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RsDataPlaylistDto"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
+    unfollow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataUnfollowResDto"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
+    follow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataFollowResDto"];
                 };
             };
             /** @description Internal Server Error */
@@ -1482,7 +1728,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                memberId: string;
+                username: string;
             };
             cookie?: never;
         };
@@ -1524,6 +1770,64 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RsDataMemberResDTO"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
+    following: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataFollowingResDto"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
+    followingCuration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataListCurationResDto"];
                 };
             };
             /** @description Internal Server Error */
