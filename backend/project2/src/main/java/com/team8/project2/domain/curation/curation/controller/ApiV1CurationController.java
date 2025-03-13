@@ -128,11 +128,25 @@ public class ApiV1CurationController {
      * @param id 큐레이션 ID
      * @return 좋아요 성공 응답
      */
-    @PostMapping("/{id}")
+    @PostMapping("/like/{id}")
     public RsData<Void> likeCuration(@PathVariable Long id) {
-        Long memberId = rq.getActor().getId();
+//        Long memberId = rq.getActor().getId();
+        Long memberId = 1L;
         curationService.likeCuration(id, memberId);
         return new RsData<>("200-1", "글에 좋아요를 했습니다.", null);
+    }
+
+    /**
+     * 특정 큐레이션에 대해 사용자가 좋아요를 눌렀는지 확인합니다.
+     * @param id 큐레이션 ID
+     * @return 좋아요 여부 응답 (true: 좋아요 누름, false: 좋아요 안 누름)
+     */
+    @GetMapping("/like/{id}/status")
+    public RsData<Boolean> isCurationLiked(@PathVariable Long id) {
+//        Long memberId = rq.getActor().getId();
+        Long memberId = 1L;
+        boolean isLiked = curationService.isLikedByMember(id, memberId);
+        return new RsData<>("200-1", "좋아요 여부 확인 성공", isLiked);
     }
   
     @GetMapping("/following")
