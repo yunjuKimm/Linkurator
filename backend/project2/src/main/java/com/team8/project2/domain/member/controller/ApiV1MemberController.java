@@ -67,6 +67,7 @@ public class ApiV1MemberController {
     record LoginResBody(MemberResDTO item, String accessToken) {}
     @PostMapping("/login")
     public RsData<LoginResBody> login(@RequestBody @Valid LoginReqBody reqBody) {
+        log.info("[login.reqBody.userName]:"+reqBody.username);
         Member member = memberService.findByMemberId(reqBody.username).orElseThrow(
                 () -> new ServiceException("401-1", "잘못된 아이디입니다.")
         );
@@ -100,14 +101,14 @@ public class ApiV1MemberController {
             throw new ServiceException("401-3", "유효하지 않은 인증 정보입니다.");
         }
 
-        log.info("✅ [/me] 사용자 인증 성공 - ID: {}, Username: {}", member.getId(), member.getUsername());
+        log.info("[/me] 사용자 인증 성공 - ID: {}, Username: {}", member.getId(), member.getUsername());
 
         try {
             MemberResDTO memberResDTO = MemberResDTO.fromEntity(member);
-            log.info("📌 [/me] MemberResDTO 변환 성공: {}", memberResDTO);
+            log.info("[/me] MemberResDTO 변환 성공: {}", memberResDTO);
             return new RsData<>("200-2", "내 정보 조회 성공", memberResDTO);
         } catch (Exception e) {
-            log.error("🚨 [/me] MemberResDTO 변환 중 오류 발생: ", e);
+            log.error("[/me] MemberResDTO 변환 중 오류 발생: ", e);
             throw new ServiceException("500-1", "사용자 정보 변환 중 오류 발생");
         }
         // return new RsData<>("200-2", "내 정보 조회 성공", MemberResDTO.fromEntity(member));

@@ -101,7 +101,6 @@ public class MemberService {
 		return Optional.of(Member.builder().id(id).memberId(memberId).build());
 	}
 
-	@Transactional
 	public String genAccessToken(Member member) {
 		return authTokenService.genAccessToken(member);
 	}

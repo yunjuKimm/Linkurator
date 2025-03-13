@@ -37,8 +37,8 @@ public class SecurityConfig {
 
 				// 🔹 특정 API 엔드포인트에 대한 인증 예외
 				.requestMatchers(HttpMethod.GET, "/api/v1/playlists", "/api/v1/playlists/{id}").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/v1/members", "/api/v1/members/{id}").permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/v1/members", "/api/v1/members/{id}").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/v1/members/**", "/api/v1/members/{id}").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/v1/members/**", "/api/v1/members/{id}").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/v1/curation/**").permitAll()
 				.requestMatchers(HttpMethod.PUT, "/api/v1/curation/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/curation/**").permitAll()
@@ -58,9 +58,14 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.GET, "/h2-console/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
 
+
 				// 🔹 그 외 모든 요청 인증 필요
 				.anyRequest().authenticated()
 			)
+			/*.formLogin(login -> login
+					.loginProcessingUrl("/api/v1/members/login")
+					.permitAll()// 로그인 요청 URL 지정
+				)*/
 			.headers((headers) -> headers
 				.addHeaderWriter(new XFrameOptionsHeaderWriter(
 					XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN)))

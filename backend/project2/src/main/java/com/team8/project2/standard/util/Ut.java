@@ -57,7 +57,6 @@ public class Ut {
                         .build()
                         .parse(token);
 
-                System.out.println("[현재 서버 시간] " + new Date(currentTime));
 
                 return true; // 토큰이 정상적으로 검증되면 true 반환
             } catch (ExpiredJwtException e) {

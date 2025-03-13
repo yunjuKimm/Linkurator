@@ -57,7 +57,6 @@ public class AuthTokenService {
         Number idNo = (Number) payload.get("id");
         long id = idNo.longValue();
         String memberId = (String) payload.get("memberId");
-
         return Map.of(
                 "id", id,
                 "memberId", memberId

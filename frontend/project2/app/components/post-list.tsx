@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react"
+import { Heart, MessageSquare, Bookmark, Share2, AlertCircle } from "lucide-react"
 import CurationSkeleton from "./skeleton/curation-skeleton"
 
 // Curation 데이터 인터페이스 정의
@@ -38,6 +38,7 @@ export default function PostList() {
   const [curations, setCurations] = useState<Curation[]>([])
   const [sortOrder, setSortOrder] = useState<SortOrder>("LATEST") // 기본값: 최신순
   const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
   const [linkMetaDataList, setLinkMetaDataList] = useState<{
     [key: number]: LinkMetaData[]
   }>({}) // 각 큐레이션에 대한 메타 데이터 상태 (배열로 수정)
@@ -47,9 +48,14 @@ export default function PostList() {
   const [title, setTitle] = useState<string>("") // 제목 필터링
   const [content, setContent] = useState<string>("") // 내용 필터링
 
+  // API 기본 URL 설정
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+
   // API 요청 함수
   const fetchCurations = async (params: CurationRequestParams) => {
     setLoading(true)
+    setError(null)
+
     try {
       const queryParams = new URLSearchParams({
         order: sortOrder, // 기존의 sortOrder 상태를 직접 전달
@@ -58,18 +64,44 @@ export default function PostList() {
         ...(params.content ? { content: params.content } : {}),
       }).toString()
 
-      const response = await fetch(`http://localhost:8080/api/v1/curation?${queryParams}`)
+      // 타임아웃 설정
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10초 타임아웃
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/curation?${queryParams}`, {
+        signal: controller.signal,
+        headers: {
+          Accept: "application/json",
+        },
+      })
+
+      clearTimeout(timeoutId) // 타임아웃 제거
+
       if (!response.ok) {
-        throw new Error("Network response was not ok")
+        throw new Error(`서버 응답 오류: ${response.status} ${response.statusText}`)
       }
+
       const data = await response.json()
       if (data && data.data) {
         setCurations(data.data)
       } else {
-        console.error("No data found in the response")
+        console.warn("응답에 데이터가 없습니다:", data)
+        setCurations([])
       }
     } catch (error) {
       console.error("Error fetching curations:", error)
+
+      // 사용자 친화적인 오류 메시지 설정
+      if ((error as Error).name === "AbortError") {
+        setError("요청 시간이 초과되었습니다. 서버 연결을 확인해주세요.")
+      } else if ((error as Error).message.includes("Failed to fetch")) {
+        setError("서버에 연결할 수 없습니다. 네트워크 연결 또는 API 서버가 실행 중인지 확인해주세요.")
+      } else {
+        setError(`큐레이션을 불러오는 중 오류가 발생했습니다: ${(error as Error).message}`)
+      }
+
+      // 오류 발생 시 빈 배열 설정
+      setCurations([])
     } finally {
       setLoading(false)
     }
@@ -101,7 +133,7 @@ export default function PostList() {
   // 메타 데이터 추출 함수
   const fetchLinkMetaData = async (url: string, curationId: number) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/link/preview`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/link/preview`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -133,7 +165,7 @@ export default function PostList() {
   // 좋아요 추가 API 호출 함수
   const likeCuration = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/curation/${id}`, {
         method: "POST", // POST 요청으로 좋아요 추가
       })
       if (!response.ok) {
@@ -156,7 +188,7 @@ export default function PostList() {
   // 큐레이션마다 메타 데이터 추출
   useEffect(() => {
     curations.forEach((curation) => {
-      if (curation.urls.length > 0) {
+      if (curation.urls && curation.urls.length > 0) {
         curation.urls.forEach((urlObj) => {
           // URL이 이미 메타 데이터에 포함되지 않았다면 메타 데이터를 가져옴
           if (!linkMetaDataList[curation.id]?.some((meta) => meta.url === urlObj.url)) {
@@ -169,13 +201,22 @@ export default function PostList() {
 
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, "0")
-    const day = String(date.getDate()).padStart(2, "0")
-    const hours = String(date.getHours()).padStart(2, "0")
-    const minutes = String(date.getMinutes()).padStart(2, "0")
-    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        return "유효하지 않은 날짜"
+      }
+
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, "0")
+      const day = String(date.getDate()).padStart(2, "0")
+      const hours = String(date.getHours()).padStart(2, "0")
+      const minutes = String(date.getMinutes()).padStart(2, "0")
+      return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`
+    } catch (e) {
+      console.error("날짜 형식 오류:", e)
+      return "날짜 형식 오류"
+    }
   }
 
   useEffect(() => {
@@ -279,6 +320,17 @@ export default function PostList() {
         </div>
       )}
 
+      {/* 오류 메시지 표시 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md flex items-start mb-6">
+          <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium">데이터를 불러올 수 없습니다</p>
+            <p className="text-sm mt-1">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* 로딩 상태 표시 - 스켈레톤 UI로 대체 */}
       {loading ? (
         <div className="space-y-6 pt-4">
@@ -290,7 +342,9 @@ export default function PostList() {
         /* 게시글 목록 */
         <div className="space-y-6 pt-4">
           {curations.length === 0 ? (
-            <p>글이 없습니다.</p>
+            <p className="text-center py-8 text-gray-500">
+              {error ? "오류로 인해 데이터를 불러올 수 없습니다." : "글이 없습니다."}
+            </p>
           ) : (
             curations.map((curation) => (
               <div key={curation.id} className="space-y-4 border-b pb-6">
@@ -309,10 +363,10 @@ export default function PostList() {
                 </div>
 
                 {/* 태그 표시 */}
-                <div className="flex space-x-2 mt-2">
-                  {curation.tags.map((tag) => (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {curation.tags.map((tag, index) => (
                     <span
-                      key={tag.name}
+                      key={`${tag.name}-${index}`}
                       className={`px-3 py-1 text-sm font-medium rounded-full cursor-pointer ${
                         selectedTags.includes(tag.name) ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600"
                       }`}
@@ -325,11 +379,11 @@ export default function PostList() {
 
                 {/* 메타 데이터 카드 */}
                 {linkMetaDataList[curation.id]?.map((metaData, index) => (
-                  <Link key={index} href={metaData.url} passHref>
+                  <Link key={`${metaData.url}-${index}`} href={metaData.url} passHref>
                     <div className="mt-4 rounded-lg border p-4 cursor-pointer">
                       <div className="flex items-center space-x-3">
                         <img
-                          src={metaData.image || "/placeholder.svg"}
+                          src={metaData.image || "/placeholder.svg?height=48&width=48"}
                           alt="Preview"
                           className="h-12 w-12 rounded-lg"
                         />
