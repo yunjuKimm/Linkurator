@@ -443,13 +443,13 @@ export default function PostDetail() {
         </div>
       </div>
 
-      {/* 플레이리스트 추가 모달 렌더링 */}
+      {/* 플레이리스트 추가 모달 렌더링
       {showPlaylistModal && post && (
         <AddToPlaylistModal
           curationId={post.id}
           onClose={() => setShowPlaylistModal(false)}
         />
-      )}
+      )} */}
 
     </main>
   )
