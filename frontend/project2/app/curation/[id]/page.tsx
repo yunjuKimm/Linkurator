@@ -10,6 +10,7 @@ import CommentSection from "@/app/components/comment-section"
 
 // 큐레이션 데이터 타입
 interface CurationData {
+  id : number
   title: string
   content: string
   authorName: string
@@ -31,7 +32,7 @@ interface LinkMetaData {
   url: string
 }
 
-export default function PostDetail({ params }: { params: { id: string } }) {
+export default function PostDetail() {
   const { id } = useParams() // useParams로 id 값을 받습니다.
   const [post, setPost] = useState<CurationData | null>(null)
   const [linksMetaData, setLinksMetaData] = useState<Map<string, LinkMetaData>>(new Map())
@@ -219,6 +220,30 @@ export default function PostDetail({ params }: { params: { id: string } }) {
   // URL 배열이 있는지 확인
   const hasUrls = post.urls && post.urls.length > 0
 
+  const likeCuration = async (id: number) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}/like`, {
+        method: "POST",
+      })
+      if (!response.ok) {
+        throw new Error("Failed to like the post")
+      }
+
+      const data = await response.json()
+      setPost((prevPost) => {
+        if (prevPost) {
+          return {
+            ...prevPost,
+            likeCount: data.likeCount, // likeCount만 업데이트
+          }
+        }
+        return null
+      })
+    } catch (error) {
+      console.error("Error liking the post:", error)
+    }
+  }
+
   return (
     <main className="container grid grid-cols-12 gap-6 px-4 py-6">
       <div className="col-span-12 lg:col-span-9">
@@ -368,7 +393,7 @@ export default function PostDetail({ params }: { params: { id: string } }) {
 
           <div className="flex items-center justify-between border-t border-b py-4">
             <div className="flex items-center space-x-4">
-              <button className="flex items-center space-x-1 text-sm">
+              <button className="flex items-center space-x-1 text-sm" onClick={() => likeCuration(post.id)}>
                 <Heart className="h-5 w-5 text-red-500 fill-red-500" />
                 <span className="font-medium">{post.likeCount}</span>
               </button>
