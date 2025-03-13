@@ -18,6 +18,11 @@ spring:
       hibernate:
         default_batch_fetch_size: 100
 
+  cloud:
+    aws:
+      s3:
+        bucket: linkurator-bucket
+
 custom:
   jwt:
     secret-key: abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890
