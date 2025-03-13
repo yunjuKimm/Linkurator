@@ -4,7 +4,17 @@ import { useState, useEffect } from "react"
 import { useParams } from "next/navigation" // `useParams`를 사용하여 params를 받아옵니다.
 import Image from "next/image"
 import Link from "next/link"
-import { Heart, MessageSquare, Bookmark, Share2, ArrowLeft, Edit, Trash2, MoreVertical } from "lucide-react"
+import {
+  Heart,
+  MessageSquare,
+  Bookmark,
+  Share2,
+  ArrowLeft,
+  Edit,
+  Trash2,
+  MoreVertical,
+  MousePointer,
+} from "lucide-react"
 import RightSidebar from "@/app/components/right-sidebar"
 import CommentSection from "@/app/components/comment-section"
 
@@ -17,7 +27,7 @@ interface CurationData {
   authorImage: string
   createdAt: string
   modifiedAt: string
-  urls: { url: string }[]
+  urls: { url: string; linkId? : number }[]
   tags: { name: string }[]
   likeCount: number
   viewCount: number // Add viewCount field
@@ -30,6 +40,8 @@ interface LinkMetaData {
   description: string
   image: string
   url: string
+  click? : number
+  linkId? : number
 }
 
 export default function PostDetail() {
@@ -110,6 +122,7 @@ export default function PostDetail() {
             }
 
             const data = await response.json()
+            console.log(data)
             if (data.data) {
               newLinksMetaData.set(url, data.data)
             }
@@ -244,6 +257,43 @@ export default function PostDetail() {
     }
   }
 
+  // 링크 클릭 처리 함수 추가
+  const handleLinkClick = async (url: string, linkId?: number) => {
+    if (!linkId) return
+
+    try {
+      // 링크 클릭 시 백엔드에 조회수 증가 요청
+      const response = await fetch(`http://localhost:8080/api/v1/link/${linkId}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "X-Forwarded-For": "127.0.0.1",
+          "X-Real-IP": "127.0.0.1",
+        },
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log("링크 클릭 결과:", result)
+
+        // 로컬 상태 업데이트 (UI 즉시 반영)
+        setLinksMetaData((prev) => {
+          const newMap = new Map(prev)
+          const metadata = newMap.get(url)
+          if (metadata) {
+            newMap.set(url, {
+              ...metadata,
+              click: result.data.click || (metadata.click || 0) + 1,
+            })
+          }
+          return newMap
+        })
+      }
+    } catch (error) {
+      console.error("링크 클릭 처리 중 오류:", error)
+    }
+  }
+
   return (
     <main className="container grid grid-cols-12 gap-6 px-4 py-6">
       <div className="col-span-12 lg:col-span-9">
@@ -306,7 +356,7 @@ export default function PostDetail() {
 
           <h1 className="text-3xl font-bold">{post.title}</h1>
           <div className="flex items-center space-x-2 mt-1 mb-4">
-            <p className="text-sm text-gray-500">조회수 {post.viewCount}</p>
+            <p className="text-sm text-gray-500">조회수 {post.viewCount || 0}</p>
           </div>
 
           {/* 링크 카드 섹션 - 여러 URL 지원 */}
@@ -351,9 +401,15 @@ export default function PostDetail() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-gray-500 hover:text-gray-700"
+                            onClick={() => handleLinkClick(url, linksMetaData.get(url)?.linkId)}
                           >
                             바로가기
                           </a>
+                          <span className="mx-2 text-gray-300">|</span>
+                          <div className="flex items-center text-gray-500">
+                            <MousePointer className="h-3 w-3 mr-1" />
+                            <span>{linksMetaData.get(url)?.click || 0}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -393,7 +449,7 @@ export default function PostDetail() {
 
           <div className="flex items-center justify-between border-t border-b py-4">
             <div className="flex items-center space-x-4">
-              <button className="flex items-center space-x-1 text-sm" onClick={() => likeCuration(post.id)}>
+              <button className="flex items-center space-x-1 text-sm">
                 <Heart className="h-5 w-5 text-red-500 fill-red-500" />
                 <span className="font-medium">{post.likeCount}</span>
               </button>
@@ -442,15 +498,6 @@ export default function PostDetail() {
           </div>
         </div>
       </div>
-
-      {/* 플레이리스트 추가 모달 렌더링
-      {showPlaylistModal && post && (
-        <AddToPlaylistModal
-          curationId={post.id}
-          onClose={() => setShowPlaylistModal(false)}
-        />
-      )} */}
-
     </main>
   )
 }
