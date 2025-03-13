@@ -49,6 +49,15 @@ public class Playlist {
     private boolean isPublic = true;
 
     /**
+     * ✅ 플레이리스트 조회수 및 좋아요 수 추가
+     */
+    @Column(nullable = false)
+    private long viewCount = 0L; // 기본값 0
+
+    @Column(nullable = false)
+    private long likeCount = 0L; // 기본값 0
+
+    /**
      * 플레이리스트에 포함된 항목 목록 (1:N 관계)
      */
     @OneToMany(mappedBy = "playlist", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -73,19 +82,33 @@ public class Playlist {
      */
     @ManyToMany
     @JoinTable(
-            name="PlaylistTag",
-            joinColumns = @JoinColumn(name="playlist_id"),
-            inverseJoinColumns = @JoinColumn(name="tag_id")
+            name = "PlaylistTag",
+            joinColumns = @JoinColumn(name = "playlist_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
     )
-
-    @ElementCollection
     private Set<Tag> tags = new HashSet<>();
 
-    public Set<String> getTags() {
-        return this.items.stream()
-                .filter(item -> item.getCuration() != null) // ✅ Curation이 존재하는 경우만 처리
-                .flatMap(item -> item.getCuration().getTags().stream().map(curationTag -> curationTag.getTag().getName())) // ✅ `Tag`의 이름 가져오기
+    /**
+     * ✅ 태그 목록을 문자열 Set으로 변환하여 반환
+     */
+    public Set<String> getTagNames() {
+        return this.tags.stream()
+                .map(Tag::getName)
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * ✅ 조회수 증가 메서드
+     */
+    public void incrementViewCount() {
+        this.viewCount += 1;
+    }
+
+    /**
+     * ✅ 좋아요 증가 메서드
+     */
+    public void incrementLikeCount() {
+        this.likeCount += 1;
     }
 
 
