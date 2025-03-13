@@ -35,35 +35,104 @@ public class PlaylistService {
     private static final String LIKE_COUNT_KEY = "playlist:like_count"; // 좋아요 수 저장
     private static final String RECOMMEND_KEY = "playlist:recommend:"; // 추천 캐싱
 
-    /** ✅ 플레이리스트 추천 로직 */
-    public List<PlaylistDto> recommendPlaylist(Long playlistId) {
-        // 1️⃣ Redis에서 캐싱된 추천 데이터 가져오기
+
+    /**
+     * ✅ 플레이리스트 추천 로직
+     * - 24시간 내 인기 추천 포함
+     * - 태그 기반 유사 플레이리스트 추천
+     * - 정렬 기준 (좋아요, 조회수, 복합)
+     */
+    public List<PlaylistDto> recommendPlaylist(Long playlistId, String sortType) {
         List<Long> cachedRecommendations = (List<Long>) redisTemplate.opsForValue().get(RECOMMEND_KEY + playlistId);
         if (cachedRecommendations != null) {
             return getPlaylistsByIds(cachedRecommendations);
         }
 
-        // 2️⃣ 조회수 기반 추천
-        Set<Object> trendingPlaylists = redisTemplate.opsForZSet().reverseRange(VIEW_COUNT_KEY, 0, 9);
+        // 1️⃣ 최근 24시간 동안 인기 플레이리스트 추천
+        Set<Object> trendingRecent = redisTemplate.opsForZSet().reverseRange("trending:24h", 0, 5);
+        Set<Object> popularRecent = redisTemplate.opsForZSet().reverseRange("popular:24h", 0, 5);
 
-        // 3️⃣ 좋아요 기반 추천
-        Set<Object> popularPlaylists = redisTemplate.opsForZSet().reverseRange(LIKE_COUNT_KEY, 0, 9);
+        // 2️⃣ 전체 인기 플레이리스트 추천 (조회수 + 좋아요)
+        Set<Object> trendingPlaylists = redisTemplate.opsForZSet().reverseRange(VIEW_COUNT_KEY, 0, 5);
+        Set<Object> popularPlaylists = redisTemplate.opsForZSet().reverseRange(LIKE_COUNT_KEY, 0, 5);
 
-        // 4️⃣ 유사한 플레이리스트 추천
+        // 3️⃣ 태그 기반 유사 플레이리스트 추천
         Playlist currentPlaylist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
-        List<Playlist> similarPlaylists = playlistRepository.findByTags(currentPlaylist.getTags(), playlistId);
 
-        // 5️⃣ 추천 결과 병합
+        List<Playlist> similarPlaylists = findSimilarPlaylistsByTag(currentPlaylist);
+
+        // 4️⃣ 추천 결과 병합
         Set<Long> recommendedPlaylistIds = new HashSet<>();
-        if (trendingPlaylists != null) trendingPlaylists.forEach(id -> recommendedPlaylistIds.add(Long.parseLong(id.toString())));
-        if (popularPlaylists != null) popularPlaylists.forEach(id -> recommendedPlaylistIds.add(Long.parseLong(id.toString())));
+        addRecommendations(recommendedPlaylistIds, trendingRecent);
+        addRecommendations(recommendedPlaylistIds, popularRecent);
+        addRecommendations(recommendedPlaylistIds, trendingPlaylists);
+        addRecommendations(recommendedPlaylistIds, popularPlaylists);
         similarPlaylists.forEach(p -> recommendedPlaylistIds.add(p.getId()));
 
-        // 6️⃣ Redis에 추천 리스트 캐싱
+        // 5️⃣ Redis에 추천 데이터 캐싱 (30분 유지)
         redisTemplate.opsForValue().set(RECOMMEND_KEY + playlistId, new ArrayList<>(recommendedPlaylistIds), Duration.ofMinutes(30));
 
-        return getPlaylistsByIds(new ArrayList<>(recommendedPlaylistIds));
+        // 6️⃣ 정렬 기준 적용
+        return getSortedPlaylists(new ArrayList<>(recommendedPlaylistIds), sortType);
+    }
+
+    /**
+     * ✅ 태그 기반 유사 플레이리스트 찾기
+     * - 3개 이상의 태그가 일치하면 유사한 플레이리스트로 추천
+     * - 3개 미만이면 랜덤 추천
+     */
+    private List<Playlist> findSimilarPlaylistsByTag(Playlist currentPlaylist) {
+        List<Playlist> allPlaylists = playlistRepository.findAll();
+        List<Playlist> similarPlaylists = new ArrayList<>();
+
+        for (Playlist other : allPlaylists) {
+            if (!other.getId().equals(currentPlaylist.getId())) {
+                Set<String> commonTags = new HashSet<>(currentPlaylist.getTagNames()); // ✅ 수정
+                commonTags.retainAll(other.getTagNames()); // ✅ 수정
+
+                if (commonTags.size() >= 3) {
+                    similarPlaylists.add(other);
+                }
+            }
+        }
+
+        if (similarPlaylists.isEmpty()) {
+            Collections.shuffle(allPlaylists);
+            return allPlaylists.stream().limit(5).collect(Collectors.toList());
+        }
+
+        return similarPlaylists;
+    }
+
+    /**
+     * ✅ 정렬 기준에 따라 플레이리스트 정렬
+     * - 좋아요 순, 조회수 순, 복합 점수 순
+     */
+    private List<PlaylistDto> getSortedPlaylists(List<Long> playlistIds, String sortType) {
+        List<Playlist> playlists = new ArrayList<>(playlistRepository.findAllById(playlistIds));
+
+        switch (sortType) {
+            case "likes":
+                playlists.sort(Comparator.comparingLong(Playlist::getLikeCount).reversed());
+                break;
+            case "views":
+                playlists.sort(Comparator.comparingLong(Playlist::getViewCount).reversed());
+                break;
+            case "combined":
+                playlists.sort(Comparator.comparingLong((Playlist p) -> p.getViewCount() + p.getLikeCount()).reversed());
+                break;
+            default:
+                break;
+        }
+
+        return playlists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
+    }
+
+    /** ✅ 추천된 Playlist ID 리스트로 PlaylistDto 리스트 반환 */
+    private List<PlaylistDto> getPlaylistsByIds(List<Long> playlistIds) {
+        List<Playlist> playlists = playlistRepository.findAllById(playlistIds);
+        return playlists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
     }
 
     /** ✅ 조회수 증가 */
@@ -76,10 +145,11 @@ public class PlaylistService {
         redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, playlistId.toString(), 1);
     }
 
-    /** ✅ 추천된 Playlist ID 리스트로 PlaylistDto 리스트 반환 */
-    private List<PlaylistDto> getPlaylistsByIds(List<Long> playlistIds) {
-        List<Playlist> playlists = playlistRepository.findAllById(playlistIds);
-        return playlists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
+    /** ✅ 추천 리스트 병합 */
+    private void addRecommendations(Set<Long> recommendedPlaylistIds, Set<Object> redisResults) {
+        if (redisResults != null) {
+            redisResults.forEach(id -> recommendedPlaylistIds.add(Long.parseLong(id.toString())));
+        }
     }
 
 

@@ -5,6 +5,7 @@ import com.team8.project2.domain.link.dto.LinkResDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.repository.LinkRepository;
 import com.team8.project2.global.exception.ServiceException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -31,27 +32,28 @@ public class LinkService {
      * 특정 링크를 조회하고 클릭수를 증가시킵니다.
      *
      * @param linkId 조회할 링크 ID
-     * @param memberId 사용자 ID (클릭을 추적하기 위한 고유 식별자)
+     * @param request 클라이언트 요청 객체
      * @return 클릭된 링크 객체
      */
     @Transactional
-    public Link getLinkAndIncrementClick(Long linkId, Long memberId) {
-        String key = CLICK_KEY + linkId + ":" + memberId;
+    public Link getLinkAndIncrementClick(Long linkId, HttpServletRequest request) {
+        String ip = request.getRemoteAddr();  // 클라이언트 IP 주소 추출
+        String key = CLICK_KEY + linkId + ":" + ip;
 
-        // Redis에서 해당 사용자와 링크에 대한 클릭 기록이 없으면, 클릭수 증가
-        boolean isNewClick = redisTemplate.opsForValue().setIfAbsent(key, "clicked", Duration.ofMinutes(10));
+        // Redis에 먼저 키 저장 (최초 요청만 true 반환, 10분 유지)
+        boolean isNewClick = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(true), Duration.ofMinutes(10));
         System.out.println("Redis Key Set? " + isNewClick + " | Key: " + key);
 
         // 링크 조회
         Link link = linkRepository.findById(linkId)
                 .orElseThrow(() -> new ServiceException("404-1", "해당 링크를 찾을 수 없습니다."));
 
-        // 새로운 클릭일 때만 클릭수 증가
+        // 새로운 조회일 때만 클릭수 증가
         if (isNewClick) {
             increaseClickCount(link);
-            System.out.println("클릭수 증가! 현재 클릭수: " + link.getClick());
+            System.out.println("조회수 증가! 현재 조회수: " + link.getClick());
         } else {
-            System.out.println("클릭수 증가 안 함 (이미 클릭한 사용자)");
+            System.out.println("조회수 증가 안 함 (이미 조회된 IP)");
         }
 
         return link;

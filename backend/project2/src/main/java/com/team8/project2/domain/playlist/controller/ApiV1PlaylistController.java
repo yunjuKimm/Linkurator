@@ -174,10 +174,13 @@ public class ApiV1PlaylistController {
         return RsData.success("좋아요가 증가되었습니다.", null);
     }
 
-    /** ✅ 추천 API (Redis 캐싱 적용) */
+    /** ✅ 추천 API (정렬 기능 추가) */
     @GetMapping("/{id}/recommendation")
-    public RsData<List<PlaylistDto>> getRecommendedPlaylists(@PathVariable Long id) {
-        List<PlaylistDto> recommended = playlistService.recommendPlaylist(id);
+    public RsData<List<PlaylistDto>> getRecommendedPlaylists(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "combined") String sortType
+    ) {
+        List<PlaylistDto> recommended = playlistService.recommendPlaylist(id, sortType);
         return RsData.success("추천 플레이리스트 목록을 조회하였습니다.", recommended);
     }
 

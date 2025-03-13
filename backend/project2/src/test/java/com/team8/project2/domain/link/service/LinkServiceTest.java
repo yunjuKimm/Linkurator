@@ -4,6 +4,7 @@ import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.repository.LinkRepository;
 import com.team8.project2.global.exception.ServiceException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,8 +29,12 @@ class LinkServiceTest {
     @Mock
     private RedisTemplate<String, String> redisTemplate;
 
+    @Mock
+    private HttpServletRequest request;
+
     @InjectMocks
     private LinkService linkService;
+
 
     private Link link;
 
@@ -163,9 +168,10 @@ class LinkServiceTest {
         // Given: Redis와 링크 관련 의존성 준비
         ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(request.getRemoteAddr()).thenReturn("192.168.0.1"); // Mock IP 설정
 
         // 첫 번째 클릭에서만 true 반환하고, 그 이후에는 false 반환하도록 설정
-        when(valueOperations.setIfAbsent(anyString(), eq("clicked"), eq(Duration.ofMinutes(10))))
+        when(valueOperations.setIfAbsent(anyString(), eq("true"), eq(Duration.ofMinutes(10))))
                 .thenReturn(true)  // 첫 번째 클릭에서는 키가 없으므로 true 반환
                 .thenReturn(false); // 두 번째 이후의 클릭에서는 키가 이미 있으므로 false 반환
 
@@ -177,9 +183,9 @@ class LinkServiceTest {
         int initialClickCount = link.getClick();
 
         // When: 링크를 여러 번 클릭한다
-        linkService.getLinkAndIncrementClick(1L, 100L);  // 첫 번째 클릭
-        linkService.getLinkAndIncrementClick(1L, 100L);  // 두 번째 클릭
-        linkService.getLinkAndIncrementClick(1L, 100L);  // 세 번째 클릭
+        linkService.getLinkAndIncrementClick(1L, request);  // 첫 번째 클릭
+        linkService.getLinkAndIncrementClick(1L, request);  // 두 번째 클릭
+        linkService.getLinkAndIncrementClick(1L, request);  // 세 번째 클릭
 
         // Then: 클릭수는 한 번만 증가해야 한다
         assertEquals(initialClickCount + 1, link.getClick()); // 클릭수가 1만 증가해야 한다.
@@ -192,9 +198,10 @@ class LinkServiceTest {
         // Given: Redis와 링크 관련 의존성 준비
         ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(request.getRemoteAddr()).thenReturn("192.168.0.1");
 
         // 이미 클릭한 경우 false 반환하도록 설정
-        when(valueOperations.setIfAbsent(anyString(), eq("clicked"), eq(Duration.ofMinutes(10))))
+        when(valueOperations.setIfAbsent(anyString(), eq("true"), eq(Duration.ofMinutes(10))))
                 .thenReturn(false); // 이미 클릭했으므로 false 반환
 
         // 링크 클릭 로직이 제대로 동작하도록 설정
@@ -204,7 +211,7 @@ class LinkServiceTest {
         int initialClickCount = link.getClick();
 
         // When: 링크를 클릭한다
-        linkService.getLinkAndIncrementClick(1L, 100L);  // 클릭 시도
+        linkService.getLinkAndIncrementClick(1L, request);  // 클릭 시도
 
         // Then: 클릭수는 증가하지 않아야 한다
         assertEquals(initialClickCount, link.getClick()); // 클릭수가 증가하지 않아야 한다.
@@ -218,16 +225,17 @@ class LinkServiceTest {
         // Given: Redis와 링크 관련 의존성 준비
         ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(request.getRemoteAddr()).thenReturn("192.168.0.1");
 
         // 첫 번째 클릭에서만 true 반환하도록 설정
-        when(valueOperations.setIfAbsent(anyString(), eq("clicked"), eq(Duration.ofMinutes(10))))
+        when(valueOperations.setIfAbsent(anyString(), eq("true"), eq(Duration.ofMinutes(10))))
                 .thenReturn(true); // 첫 번째 클릭에서는 키가 없으므로 true 반환
 
         // 링크 조회 시 존재하지 않는 링크를 반환하도록 설정
         when(linkRepository.findById(1L)).thenReturn(Optional.empty());
 
         // When & Then: 링크가 존재하지 않으면 예외 발생
-        ServiceException exception = assertThrows(ServiceException.class, () -> linkService.getLinkAndIncrementClick(1L, 100L));
+        ServiceException exception = assertThrows(ServiceException.class, () -> linkService.getLinkAndIncrementClick(1L, request));
         assertEquals("404-1", exception.getCode());
         assertEquals("해당 링크를 찾을 수 없습니다.", exception.getMessage());
     }

@@ -41,6 +41,7 @@ public class CurationService {
 	private final TagService tagService;
 	private final MemberRepository memberRepository;
     private final LikeRepository likeRepository;
+	private final CurationViewService curationViewService;
 
 	private final RedisTemplate<String, Object> redisTemplate;
 	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
@@ -166,22 +167,24 @@ public class CurationService {
 	 * @param curationId 조회할 큐레이션 ID
 	 * @return 조회된 큐레이션 객체
 	 */
+	@Transactional
 	public Curation getCuration(Long curationId, HttpServletRequest request) {
-		String ip = request.getRemoteAddr();  // 클라이언트 IP 주소 추출
+		String ip = request.getHeader("X-Forwarded-For");
+
+		if (ip == null || ip.isEmpty()) {
+			ip = request.getRemoteAddr();
+		}
+		System.out.println("IP: " + ip);
 		String key = VIEW_COUNT_KEY + curationId + ":" + ip;
 
-		// Redis에 먼저 키 저장 (최초 요청만 true 반환, 10분 유지)
 		boolean isNewView = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(true), Duration.ofMinutes(10));
 		System.out.println("Redis Key Set? " + isNewView + " | Key: " + key);
 
-		// 큐레이션 조회
 		Curation curation = curationRepository.findById(curationId)
 				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
 
-		// 새로운 조회일 때만 조회수 증가
 		if (isNewView) {
-			increaseViewCount(curation);
-			System.out.println("조회수 증가! 현재 조회수: " + curation.getViewCount());
+			curationViewService.increaseViewCount(curation);
 		} else {
 			System.out.println("조회수 증가 안 함 (이미 조회된 IP)");
 		}
@@ -189,11 +192,23 @@ public class CurationService {
 		return curation;
 	}
 
-	@Transactional
-	public void increaseViewCount(Curation curation) {
-		curation.setViewCount(curation.getViewCount() + 1);
-		curationRepository.save(curation);
-	}
+//	public void increaseViewCount(Curation curation) {
+//		// 현재 조회수 로그 출력
+//		System.out.println("현재 조회수 (조회 전): " + curation.getViewCount());
+//
+//		// 조회수 증가
+//		curation.increaseViewCount();
+//
+//		// 조회수 증가 후 로그 출력
+//		System.out.println("조회수 증가 후: " + curation.getViewCount());
+//
+//		// DB에 저장
+//		curationRepository.saveAndFlush(curation);
+//
+//		// 저장 후 로그 출력
+//		System.out.println("조회수 저장 후 (DB 반영): " + curation.getViewCount());
+//
+//	}
 
 	/**
      * 큐레이션을 검색합니다.

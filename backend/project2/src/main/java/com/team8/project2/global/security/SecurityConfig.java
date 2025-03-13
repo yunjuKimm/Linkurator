@@ -79,7 +79,7 @@ public class SecurityConfig {
 		configuration.setAllowCredentials(true);
 		configuration.setAllowedOrigins(List.of("http://localhost:3000")); // 허용할 프론트엔드 주소
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Forwarded-For", "X-Real-IP"));
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);

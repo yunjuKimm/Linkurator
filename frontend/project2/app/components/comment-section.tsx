@@ -163,6 +163,11 @@ export default function CommentSection({ postId }: { postId: string }) {
 
   // 댓글 수정 저장 함수 수정
   const handleEditSave = async (commentId: number) => {
+    if (!commentId) {
+      console.error("댓글 ID가 없습니다");
+      return;
+    }
+
     if (!editContent.trim()) return;
 
     try {
@@ -220,6 +225,11 @@ export default function CommentSection({ postId }: { postId: string }) {
 
   // 댓글 삭제 함수 수정
   const handleDeleteComment = async (commentId: number) => {
+    if (!commentId) {
+      console.error("댓글 ID가 없습니다");
+      return;
+    }
+
     if (!confirm("정말로 이 댓글을 삭제하시겠습니까?")) return;
 
     try {

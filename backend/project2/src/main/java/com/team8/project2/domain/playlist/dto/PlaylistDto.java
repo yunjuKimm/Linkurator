@@ -33,6 +33,17 @@ public class PlaylistDto {
     private String description;
 
     /**
+     * 플레이리스트 공개 여부
+     */
+    private boolean isPublic;
+
+    /**
+     * ✅ 조회수 및 좋아요 수 필드 추가
+     */
+    private long viewCount;
+    private long likeCount;
+
+    /**
      * 플레이리스트에 포함된 항목 목록
      */
     private List<PlaylistItemDto> items;
@@ -50,12 +61,13 @@ public class PlaylistDto {
                 .id(playlist.getId())
                 .title(playlist.getTitle())
                 .description(playlist.getDescription())
+                .isPublic(playlist.isPublic())
+                .viewCount(playlist.getViewCount())  // ✅ 추가
+                .likeCount(playlist.getLikeCount())  // ✅ 추가
                 .items(playlist.getItems().stream()
                         .map(PlaylistItemDto::fromEntity)
                         .collect(Collectors.toList()))
-                .tags(playlist.getTags().stream()
-                        .map(tag -> tag.getName())
-                        .collect(Collectors.toSet()))
+                .tags(playlist.getTagNames()) // ✅ 태그 가져오기
                 .createdAt(playlist.getCreatedAt())
                 .build();
     }

@@ -5,6 +5,7 @@ import com.team8.project2.domain.link.dto.LinkResDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.global.dto.RsData;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -65,4 +66,17 @@ public class ApiV1LinkController {
         LinkResDTO linkResDTO = linkService.getLinkMetaData(linkDTO.getUrl());
         return new RsData<>("200","메타 데이터가 성공적으로 추출되었습니다.",linkResDTO);
     }
+
+    /**
+     * 특정 링크를 조회하고 조회수를 증가시킵니다. (IP 기준)
+     * @param linkId 조회할 링크 ID
+     * @param request 클라이언트 요청 객체 (IP 추출용)
+     * @return 조회된 링크 정보 응답
+     */
+    @GetMapping("/{linkId}")
+    public RsData<Link> getLink(@PathVariable Long linkId, HttpServletRequest request) {
+        Link link = linkService.getLinkAndIncrementClick(linkId, request);
+        return new RsData<>("200-2", "링크가 성공적으로 조회되었습니다.", link);
+    }
+
 }
