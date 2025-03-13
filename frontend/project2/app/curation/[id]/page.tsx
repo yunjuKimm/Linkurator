@@ -479,7 +479,7 @@ export default function CurationDetail() {
       </div>
 
       {/* 플레이리스트 추가 모달 렌더링 */}
-      {showPlaylistModal && (
+      {showPlaylistModal && post && (
         <AddToPlaylistModal
           curationId={post.id}
           onClose={() => setShowPlaylistModal(false)}
