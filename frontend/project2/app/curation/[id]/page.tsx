@@ -53,46 +53,39 @@ export default function PostDetail() {
   const [showActionMenu, setShowActionMenu] = useState(false)
 
   // API 데이터 호출
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        setError(null)
+  async function fetchData() {
+    try {
+      setLoading(true);
+      setError(null);
 
-        // 요청 시 credentials와 헤더 추가
-        const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
-          method: "GET",
-          credentials: "include", // 쿠키를 포함하여 요청
-          headers: {
-            Accept: "application/json",
-            "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
-            "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
-          },
-        })
+      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "X-Forwarded-For": "127.0.0.1",
+          "X-Real-IP": "127.0.0.1",
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.")
-        }
-
-        const data = await response.json()
-        console.log("API 응답 데이터:", data) // 응답 데이터 로깅
-
-        // 이전 조회수와 비교하여 로그 출력
-        // if (post && data.data.viewCount !== post.viewCount) {
-        //   console.log(`조회수 변경: ${post.viewCount} -> ${data.data.viewCount}`)
-        // }
-
-        setPost(data.data)
-      } catch (err) {
-        setError((err as Error).message)
-        console.error("Error fetching curation data:", err)
-      } finally {
-        setLoading(false)
+      if (!response.ok) {
+        throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.");
       }
-    }
 
-    fetchData()
-  }, [id])
+      const data = await response.json();
+      setPost(data.data);
+    } catch (err) {
+      setError((err as Error).message);
+      console.error("Error fetching curation data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 최초 데이터 불러오기
+  useEffect(() => {
+    fetchData();
+  }, [id]);
 
   // 모든 링크의 메타데이터 가져오기
   useEffect(() => {
@@ -257,20 +250,24 @@ export default function PostDetail() {
     window.location.reload();
   }
 
-  // 좋아요 추가 API 호출 함수
+  // 좋아요 추가 API 호출
   const likeCuration = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
-        method: "POST", // POST 요청으로 좋아요 추가
-      })
+      const response = await fetch(`http://localhost:8080/api/v1/curation/like/${id}`, {
+        method: "POST",
+        credentials: "include",
+      });
+
       if (!response.ok) {
-        throw new Error("Failed to like the post")
+        throw new Error("좋아요 추가 실패");
       }
+
+      // 좋아요 반영을 위해 데이터 갱신
+      fetchData();
     } catch (error) {
-      console.error("Error liking the post:", error)
+      console.error("좋아요 추가 중 오류:", error);
     }
-    window.location.reload();
-  }
+  };
   
 
   return (

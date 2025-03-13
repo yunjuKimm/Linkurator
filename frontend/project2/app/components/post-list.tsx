@@ -45,6 +45,8 @@ export default function PostList() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]) // 필터링된 태그 상태
   const [title, setTitle] = useState<string>("") // 제목 필터링
   const [content, setContent] = useState<string>("") // 내용 필터링
+  const [likedCurations, setLikedCurations] = useState<{ [key: number]: boolean }>({}) // 좋아요 상태 관리
+
 
   // API 요청 함수
   const fetchCurations = async (params: CurationRequestParams) => {
@@ -132,7 +134,7 @@ export default function PostList() {
   // 좋아요 추가 API 호출 함수
   const likeCuration = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
+      const response = await fetch(`http://localhost:8080/api/v1/curation/like/${id}`, {
         method: "POST", // POST 요청으로 좋아요 추가
       })
       if (!response.ok) {
@@ -146,6 +148,7 @@ export default function PostList() {
         content,
         order: sortOrder, // 정렬 기준도 함께 보내기
       }
+      setLikedCurations((prev) => ({ ...prev, [id]: !prev[id] })) // UI 즉시 반영
       fetchCurations(params)
     } catch (error) {
       console.error("Error liking the post:", error)
@@ -200,6 +203,24 @@ export default function PostList() {
   useEffect(() => {
     fetchCurations({}) // 페이지 로딩 시 한번 API 호출
   }, []) // 빈 배열을 의존성으로 두어 처음 한 번만 호출되게 설정
+
+  useEffect(() => {
+    curations.forEach((curation) => {
+      checkLikedStatus(curation.id)
+    })
+  }, [curations])
+
+  const checkLikedStatus = async (id: number) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/v1/curation/like/${id}/status`)
+      if (!response.ok) throw new Error("Failed to fetch like status")
+
+      const data = await response.json()
+      setLikedCurations((prev) => ({ ...prev, [id]: data.isLiked })) // 좋아요 여부 설정
+    } catch (error) {
+      console.error("Error checking like status:", error)
+    }
+  }
 
   return (
     <>
@@ -355,7 +376,7 @@ export default function PostList() {
                       className="flex items-center space-x-1 text-sm text-gray-500"
                       onClick={() => likeCuration(curation.id)} // 좋아요 버튼 클릭 시 likeCuration 호출
                     >
-                      <Heart className="h-4 w-4" />
+                      <Heart className={`w-6 h-6 ${likedCurations[curation.id] ? "text-red-500 fill-red-500" : "text-gray-500"}`} />
                       <span>{curation.likeCount}</span>
                     </button>
                     <button className="flex items-center space-x-1 text-sm text-gray-500">
