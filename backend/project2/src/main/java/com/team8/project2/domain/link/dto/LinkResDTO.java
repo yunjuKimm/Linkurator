@@ -24,4 +24,6 @@ public class LinkResDTO {
     private String title;
     private String description;
     private String image;
+    private int click;
+    private Long linkId;
 }

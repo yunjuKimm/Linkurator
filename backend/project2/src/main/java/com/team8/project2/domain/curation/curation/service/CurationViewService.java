@@ -18,18 +18,11 @@ public class CurationViewService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW) // 별도 트랜잭션 실행
     public void increaseViewCount(Curation curation) {
-        System.out.println("현재 조회수 (조회 전): " + curation.getViewCount());
-
         // 조회수 증가
         curation.increaseViewCount();
-
-        System.out.println("조회수 증가 후: " + curation.getViewCount());
-
         // DB에 저장
         curationRepository.save(curation);
         curationRepository.flush(); // 즉시 반영
-
-        System.out.println("조회수 저장 후 (DB 반영): " + curation.getViewCount());
     }
 }
 

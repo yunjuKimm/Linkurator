@@ -21,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import java.time.Duration;
 import java.util.List;
@@ -171,12 +173,43 @@ public class CurationService {
 	public Curation getCuration(Long curationId, HttpServletRequest request) {
 		String ip = request.getHeader("X-Forwarded-For");
 
-		if (ip == null || ip.isEmpty()) {
+		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("Proxy-Client-IP");
+		}
+		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("WL-Proxy-Client-IP");
+		}
+		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("HTTP_CLIENT_IP");
+		}
+		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+		}
+		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("X-Real-IP");
+		}
+		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("X-RealIP");
+		}
+		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+			ip = request.getHeader("REMOTE_ADDR");
+		}
+		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
 			ip = request.getRemoteAddr();
 		}
-		System.out.println("IP: " + ip);
-		String key = VIEW_COUNT_KEY + curationId + ":" + ip;
 
+		if(ip.equals("0:0:0:0:0:0:0:1") || ip.equals("127.0.0.1"))
+		{
+            InetAddress address = null;
+            try {
+                address = InetAddress.getLocalHost();
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            }
+            ip = address.getHostName() + "/" + address.getHostAddress();
+		}
+		String key = VIEW_COUNT_KEY + curationId + ":" + ip;
+		System.out.println("Redis Key: " + key);
 		boolean isNewView = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(true), Duration.ofMinutes(10));
 		System.out.println("Redis Key Set? " + isNewView + " | Key: " + key);
 
