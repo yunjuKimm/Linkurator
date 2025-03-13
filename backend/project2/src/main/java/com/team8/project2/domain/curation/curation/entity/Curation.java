@@ -109,6 +109,11 @@ public class Curation {
         this.likeCount++;
     }
 
+    // 조회수 증가 메서드
+    public void increaseViewCount() {
+        this.viewCount++;
+    }
+
 
     public String getMemberName() {
         return member.getUsername();
