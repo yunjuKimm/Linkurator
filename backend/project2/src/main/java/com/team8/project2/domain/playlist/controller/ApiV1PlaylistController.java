@@ -175,7 +175,7 @@ public class ApiV1PlaylistController {
     @GetMapping("/{id}/recommendation")
     public RsData<List<PlaylistDto>> getRecommendedPlaylists(
             @PathVariable Long id,
-            @RequestParam(value = "sort", defaultValue = "combined") String sortType
+            @RequestParam(defaultValue = "combined") String sortType
     ) {
         List<PlaylistDto> recommended = playlistService.recommendPlaylist(id, sortType);
         return RsData.success("추천 플레이리스트 목록을 조회하였습니다.", recommended);
