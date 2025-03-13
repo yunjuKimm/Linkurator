@@ -160,17 +160,25 @@ public class ApiV1PlaylistController {
         return RsData.success("플레이리스트 아이템 순서가 변경되었습니다.", updatedPlaylist);
     }
 
-    /**
-     * 추천 플레이리스트 목록을 조회합니다.
-     *
-     * @param id 추천 기준이 되는 플레이리스트 ID
-     * @return 추천 플레이리스트 목록
-     */
+    /** ✅ 조회수 증가 API */
+    @PostMapping("/{id}/view")
+    public RsData<Void> recordPlaylistView(@PathVariable Long id) {
+        playlistService.recordPlaylistView(id);
+        return RsData.success("조회수가 증가되었습니다.", null);
+    }
 
+    /** ✅ 좋아요 증가 API */
+    @PostMapping("/{id}/like")
+    public RsData<Void> likePlaylist(@PathVariable Long id) {
+        playlistService.likePlaylist(id);
+        return RsData.success("좋아요가 증가되었습니다.", null);
+    }
+
+    /** ✅ 추천 API (Redis 캐싱 적용) */
     @GetMapping("/{id}/recommendation")
-    public RsData<List<PlaylistDto>> getRecommendedPlaylists(@PathVariable("id") Long id) {
-        List<PlaylistDto> recommended  = playlistService.recommendPlaylist(id);
-        return RsData.success("추천 플레이리스트 목록을 조회하였습니다.", recommended );
+    public RsData<List<PlaylistDto>> getRecommendedPlaylists(@PathVariable Long id) {
+        List<PlaylistDto> recommended = playlistService.recommendPlaylist(id);
+        return RsData.success("추천 플레이리스트 목록을 조회하였습니다.", recommended);
     }
 
     private final LinkService linkService;

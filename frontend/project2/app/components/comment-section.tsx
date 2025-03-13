@@ -5,6 +5,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Heart, Edit, Trash2, X, Check } from "lucide-react";
+import CommentSkeleton from "./skeleton/comment-skeleton";
 
 // 댓글 데이터 타입 정의를 API 응답 구조에 맞게 수정
 type Comment = {
@@ -34,10 +35,12 @@ export default function CommentSection({ postId }: { postId: string }) {
   const [error, setError] = useState<string | null>(null); // 오류 상태
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null); // 수정 중인 댓글 ID
   const [editContent, setEditContent] = useState(""); // 수정 중인 댓글 내용
+  const [loading, setLoading] = useState(true); // 로딩 상태 추가
 
   // API에서 커레이션 데이터를 불러오는 함수 수정
   const fetchCurationData = async (id: string) => {
     try {
+      setLoading(true);
       setError(null);
       const res = await fetch(`http://localhost:8080/api/v1/curation/${id}`);
 
@@ -60,6 +63,11 @@ export default function CommentSection({ postId }: { postId: string }) {
     } catch (error) {
       console.error("API 호출 중 오류 발생:", error);
       setError((error as Error).message);
+    } finally {
+      // 스켈레톤 UI가 잠시 보이도록 약간의 지연 추가 (실제 환경에서는 제거 가능)
+      setTimeout(() => {
+        setLoading(false);
+      }, 500);
     }
   };
 
@@ -271,6 +279,11 @@ export default function CommentSection({ postId }: { postId: string }) {
       return "날짜 형식 오류";
     }
   };
+
+  // 로딩 중일 때 스켈레톤 UI 표시
+  if (loading) {
+    return <CommentSkeleton />;
+  }
 
   return (
     <div className="space-y-6">

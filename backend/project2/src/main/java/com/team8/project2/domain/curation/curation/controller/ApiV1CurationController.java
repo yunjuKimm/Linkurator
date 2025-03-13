@@ -6,9 +6,13 @@ import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.service.CurationService;
-import com.team8.project2.domain.curation.tag.service.TagService;
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,7 +29,8 @@ import java.util.stream.Collectors;
 public class ApiV1CurationController {
 
     private final CurationService curationService;
-    private final TagService tagService;
+
+    private final Rq rq;
 
     /**
      * 새로운 큐레이션을 생성합니다.
@@ -34,11 +39,14 @@ public class ApiV1CurationController {
      */
     @PostMapping
     public RsData<CurationResDto> createCuration(@RequestBody CurationReqDTO curationReq) {
+        Member member = rq.getActor();
+
         Curation createdCuration = curationService.createCuration(
                 curationReq.getTitle(),
                 curationReq.getContent(),
                 curationReq.getLinkReqDtos().stream().map(url -> url.getUrl()).collect(Collectors.toUnmodifiableList()),
-                curationReq.getTagReqDtos().stream().map(tag -> tag.getName()).collect(Collectors.toUnmodifiableList())
+                curationReq.getTagReqDtos().stream().map(tag -> tag.getName()).collect(Collectors.toUnmodifiableList()),
+                member
         );
         return new RsData<>("201-1", "글이 성공적으로 생성되었습니다.", new CurationResDto(createdCuration));
     }
@@ -51,12 +59,15 @@ public class ApiV1CurationController {
      */
     @PutMapping("/{id}")
     public RsData<CurationResDto> updateCuration(@PathVariable Long id, @RequestBody CurationReqDTO curationReq) {
+        Member member = rq.getActor();
+
         Curation updatedCuration = curationService.updateCuration(
                 id,
                 curationReq.getTitle(),
                 curationReq.getContent(),
                 curationReq.getLinkReqDtos().stream().map(url -> url.getUrl()).collect(Collectors.toUnmodifiableList()),
-                curationReq.getTagReqDtos().stream().map(tag -> tag.getName()).collect(Collectors.toUnmodifiableList())
+                curationReq.getTagReqDtos().stream().map(tag -> tag.getName()).collect(Collectors.toUnmodifiableList()),
+                member
         );
         return new RsData<>("200-1", "글이 성공적으로 수정되었습니다.", new CurationResDto(updatedCuration));
     }
@@ -68,7 +79,8 @@ public class ApiV1CurationController {
      */
     @DeleteMapping("/{id}")
     public RsData<Void> deleteCuration(@PathVariable Long id) {
-        curationService.deleteCuration(id);
+        Member member = rq.getActor();
+        curationService.deleteCuration(id, member.getId());
         return new RsData<>("204-1", "글이 성공적으로 삭제되었습니다.", null);
     }
 
@@ -79,8 +91,11 @@ public class ApiV1CurationController {
      */
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
-    public RsData<CurationDetailResDto> getCuration(@PathVariable Long id) {
-        Curation curation = curationService.getCuration(id);
+    public RsData<CurationDetailResDto> getCuration(@PathVariable Long id, HttpServletRequest request) {
+
+        // 큐레이션 서비스 호출 시 IP를 전달
+        Curation curation = curationService.getCuration(id, request);
+
         return new RsData<>("200-1", "조회 성공", CurationDetailResDto.fromEntity(curation));
     }
 
@@ -112,12 +127,20 @@ public class ApiV1CurationController {
     /**
      * 특정 큐레이션에 좋아요를 추가합니다.
      * @param id 큐레이션 ID
-     * @param memberId 좋아요를 누른 회원 ID
      * @return 좋아요 성공 응답
      */
     @PostMapping("/{id}")
-    public RsData<Void> likeCuration(@PathVariable Long id, @RequestParam Long memberId) {
+    public RsData<Void> likeCuration(@PathVariable Long id) {
+        Long memberId = rq.getActor().getId();
         curationService.likeCuration(id, memberId);
         return new RsData<>("200-1", "글에 좋아요를 했습니다.", null);
+    }
+  
+    @GetMapping("/following")
+    @PreAuthorize("isAuthenticated()")
+    public RsData<List<CurationResDto>> followingCuration() {
+        Member actor = rq.getActor();
+        List<CurationResDto> curations = curationService.getFollowingCurations(actor);
+        return new RsData<>("200-1", "팔로우중인 큐레이터의 큐레이션이 조회되었습니다.", curations);
     }
 }

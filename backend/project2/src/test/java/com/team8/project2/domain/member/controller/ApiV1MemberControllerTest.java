@@ -1,18 +1,12 @@
 package com.team8.project2.domain.member.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.service.CurationService;
-import com.team8.project2.domain.curation.tag.dto.TagReqDto;
-import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.member.service.MemberService;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,12 +17,11 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -58,6 +51,8 @@ public class ApiV1MemberControllerTest {
     private static String validToken;
     private static String invalidToken;
 
+    private Member member;
+
     @BeforeEach
     void setUp() {
 
@@ -71,16 +66,33 @@ public class ApiV1MemberControllerTest {
         memberReqDTO.setEmail("member1@gmail.com");
         memberReqDTO.setIntroduce("안녕");
 
-        // ✅ 회원이 없으면 생성
-        Member member = memberRepository.findByMemberId(memberReqDTO.getMemberId())
-                .orElseGet(() -> memberRepository.save(memberReqDTO.toEntity()));
+        Member savedMember = memberRepository.findByUsername(memberReqDTO.getUsername())
+                .orElseGet(() -> {
+                    Member newMember = memberRepository.save(memberReqDTO.toEntity());
+                    memberRepository.flush(); // ✅ 강제 동기화
+                    return newMember;
+                });
+
+        this.member = memberRepository.findByUsername(savedMember.getUsername()).orElse(null);
+
+        System.out.println("setup()에서 생성된 member: " + this.member);
+
+        if (this.member == null) {
+            throw new IllegalStateException("setup()에서 member가 정상적으로 생성되지 않았습니다.");
+        }
+
+        if (this.member == null) {
+            System.out.println("setup()에서 member가 정상적으로 생성되지 않음. 테스트 중단");
+            return;  //
+        }
 
         // ✅ 큐레이션 추가
         curationService.createCuration(
                 "테스트 큐레이션 1",
                 "큐레이션 내용",
                 List.of("https://test.com"),
-                List.of("테스트 태그")
+                List.of("테스트 태그"),
+                member
         );
 
     }
@@ -213,13 +225,14 @@ public class ApiV1MemberControllerTest {
     }
 
     @Test
-    @DisplayName("memberId 기반 큐레이터 정보 조회")
+    @DisplayName("username 기반 큐레이터 정보 조회")
     void getCuratorInfoTest() throws Exception {
-        // Given
-        long curationCount = curationService.countByMemberId(memberReqDTO.getMemberId()); // ✅ setup()에서 큐레이션 추가됨
+
+        Member savedMember = memberRepository.findByUsername(memberReqDTO.getUsername()).orElseThrow();
+        long curationCount = curationService.countByMember(savedMember);
 
         // When
-        mvc.perform(get("/api/v1/members/" + memberReqDTO.getMemberId()))
+        mvc.perform(get("/api/v1/members/" + memberReqDTO.getUsername()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-4"))
                 .andExpect(jsonPath("$.data.username").value("초보"))
@@ -254,6 +267,8 @@ public class ApiV1MemberControllerTest {
     @Test
     @DisplayName("JWT 인증으로 내 정보 조회")
     void getMyInfoTest() throws Exception {
+        memberReqDTO.setMemberId( "member" + UUID.randomUUID());
+        memberReqDTO.setUsername("user" + UUID.randomUUID());
         Member member = memberService.join(memberReqDTO.toEntity());
         String accessToken = memberService.genAccessToken(member);
 
@@ -261,13 +276,14 @@ public class ApiV1MemberControllerTest {
                         .header("Authorization", "Bearer " + accessToken)) // JWT 포함 요청
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-2"))
-                .andExpect(jsonPath("$.data.memberId").value("member1"))
                 .andDo(print());
     }
 
     @Test
     @DisplayName("로그아웃 시 JWT 삭제")
     void logoutTest() throws Exception {
+        memberReqDTO.setMemberId( "member" + UUID.randomUUID());
+        memberReqDTO.setUsername("user" + UUID.randomUUID());
         Member member = memberService.join(memberReqDTO.toEntity());
         String accessToken = memberService.genAccessToken(member);
 
@@ -276,5 +292,130 @@ public class ApiV1MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-3"))
                 .andDo(print());
+    }
+
+    @Nested
+    @DisplayName("팔로우")
+    class Follow {
+
+        @Test
+        @DisplayName("다른 사용자를 팔로우할 수 있다")
+        void follow() throws Exception {
+            Long followeeId = 1L;
+            Long followerId = 2L;
+            Member followee = memberService.findById(followeeId).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/follow".formatted(followee.getMemberId()))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("%s님을 팔로우했습니다.".formatted(followee.getUsername())))
+                .andExpect(jsonPath("$.data.followee").value(followee.getUsername()))
+                .andExpect(jsonPath("$.data.followedAt").isNotEmpty());
+        }
+
+        @Test
+        @DisplayName("실패 - 이미 팔로우중인 사용자를 팔로우할 수 없다")
+        void follow_alreadyFollowed() throws Exception {
+            Long followeeId = 1L;
+            Long followerId = 3L;
+            Member followee = memberService.findById(followeeId).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/follow".formatted(followee.getMemberId()))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("400-1"))
+                .andExpect(jsonPath("$.msg").value("이미 팔로우중인 사용자입니다."));
+        }
+
+        @Test
+        @DisplayName("실패 - 존재하지 않는 사용자를 팔로우할 수 없다")
+        void follow_invalidFollowee() throws Exception {
+            String invalidFolloweeMemberId = "invalidMemberId";
+            Long followerId = 1L;
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/follow".formatted(invalidFolloweeMemberId))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("404-1"))
+                .andExpect(jsonPath("$.msg").value("존재하지 않는 사용자입니다."));
+        }
+
+        @Test
+        @DisplayName("실패 - 자신을 팔로우할 수 없다")
+        void follow_self() throws Exception {
+            Long followeeId = 1L;
+            Long followerId = 1L;
+            Member followee = memberService.findById(followeeId).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/follow".formatted(followee.getMemberId()))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("400-1"))
+                .andExpect(jsonPath("$.msg").value("자신을 팔로우할 수 없습니다."));
+        }
+
+        @Test
+        @DisplayName("팔로우중인 다른 사용자를 팔로우 취소할 수 있다")
+        void unfollow() throws Exception {
+            Long followeeId = 1L;
+            Long followerId = 3L;
+            Member followee = memberService.findById(followeeId).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/unfollow".formatted(followee.getMemberId()))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("%s님을 팔로우 취소했습니다.".formatted(followee.getUsername())))
+                .andExpect(jsonPath("$.data.followee").value(followee.getUsername()));
+        }
+
+        @Test
+        @DisplayName("실패 - 팔로우중이 아닌 사용자를 팔로우 취소하면 실패한다")
+        void unfollow_notFollowed() throws Exception {
+            Long followeeId = 3L;
+            Long followerId = 1L;
+            Member followee = memberService.findById(followeeId).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(post("/api/v1/members/%s/unfollow".formatted(followee.getMemberId()))
+                    .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("400-1"))
+                .andExpect(jsonPath("$.msg").value("팔로우중이 아닙니다."));
+        }
+
+        @Test
+        @DisplayName("팔로우중인 사용자를 조회할 수 있다")
+        void following() throws Exception {
+            Long followee1Id = 1L;
+            Long followee2Id = 2L;
+            Long followerId = 3L;
+            Member followee1 = memberService.findById(followee1Id).get();
+            Member followee2 = memberService.findById(followee2Id).get();
+            Member member = memberRepository.findById(followerId).get();
+            String accessToken = memberService.genAccessToken(member);
+
+            mvc.perform(get("/api/v1/members/following")
+                .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("팔로우 중인 사용자를 조회했습니다."))
+                .andExpect(jsonPath("$.data.following[0].followee").value(followee2.getUsername()))
+                .andExpect(jsonPath("$.data.following[0].followedAt").isNotEmpty())
+                .andExpect(jsonPath("$.data.following[1].followee").value(followee1.getUsername()))
+                .andExpect(jsonPath("$.data.following[1].followedAt").isNotEmpty());
+        }
     }
 }

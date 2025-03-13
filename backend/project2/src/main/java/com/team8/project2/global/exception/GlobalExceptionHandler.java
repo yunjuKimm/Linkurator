@@ -74,9 +74,11 @@ public class GlobalExceptionHandler {
 
 	/** 401 - Unauthorized */
 	@ExceptionHandler(AccessDeniedException.class)
-	public RsData<Void> handleAccessDeniedException(AccessDeniedException ex) {
+	public ResponseEntity<RsData<Void>> handleAccessDeniedException(AccessDeniedException ex) {
 		// 예외 발생 시 반환할 메시지와 상태 코드 정의
-		return new RsData<>("401-1","접근이 거부되었습니다. 로그인 상태를 확인해 주세요.");
+		return ResponseEntity
+			.status(HttpStatus.UNAUTHORIZED)
+			.body(new RsData<>("401-1","접근이 거부되었습니다. 로그인 상태를 확인해 주세요."));
 	}
 
 	/** 500 - Internal Server Error */
