@@ -233,30 +233,6 @@ export default function PostDetail() {
   // URL 배열이 있는지 확인
   const hasUrls = post.urls && post.urls.length > 0
 
-  const likeCuration = async (id: number) => {
-    try {
-      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}/like`, {
-        method: "POST",
-      })
-      if (!response.ok) {
-        throw new Error("Failed to like the post")
-      }
-
-      const data = await response.json()
-      setPost((prevPost) => {
-        if (prevPost) {
-          return {
-            ...prevPost,
-            likeCount: data.likeCount, // likeCount만 업데이트
-          }
-        }
-        return null
-      })
-    } catch (error) {
-      console.error("Error liking the post:", error)
-    }
-  }
-
   // 링크 클릭 처리 함수 추가
   const handleLinkClick = async (url: string, linkId?: number) => {
     if (!linkId) return
@@ -274,25 +250,28 @@ export default function PostDetail() {
 
       if (response.ok) {
         const result = await response.json()
-        console.log("링크 클릭 결과:", result)
-
-        // 로컬 상태 업데이트 (UI 즉시 반영)
-        setLinksMetaData((prev) => {
-          const newMap = new Map(prev)
-          const metadata = newMap.get(url)
-          if (metadata) {
-            newMap.set(url, {
-              ...metadata,
-              click: result.data.click || (metadata.click || 0) + 1,
-            })
-          }
-          return newMap
-        })
       }
     } catch (error) {
       console.error("링크 클릭 처리 중 오류:", error)
     }
+    window.location.reload();
   }
+
+  // 좋아요 추가 API 호출 함수
+  const likeCuration = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
+        method: "POST", // POST 요청으로 좋아요 추가
+      })
+      if (!response.ok) {
+        throw new Error("Failed to like the post")
+      }
+    } catch (error) {
+      console.error("Error liking the post:", error)
+    }
+    window.location.reload();
+  }
+  
 
   return (
     <main className="container grid grid-cols-12 gap-6 px-4 py-6">
@@ -345,9 +324,7 @@ export default function PostDetail() {
               <div>
                 <p className="font-medium">{post.authorName}</p>
                 <p className="text-xs text-gray-500">
-                  {isModified
-                    ? `수정된 날짜: ${formatDate(post.modifiedAt)}`
-                    : `작성된 날짜: ${formatDate(post.createdAt)}`}
+                  {`작성된 날짜: ${formatDate(post.createdAt)}`}
                 </p>
               </div>
             </div>
@@ -449,7 +426,7 @@ export default function PostDetail() {
 
           <div className="flex items-center justify-between border-t border-b py-4">
             <div className="flex items-center space-x-4">
-              <button className="flex items-center space-x-1 text-sm">
+              <button onClick={likeCuration} className="flex items-center space-x-1 text-sm">
                 <Heart className="h-5 w-5 text-red-500 fill-red-500" />
                 <span className="font-medium">{post.likeCount}</span>
               </button>
