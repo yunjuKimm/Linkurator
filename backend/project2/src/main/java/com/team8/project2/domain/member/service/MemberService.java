@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.team8.project2.domain.member.dto.MemberReqDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -152,4 +153,18 @@ public class MemberService {
 			.toList();
 		return FollowingResDto.fromEntity(followings);
 	}
+
+    public Member updateMember(String memberId, MemberReqDTO updateDTO) {
+		Member member = memberRepository.findByMemberId(memberId)
+				.orElseThrow(() -> new ServiceException("404-2", "회원 정보를 찾을 수 없습니다."));
+
+		// DTO에서 null 체크가 이루어지므로 바로 업데이트
+		member.setPassword(updateDTO.getPassword());
+		member.setEmail(updateDTO.getEmail());
+		member.setUsername(updateDTO.getUsername());
+		member.setProfileImage(updateDTO.getProfileImage());
+		member.setIntroduce(updateDTO.getIntroduce());
+
+		return memberRepository.save(member);
+    }
 }

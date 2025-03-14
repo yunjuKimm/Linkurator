@@ -4,12 +4,7 @@ import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.dto.FollowResDto;
@@ -137,6 +132,22 @@ public class ApiV1MemberController {
 
         return new RsData<>("200-4", "큐레이터 정보 조회 성공", responseData);
     }
+
+    @PutMapping("/{memberId}")
+    @PreAuthorize("isAuthenticated()")
+    public RsData<MemberResDTO> updateMember(
+            @PathVariable String memberId,
+            @RequestBody @Valid MemberReqDTO updateDTO) {
+
+        Member actor = rq.getActor();
+        if (actor == null || !actor.getMemberId().equals(memberId)) {
+            throw new ServiceException("403-1", "권한이 없습니다.");
+        }
+
+        Member updatedMember = memberService.updateMember(memberId, updateDTO);
+        return new RsData<>("200-5", "회원 정보가 수정되었습니다.", MemberResDTO.fromEntity(updatedMember));
+    }
+
 
     @PostMapping("/{memberId}/follow")
     @PreAuthorize("isAuthenticated()")
