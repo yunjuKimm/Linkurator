@@ -1,146 +1,201 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-} from "@hello-pangea/dnd";
+  Clock,
+  ExternalLink,
+  FileText,
+  GripVertical,
+  LinkIcon,
+  MoreVertical,
+  Trash2,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { GripVertical, LinkIcon, ExternalLink } from "lucide-react";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import type { PlaylistItem } from "@/types/playlist";
+import {
+  deletePlaylistItem,
+  updatePlaylistItemOrder,
+} from "@/lib/playlist-service";
+import AddLinkButton from "./add-link-button";
 
-export interface PlaylistItem {
-  id: number;
-  url: string;
-  title: string;
-  thumbnailUrl?: string;
-  creator?: string;
-  description?: string;
-  addedAt?: string;
-}
-
-export interface PlaylistItemsProps {
+interface PlaylistItemsProps {
   playlistId: number;
   items: PlaylistItem[];
 }
 
 export default function PlaylistItems({
   playlistId,
-  items,
+  items: initialItems,
 }: PlaylistItemsProps) {
-  const [localItems, setLocalItems] = useState<PlaylistItem[]>(items);
+  const router = useRouter();
+  const [items, setItems] = useState<PlaylistItem[]>(initialItems || []);
 
-  useEffect(() => {
-    setLocalItems(items);
-  }, [items]);
-
-  const handleDragEnd = async (result: DropResult): Promise<void> => {
-    if (!result.destination) return;
-
-    const reorderedItems = Array.from(localItems);
-    const [movedItem] = reorderedItems.splice(result.source.index, 1);
-    reorderedItems.splice(result.destination.index, 0, movedItem);
-    setLocalItems(reorderedItems);
-
-    const orderedItemIds = reorderedItems.map((item) => item.id);
-
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/playlists/${playlistId}/items/order`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(orderedItemIds),
-        }
-      );
-      if (!response.ok) {
-        throw new Error("순서 변경 API 호출 실패");
+  const handleDelete = async (itemId: number) => {
+    if (window.confirm("이 링크를 플레이리스트에서 삭제하시겠습니까?")) {
+      try {
+        await deletePlaylistItem(playlistId, itemId);
+        setItems(items.filter((item) => item.id !== itemId));
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to delete link:", error);
       }
-    } catch (error) {
-      console.error("순서 변경 실패:", error);
     }
   };
 
+  const handleDragEnd = async (result: any) => {
+    if (!result.destination) return;
+    const startIndex = result.source.index;
+    const endIndex = result.destination.index;
+    if (startIndex === endIndex) return;
+    const reorderedItems = Array.from(items);
+    const [removed] = reorderedItems.splice(startIndex, 1);
+    reorderedItems.splice(endIndex, 0, removed);
+    setItems(reorderedItems);
+    try {
+      await updatePlaylistItemOrder(
+        playlistId,
+        reorderedItems.map((item) => item.id)
+      );
+    } catch (error) {
+      console.error("Failed to reorder items:", error);
+      setItems(initialItems);
+    }
+  };
+
+  const getLinkTypeIcon = (url: string | undefined) => {
+    if (!url) return <LinkIcon className="h-4 w-4" />;
+    if (url.includes("pdf")) {
+      return <FileText className="h-4 w-4" />;
+    }
+    return <LinkIcon className="h-4 w-4" />;
+  };
+
   return (
-    <div className="container mx-auto px-8">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">링크 목록</h2>
+        <AddLinkButton playlistId={playlistId} />
+      </div>
+
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="playlist-items">
           {(provided) => (
             <div
-              className="space-y-4"
               {...provided.droppableProps}
               ref={provided.innerRef}
+              className="space-y-2"
             >
-              {localItems.map((item, index) => (
+              {items.map((item, index) => (
                 <Draggable
-                  key={item.id}
+                  key={String(item.id)}
                   draggableId={String(item.id)}
                   index={index}
                 >
-                  {(providedDrag) => (
-                    <Card
-                      ref={providedDrag.innerRef}
-                      {...providedDrag.draggableProps}
-                      className="w-full"
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      className="flex items-center gap-3 p-4 bg-card rounded-md border hover:bg-accent/50 group"
                     >
-                      <div className="flex">
-                        {/* 드래그 핸들: 좌측 아이콘 영역 */}
-                        <div
-                          {...providedDrag.dragHandleProps}
-                          className="flex items-center px-2 cursor-grab"
-                        >
-                          <GripVertical className="h-5 w-5 text-gray-500" />
+                      <div
+                        {...provided.dragHandleProps}
+                        className="cursor-grab text-muted-foreground"
+                      >
+                        <GripVertical className="h-5 w-5" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-1"
+                          >
+                            {getLinkTypeIcon(item.url)}
+                          </Badge>
+                          <h3 className="font-medium line-clamp-1">
+                            {item.title}
+                          </h3>
                         </div>
-                        <div className="flex-1">
-                          <CardHeader>
-                            <CardTitle className="flex items-center">
-                              <LinkIcon className="h-5 w-5 mr-2 text-muted-foreground" />
+
+                        {item.description && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {item.description}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline flex items-center gap-1"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            <span className="truncate max-w-[200px] text-black">
+                              {item.url}
+                            </span>
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex"
+                          asChild
+                        >
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            방문하기
+                          </a>
+                        </Button>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">메뉴</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
                               <a
                                 href={item.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="hover:underline"
                               >
-                                {item.title /* 제목 표시 */}
+                                새 탭에서 열기
                               </a>
-                            </CardTitle>
-                            {item.description && (
-                              <CardDescription className="mt-1 text-sm text-gray-500">
-                                {item.description /* 설명 표시 */}
-                              </CardDescription>
-                            )}
-                          </CardHeader>
-                          <CardContent>
-                            <div className="flex gap-4">
-                              <div className="flex flex-col justify-center">
-                                {/* URL 표시 */}
-                                <p className="text-sm text-gray-500 break-all">
-                                  {item.url}
-                                </p>
-                              </div>
-                            </div>
-                          </CardContent>
-                          <CardFooter>
-                            {item.addedAt && (
-                              <time className="text-xs text-gray-400">
-                                {new Date(item.addedAt).toLocaleDateString(
-                                  "ko-KR"
-                                )}
-                              </time>
-                            )}
-                          </CardFooter>
-                        </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => handleDelete(item.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              삭제하기
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    </Card>
+                    </div>
                   )}
                 </Draggable>
               ))}
