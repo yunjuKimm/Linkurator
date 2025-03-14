@@ -1,6 +1,7 @@
 package com.team8.project2.domain.playlist.repository;
 
 import com.team8.project2.domain.curation.tag.entity.Tag;
+import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -49,5 +50,13 @@ public interface PlaylistRepository extends JpaRepository<Playlist, Long> {
      */
     @Query("SELECT COALESCE(SUM(p.likeCount), 0) FROM Playlist p")
     long sumTotalLikes();
+
+    /**
+     * 특정 사용자의 플레이리스트를 조회하는 메서드입니다.
+     *
+     * @param member 플레이리스트를 생성한 회원
+     * @return 플레이리스트 목록
+     */
+    List<Playlist> findByMember(Member member);
 
 }

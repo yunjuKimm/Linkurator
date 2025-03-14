@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -29,14 +29,15 @@ const formatDate = (dateString: string): string => {
 };
 
 export default function PlaylistGrid() {
-  const [playlists, setPlaylists] = useState<Playlist[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchPlaylists() {
       try {
         const res = await fetch("http://localhost:8080/api/v1/playlists", {
           cache: "no-store",
+          credentials: "include",
         });
         if (!res.ok) {
           throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");
@@ -44,14 +45,13 @@ export default function PlaylistGrid() {
         const result = await res.json();
         setPlaylists(result.data);
       } catch (error) {
-        console.error("플레이리스트 로딩 오류", error);
-
+        console.error("플레이리스트 로딩 실패", error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
-    fetchPlaylists()
-  }, [])
+    fetchPlaylists();
+  }, []);
 
   const handleDelete = async (playlistId: number) => {
     try {
@@ -59,6 +59,7 @@ export default function PlaylistGrid() {
         `http://localhost:8080/api/v1/playlists/${playlistId}`,
         {
           method: "DELETE",
+          credentials: "include",
         }
       );
       if (!res.ok) {
@@ -71,7 +72,6 @@ export default function PlaylistGrid() {
   };
 
   if (isLoading) {
-
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {[...Array(6)].map((_, i) => (
@@ -97,13 +97,12 @@ export default function PlaylistGrid() {
           <Button className="mt-4">새 플레이리스트 생성</Button>
         </Link>
       </div>
-    )
+    );
   }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       {playlists.map((playlist) => (
-
         <Card
           key={playlist.id}
           className="relative hover:shadow-md transition-shadow"
@@ -126,7 +125,6 @@ export default function PlaylistGrid() {
                 <div className="flex items-center gap-1">
                   <LinkIcon className="w-4 h-4" />
                   <span>{playlist.items?.length || 0}</span>
-
                 </div>
               </div>
             </CardContent>
@@ -165,6 +163,5 @@ export default function PlaylistGrid() {
         </Card>
       ))}
     </div>
-  )
+  );
 }
-

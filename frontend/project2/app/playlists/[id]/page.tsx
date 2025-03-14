@@ -1,31 +1,101 @@
+"use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark, Edit, Eye, LinkIcon, Share2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getPlaylistById, recommendPlaylist } from "@/lib/playlist-service";
 import AddLinkButton from "@/app/components/add-link-button";
 import PlaylistItems from "@/app/components/playlist-items";
 import LikeButton from "@/app/components/like-button";
 import type { Playlist } from "@/types/playlist";
 
-export default async function PlaylistDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const playlist = await getPlaylistById(Number(params.id));
-  if (!playlist) {
-    notFound();
+export default function PlaylistDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const [playlist, setPlaylist] = useState<Playlist | null>(null);
+  const [recommendedPlaylists, setRecommendedPlaylists] = useState<Playlist[]>(
+    []
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      try {
+        // 플레이리스트 데이터 가져오기
+        const response = await fetch(
+          `http://localhost:8080/api/v1/playlists/${params.id}`,
+          {
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");
+        }
+
+        const result = await response.json();
+        setPlaylist(result.data);
+
+        // 추천 플레이리스트 가져오기
+        const recResponse = await fetch(
+          `http://localhost:8080/api/v1/playlists/${params.id}/recommendation`,
+          {
+            credentials: "include",
+          }
+        );
+
+        if (recResponse.ok) {
+          const recResult = await recResponse.json();
+          setRecommendedPlaylists(recResult.data || []);
+        }
+      } catch (err) {
+        console.error("데이터 로딩 오류:", err);
+        setError((err as Error).message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (params.id) {
+      fetchData();
+    }
+  }, [params.id]);
+
+  if (isLoading) {
+    return (
+      <div className="container py-6 flex justify-center items-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
-  const recommendedPlaylists: Playlist[] = await recommendPlaylist(
-    Number(params.id)
-  );
+  if (error || !playlist) {
+    return (
+      <div className="container py-6 max-w-6xl mx-auto">
+        <div className="mb-4">
+          <Link
+            href="/playlists"
+            className="inline-flex items-center text-sm text-muted-foreground hover:underline"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            플레이리스트 목록으로 돌아가기
+          </Link>
+        </div>
+
+        <div className="p-6 bg-red-50 text-red-600 rounded-lg border border-red-200">
+          <h2 className="text-xl font-bold mb-2">오류가 발생했습니다</h2>
+          <p>{error || "플레이리스트를 찾을 수 없습니다."}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-6 max-w-6xl mx-auto">
@@ -169,6 +239,5 @@ export default async function PlaylistDetailPage({
         </div>
       </div>
     </div>
-  )
+  );
 }
-
