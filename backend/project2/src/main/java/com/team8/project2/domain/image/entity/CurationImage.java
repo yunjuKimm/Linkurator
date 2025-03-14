@@ -44,8 +44,8 @@ public class CurationImage {
 	@Column(name = "uploadedAt", nullable = false, updatable = false)
 	private LocalDateTime uploadedAt;
 
-	public void setCurationIdIfNotNull(Long curationId) {
-		if (this.curationId != null) {
+	public void setCurationIdIfNull(Long curationId) {
+		if (this.curationId == null) {
 			this.curationId = curationId;
 		}
 	}

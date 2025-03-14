@@ -42,12 +42,12 @@ public class CurationService {
 	private final CurationRepository curationRepository;
 	private final CurationLinkRepository curationLinkRepository;
 	private final CurationTagRepository curationTagRepository;
+	private final CurationImageRepository curationImageRepository;
 	private final LinkService linkService;
 	private final TagService tagService;
 	private final MemberRepository memberRepository;
 	private final LikeRepository likeRepository;
 	private final ApplicationEventPublisher eventPublisher;
-	private final CurationImageRepository curationImageRepository;
 
 	/**
 	 * ✅ 특정 큐레이터의 큐레이션 개수를 반환하는 메서드 추가
@@ -95,12 +95,17 @@ public class CurationService {
 		curation.setTags(curationTags);
 
 		// 작성한 큐레이션에 이미지가 첨부되어 있다면, 이미지에 큐레이션 번호를 연결 (연결이 이미 있는 이미지는 무시)
-		List<String> imageUrls = curation.getImageNames();
-		for (String imageUrl : imageUrls) {
-			Optional<CurationImage> opImage = curationImageRepository.findByImageName(imageUrl);
+		List<String> imageNames = curation.getImageNames();
+
+		for (int i = 0; i < imageNames.size(); i++) {
+			System.out.println(i + ": " + imageNames.get(i));
+		}
+
+		for (String imageName : imageNames) {
+			Optional<CurationImage> opImage = curationImageRepository.findByImageName(imageName);
 			if (opImage.isPresent()) {
 				CurationImage curationImage = opImage.get();
-				curationImage.setCurationIdIfNotNull(curation.getId());
+				curationImage.setCurationIdIfNull(curation.getId());
 				curationImageRepository.save(curationImage);
 			}
 		}
