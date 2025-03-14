@@ -137,19 +137,22 @@ export default function PlaylistItems({
                           </p>
                         )}
 
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        {/* URL을 설명 아래에 표시 */}
+                        <div className="overflow-x-auto">
                           <a
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:underline flex items-center gap-1"
+                            className="text-sm text-gray-500 underline hover:text-gray-700 flex items-center gap-1"
                           >
                             <ExternalLink className="h-3 w-3" />
-                            <span className="truncate max-w-[200px] text-black">
+                            <span className="truncate max-w-[300px]">
                               {item.url}
                             </span>
                           </a>
                         </div>
+
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground"></div>
                       </div>
 
                       <div className="flex items-center gap-2">
