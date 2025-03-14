@@ -11,6 +11,8 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { ClipLoader } from "react-spinners";
+import { stripHtml } from "@/lib/htmlutils";
+// Add the import for the stripHtml function
 
 // Curator 데이터 인터페이스 정의
 interface Curator {
@@ -250,10 +252,9 @@ export default function CuratorProfile({
                         {curation.title}
                       </h2>
                     </Link>
+                    {/* Replace the content rendering in the curations.map section with: */}
                     <p className="mt-2 text-gray-600">
-                      {curation.content.length > 100
-                        ? `${curation.content.substring(0, 100)}...`
-                        : curation.content}
+                      {curation.content ? stripHtml(curation.content, 100) : ""}
                     </p>
                     <Link
                       href={`/curation/${curation.id}`}

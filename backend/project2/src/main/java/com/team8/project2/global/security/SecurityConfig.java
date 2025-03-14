@@ -53,6 +53,7 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.DELETE, "api/v1/admin/**").permitAll()
 				.requestMatchers(HttpMethod.GET, "/h2-console/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/v1/images/upload").permitAll()
 				.requestMatchers("/api/v1/playlists/**").authenticated()
 
 				// 권한 설정

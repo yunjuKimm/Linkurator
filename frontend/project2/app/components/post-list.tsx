@@ -1,7 +1,9 @@
-"use client"
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react"
+"use client";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react";
+import CurationSkeleton from "./skeleton/curation-skeleton";
+import { stripHtml } from "@/lib/htmlutils";
 import { ClipLoader } from "react-spinners" // 로딩 애니메이션
 
 // Curation 데이터 인터페이스 정의
@@ -321,19 +323,16 @@ const toggleLike = async (id: number) => {
                       `작성된 날짜 : ${formatDate(curation.createdAt)}`
                     }
                   </p>
+                    <p className="text-xs text-gray-500">조회수 {curation.viewCount}</p>
                 </div>
 
                 <div>
                   <Link href={`/curation/${curation.id}`} className="group">
                     <h2 className="text-xl font-bold group-hover:text-blue-600">{curation.title}</h2>
                   </Link>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <p className="text-xs text-gray-500">{`작성된 날짜 : ${formatDate(curation.createdAt)}`}</p>
-                    <span className="text-xs text-gray-500">•</span>
-                    <p className="text-xs text-gray-500">조회수 {curation.viewCount}</p>
-                  </div>
+                  {/* Replace the content rendering in the curations.map section with: */}
                   <p className="mt-2 text-gray-600">
-                    {curation.content.length > 100 ? `${curation.content.substring(0, 100)}...` : curation.content}
+                    {curation.content ? stripHtml(curation.content, 100) : ""}
                   </p>
                   <button className="mt-2 text-sm font-medium text-blue-600">더보기</button>
                 </div>

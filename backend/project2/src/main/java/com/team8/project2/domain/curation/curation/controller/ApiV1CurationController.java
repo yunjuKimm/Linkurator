@@ -7,6 +7,7 @@ import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,6 +31,7 @@ public class ApiV1CurationController {
     private final CurationService curationService;
 
     private final Rq rq;
+    private final MemberService memberService;
 
     /**
      * 새로운 큐레이션을 생성합니다.
@@ -38,8 +40,9 @@ public class ApiV1CurationController {
      */
     @PostMapping
     public RsData<CurationResDto> createCuration(@RequestBody CurationReqDTO curationReq) {
-        Member member = rq.getActor();
+        // Member member = rq.getActor();
 
+        Member member = memberService.findByUsername("username").get();
         Curation createdCuration = curationService.createCuration(
                 curationReq.getTitle(),
                 curationReq.getContent(),
