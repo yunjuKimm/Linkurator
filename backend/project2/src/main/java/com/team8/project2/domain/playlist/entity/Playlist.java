@@ -1,6 +1,5 @@
 package com.team8.project2.domain.playlist.entity;
 
-import com.team8.project2.domain.curation.curation.entity.CurationTag;
 import com.team8.project2.domain.curation.tag.entity.Tag;
 import jakarta.persistence.*;
 import lombok.*;
@@ -84,6 +83,7 @@ public class Playlist {
     /**
      * 플레이리스트 연관 추천 태그
      */
+    @Builder.Default
     @ManyToMany
     @JoinTable(
             name = "PlaylistTag",
@@ -95,6 +95,7 @@ public class Playlist {
     /**
      * ✅ 태그 목록을 문자열 Set으로 변환하여 반환
      */
+
     public Set<String> getTagNames() {
         return this.tags.stream()
                 .map(Tag::getName)
