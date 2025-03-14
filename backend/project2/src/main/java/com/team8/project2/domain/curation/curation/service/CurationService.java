@@ -32,6 +32,7 @@ import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.FollowRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
+import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.exception.ServiceException;
 
@@ -62,6 +63,7 @@ public class CurationService {
 	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
 	private static final String LIKE_COUNT_KEY = "curation:like_count"; // 좋아요 수 저장
 	private final FollowRepository followRepository;
+	private final MemberService memberService;
 
 	/**
 	 * ✅ 특정 큐레이터의 큐레이션 개수를 반환하는 메서드 추가
@@ -262,7 +264,7 @@ public class CurationService {
 			isLogin = true;
 			Member actor = rq.getActor();
 			isLiked = isLikedByMember(curationId, actor.getId());
-			isFollowed = isFollowed(curation.getMemberId(), actor.getId());
+			isFollowed = memberService.isFollowed(curation.getMemberId(), actor.getId());
 		}
 
 		if (isNewView) {
@@ -272,10 +274,6 @@ public class CurationService {
 		}
 
 		return CurationDetailResDto.fromEntity(curation, isLiked, isFollowed, isLogin);
-	}
-
-	private boolean isFollowed(Long followeeId, Long followerId) {
-		return followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId);
 	}
 
 	/**

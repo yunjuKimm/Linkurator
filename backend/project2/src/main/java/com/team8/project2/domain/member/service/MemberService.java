@@ -5,8 +5,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.team8.project2.domain.curation.curation.repository.CurationRepository;
+import com.team8.project2.domain.member.dto.CuratorInfoDto;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +22,7 @@ import com.team8.project2.domain.member.entity.RoleEnum;
 import com.team8.project2.domain.member.repository.FollowRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.member.dto.FollowResDto;
+import com.team8.project2.global.Rq;
 import com.team8.project2.global.exception.ServiceException;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +35,8 @@ public class MemberService {
 	private final MemberRepository memberRepository;
 	private final AuthTokenService authTokenService;
 	private final FollowRepository followRepository;
+	private final Rq rq;
+	private final CurationRepository curationRepository;
 
 	public Member join(String memberId, String password, RoleEnum role, String email, String profileImage) {
 		return join(memberId, password, role, email, profileImage, null);
@@ -91,7 +98,7 @@ public class MemberService {
 	@Transactional
 	public Optional<Member> getMemberByAccessToken(String accessToken) {
 		Map<String, Object> payload = authTokenService.getPayload(accessToken);
-		log.info("[JWT PAYLOAD] :"+payload);
+		log.info("[JWT PAYLOAD] :" + payload);
 		if (payload == null) {
 			return Optional.empty();
 		}
@@ -108,8 +115,8 @@ public class MemberService {
 
 	@Transactional
 	public FollowResDto followUser(Member follower, String followeeId) {
-		Member followee = findByMemberId(followeeId)
-			.orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 사용자입니다."));
+		Member followee = findByMemberId(followeeId).orElseThrow(
+			() -> new ServiceException("404-1", "존재하지 않는 사용자입니다."));
 
 		if (follower.getMemberId().equals(followee.getMemberId())) {
 			throw new ServiceException("400-1", "자신을 팔로우할 수 없습니다.");
@@ -118,10 +125,9 @@ public class MemberService {
 		Follow follow = new Follow();
 		follow.setFollowerAndFollowee(follower, followee);
 
-		followRepository.findByFollowerAndFollowee(follower, followee)
-			.ifPresent(_f -> {
-				throw new ServiceException("400-1", "이미 팔로우중인 사용자입니다.");
-			});
+		followRepository.findByFollowerAndFollowee(follower, followee).ifPresent(_f -> {
+			throw new ServiceException("400-1", "이미 팔로우중인 사용자입니다.");
+		});
 
 		follow = followRepository.save(follow);
 		return FollowResDto.fromEntity(follow);
@@ -129,8 +135,8 @@ public class MemberService {
 
 	@Transactional
 	public UnfollowResDto unfollowUser(Member follower, String followeeId) {
-		Member followee = findByMemberId(followeeId)
-			.orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 사용자입니다."));
+		Member followee = findByMemberId(followeeId).orElseThrow(
+			() -> new ServiceException("404-1", "존재하지 않는 사용자입니다."));
 
 		if (follower.getMemberId().equals(followee.getMemberId())) {
 			throw new ServiceException("400-1", "자신을 팔로우할 수 없습니다.");
@@ -148,23 +154,38 @@ public class MemberService {
 
 	@Transactional(readOnly = true)
 	public FollowingResDto getFollowingUsers(Member actor) {
-		List<Follow> followings = followRepository.findByFollower(actor).stream()
+		List<Follow> followings = followRepository.findByFollower(actor)
+			.stream()
 			.sorted(Comparator.comparing(Follow::getFollowedAt).reversed())
 			.toList();
 		return FollowingResDto.fromEntity(followings);
 	}
 
-    public Member updateMember(String memberId, MemberReqDTO updateDTO) {
-		Member member = memberRepository.findByMemberId(memberId)
-				.orElseThrow(() -> new ServiceException("404-2", "회원 정보를 찾을 수 없습니다."));
+	@Transactional
+	public Member updateMember(String memberId, MemberReqDTO updateDTO) {
+		return null;
+	}
 
-		// DTO에서 null 체크가 이루어지므로 바로 업데이트
-		member.setPassword(updateDTO.getPassword());
-		member.setEmail(updateDTO.getEmail());
-		member.setUsername(updateDTO.getUsername());
-		member.setProfileImage(updateDTO.getProfileImage());
-		member.setIntroduce(updateDTO.getIntroduce());
+	@Transactional(readOnly = true)
+	public boolean isFollowed(Long followeeId, Long followerId) {
+		return followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId);
+	}
 
-		return memberRepository.save(member);
-    }
+	@Transactional(readOnly = true)
+	public CuratorInfoDto getCuratorInfo(String username) {
+		Member member = memberRepository.findByUsername(username)
+			.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이터를 찾을 수 없습니다."));
+
+		long curationCount = curationRepository.countByMember(member);
+		boolean isLogin = false;
+		boolean isFollowed = false;
+		if (rq.isLogin()) {
+			isLogin = true;
+			Member actor = rq.getActor();
+			isFollowed = followRepository.existsByFollowerIdAndFolloweeId(actor.getId(), member.getId());
+		}
+
+		return new CuratorInfoDto(username, member.getProfileImage(), member.getIntroduce(), curationCount, isFollowed,
+			isLogin);
+	}
 }

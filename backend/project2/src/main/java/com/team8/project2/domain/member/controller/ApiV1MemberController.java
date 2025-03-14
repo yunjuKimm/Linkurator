@@ -7,6 +7,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.member.dto.CuratorInfoDto;
 import com.team8.project2.domain.member.dto.FollowResDto;
 import com.team8.project2.domain.member.dto.FollowingResDto;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
@@ -116,21 +117,9 @@ public class ApiV1MemberController {
     }
 
     @GetMapping("/{username}")
-    public RsData<Map<String, Object>> getCuratorInfo(@PathVariable String username) {
-        Member member = memberService.findByUsername(username).orElseThrow(
-                () -> new ServiceException("404-1", "해당 큐레이터를 찾을 수 없습니다.")
-        );
-
-        long curationCount = curationService.countByMember(member); // ✅ 코드 수정됨
-
-        Map<String, Object> responseData = Map.of(
-                "username", member.getUsername(),
-                "profileImage", member.getProfileImage(),
-                "introduce", member.getIntroduce(),
-                "curationCount", curationCount
-        );
-
-        return new RsData<>("200-4", "큐레이터 정보 조회 성공", responseData);
+    public RsData<CuratorInfoDto> getCuratorInfo(@PathVariable String username) {
+        CuratorInfoDto curatorInfoDto = memberService.getCuratorInfo(username);
+        return new RsData<>("200-4", "큐레이터 정보 조회 성공", curatorInfoDto);
     }
 
     @PutMapping("/{memberId}")
