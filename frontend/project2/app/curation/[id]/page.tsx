@@ -25,14 +25,16 @@ interface CurationData {
   content: string;
   authorName: string;
   authorImage: string;
+  authorImgUrl: string; // API 응답에 맞게 추가
+  authorId: number; // API 응답에 맞게 추가
   createdAt: string;
   modifiedAt: string;
   urls: { url: string; linkId?: number }[];
   tags: { name: string }[];
   likeCount: number;
-  viewCount: number; // Add viewCount field
-  comments: { authorName: string; content: string }[]; // 댓글
-  isLiked: boolean;
+  viewCount: number;
+  comments: { authorName: string; content: string }[];
+  liked: boolean; // isLiked에서 liked로 변경
 }
 
 // 링크 메타데이터 타입
@@ -142,38 +144,6 @@ export default function PostDetail() {
     fetchAllLinksMetaData();
   }, [post?.urls]);
 
-  // 좋아요 상태 확인 함수 추가 (toggleLike 함수 위에 추가)
-  async function checkLikeStatus() {
-    if (!id) return;
-
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/curation/like/${id}/status`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "X-Forwarded-For": "127.0.0.1",
-            "X-Real-IP": "127.0.0.1",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("좋아요 상태 확인 실패");
-      }
-
-      const data = await response.json();
-
-      // post가 있을 때만 상태 업데이트, 그리고 현재 상태와 다를 때만 업데이트
-      if (post && post.isLiked !== data.data) {
-        setPost((prev) => (prev ? { ...prev, isLiked: data.data } : prev));
-      }
-    } catch (error) {
-      console.error("좋아요 상태 확인 중 오류:", error);
-    }
-  }
-
   // 좋아요 토글 API 호출
   const toggleLike = async () => {
     try {
@@ -198,8 +168,8 @@ export default function PostDetail() {
         prev
           ? {
               ...prev,
-              likeCount: prev.likeCount + (prev.isLiked ? -1 : 1),
-              isLiked: !prev.isLiked,
+              likeCount: prev.likeCount + (prev.liked ? -1 : 1),
+              liked: !prev.liked,
             }
           : prev
       );
@@ -207,13 +177,6 @@ export default function PostDetail() {
       console.error("좋아요 처리 중 오류:", error);
     }
   };
-
-  // 기존 useEffect 아래에 새 useEffect 추가 (모든 링크의 메타데이터 가져오기 useEffect 바로 아래에 추가)
-  useEffect(() => {
-    if (post && id) {
-      checkLikeStatus();
-    }
-  }, [id]);
 
   // 큐레이션 삭제 처리
   const handleDeleteCuration = async () => {
@@ -389,7 +352,7 @@ export default function PostDetail() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Image
-                src={post.authorImage || "/placeholder.svg?height=40&width=40"}
+                src={post.authorImgUrl || "/placeholder.svg?height=40&width=40"}
                 alt={post.authorName}
                 width={40}
                 height={40}
@@ -527,7 +490,7 @@ export default function PostDetail() {
               >
                 <Heart
                   className={`h-5 w-5 ${
-                    post.isLiked ? "text-red-500 fill-red-500" : "text-gray-500"
+                    post.liked ? "text-red-500 fill-red-500" : "text-gray-500"
                   }`}
                 />
                 <span className="font-medium">{post.likeCount}</span>
@@ -560,7 +523,7 @@ export default function PostDetail() {
             <h3 className="mb-3 font-semibold">이 글의 작성자</h3>
             <div className="flex items-center space-x-3">
               <Image
-                src={post.authorImage || "/placeholder.svg?height=48&width=48"}
+                src={post.authorImgUrl || "/placeholder.svg?height=48&width=48"}
                 alt={post.authorName}
                 width={48}
                 height={48}
