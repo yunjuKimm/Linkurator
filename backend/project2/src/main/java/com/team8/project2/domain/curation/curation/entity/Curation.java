@@ -1,17 +1,37 @@
 package com.team8.project2.domain.curation.curation.entity;
 
-import com.team8.project2.domain.comment.entity.Comment;
-import com.team8.project2.domain.image.entity.CurationImage;
-import com.team8.project2.domain.member.entity.Member;
-import jakarta.persistence.*;
-import lombok.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.member.entity.Member;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * 큐레이션(Curation) 엔티티 클래스입니다.
@@ -112,5 +132,19 @@ public class Curation {
 
     public String getMemberImgUrl() {
         return member.getProfileImage();
+    }
+
+    public List<String> getImageUrls() {
+        List<String> imageUrls = new ArrayList<>();
+        Document document = Jsoup.parse(content);
+        Elements images = document.select("img[src]");
+
+        for (Element img : images) {
+            String src = img.attr("src");
+            if (src.startsWith("https://linkurator-bucket")) {
+                imageUrls.add(src);
+            }
+        }
+        return imageUrls;
     }
 }
