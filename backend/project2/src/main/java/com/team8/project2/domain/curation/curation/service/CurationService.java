@@ -5,10 +5,12 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -300,34 +302,60 @@ public class CurationService {
 
 	@Transactional
 	public void likeCuration(Long curationId, Long memberId) {
+		// 큐레이션과 멤버를 찾음
 		Curation curation = curationRepository.findById(curationId)
-				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+			.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
 
 		Member member = memberRepository.findById(memberId)
-				.orElseThrow(() -> new ServiceException("404-1", "해당 멤버를 찾을 수 없습니다."));
+			.orElseThrow(() -> new ServiceException("404-1", "해당 멤버를 찾을 수 없습니다."));
 
-		Optional<Like> existingLike = likeRepository.findByCurationAndMember(curation, member);
+		// Redis에 좋아요 상태 저장
+		String redisKey = "curation_like:" + curationId + ":" + memberId;
+		boolean isLiked = redisTemplate.hasKey(redisKey);
 
-		if (existingLike.isPresent()) {
+		if (isLiked) {
 			// 좋아요 삭제
-			likeRepository.delete(existingLike.get());
+			redisTemplate.delete(redisKey);
 
-			// ✅ Redis에서 좋아요 개수를 먼저 감소
-			Double updatedLikes = redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, curationId.toString(), -1);
-			curation.setLikeCount(updatedLikes != null && updatedLikes > 0 ? updatedLikes.longValue() : 0);
+			// Redis에서 좋아요 개수를 먼저 감소
+			redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, curationId.toString(), -1);
 		} else {
 			// 좋아요 추가
-			Like newLike = new Like().setLike(curation, member);
-			likeRepository.save(newLike);
+			redisTemplate.opsForValue().set(redisKey, "liked");
 
-			// ✅ Redis에서 좋아요 개수를 먼저 증가
-			Double updatedLikes = redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, curationId.toString(), 1);
-			curation.setLikeCount(updatedLikes.longValue());
+			// Redis에서 좋아요 개수를 먼저 증가
+			redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, curationId.toString(), 1);
 		}
 
-		// ✅ 변경된 좋아요 개수를 DB에 저장
-		curationRepository.save(curation);
+		// Redis에서 좋아요 개수만 관리, DB에는 반영하지 않음
+		// 큐레이션 정보는 바로 업데이트하지 않음
 	}
+
+	@Scheduled(fixedRate = 60000) // 1분마다 실행
+	public void syncLikesToDatabase() {
+		// Redis에서 모든 큐레이션의 좋아요 개수를 가져와서 DB에 업데이트
+		Set<String> keys = redisTemplate.keys("curation_like:*");
+
+		for (String key : keys) {
+			String[] parts = key.split(":");
+			Long curationId = Long.parseLong(parts[1]);
+
+			// Redis에서 좋아요 개수 구하기
+			Double likesCount = redisTemplate.opsForZSet().score(LIKE_COUNT_KEY, curationId.toString());
+
+			if (likesCount != null) {
+				// 큐레이션을 DB에 반영
+				Optional<Curation> curationOpt = curationRepository.findById(curationId);
+				if (curationOpt.isPresent()) {
+					Curation curation = curationOpt.get();
+					curation.setLikeCount(likesCount.longValue());
+					curationRepository.save(curation);
+				}
+			}
+		}
+	}
+
+
 
 	/**
 	 * 특정 큐레이션에 대한 좋아요 여부를 확인합니다.
