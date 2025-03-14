@@ -80,13 +80,14 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 	List<Curation> findFollowingCurations(@Param("userId") Long userId);
 
 	/**
-	 * 일정 개수 이상 신고된 큐레이션을 조회하는 메서드입니다.
+	 * 일정 개수 이상 신고된 큐레이션을 조회하는 메서드
 	 *
 	 * @param minReports 최소 신고 개수
 	 * @return 일정 개수 이상 신고된 큐레이션 목록
 	 */
-	@Query("SELECT c.id FROM Curation c WHERE c.reportCount >= :minReports")
-	List<Long> findReportedCurationIds(int minReports);
+	@Query("SELECT c FROM Curation c WHERE " +
+			"(SELECT COUNT(r) FROM Report r WHERE r.curation.id = c.id) >= :minReports")
+	List<Curation> findReportedCurations(int minReports);
 
 	/**
 	 * 전체 큐레이션의 조회수를 합산하는 메서드입니다.
