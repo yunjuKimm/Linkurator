@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Playlist } from "@/types/playlist";
+import LikeButton from "@/app/components/like-button";
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -114,8 +115,10 @@ export default function PlaylistGrid() {
                   <span>{playlist.viewCount || 0}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Heart className="w-4 h-4 text-rose-500" />
-                  <span>{playlist.likeCount || 0}</span>
+                  <LikeButton
+                    playlistId={playlist.id}
+                    initialLikes={playlist.likeCount}
+                  />
                 </div>
                 <div className="flex items-center gap-1">
                   <LinkIcon className="w-4 h-4" />

@@ -2,21 +2,24 @@
 
 import { useState, useEffect } from "react";
 import { Heart } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface LikeButtonProps {
   playlistId: number;
   initialLikes: number;
+  size?: "sm" | "default";
   onUnlike?: () => void;
 }
 
 export default function LikeButton({
   playlistId,
   initialLikes,
+  size = "default",
   onUnlike,
 }: LikeButtonProps) {
   const [likes, setLikes] = useState(initialLikes);
   const [isLiked, setIsLiked] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchLikedState() {
@@ -31,11 +34,9 @@ export default function LikeButton({
             credentials: "include",
           }
         );
-
         if (!res.ok) {
           throw new Error("좋아요 상태 조회 실패");
         }
-
         const data = await res.json();
         setIsLiked(data.data);
 
@@ -49,16 +50,16 @@ export default function LikeButton({
       } catch (error) {
         console.error("좋아요 상태 불러오기 실패", error);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     }
     fetchLikedState();
   }, [playlistId]);
 
   const handleToggleLike = async () => {
-    if (loading) return;
+    if (isLoading) return;
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       const response = await fetch(
         `http://localhost:8080/api/v1/playlists/${playlistId}/like`,
@@ -70,11 +71,9 @@ export default function LikeButton({
           credentials: "include",
         }
       );
-
       if (!response.ok) {
         throw new Error("좋아요 요청 실패");
       }
-
       setIsLiked((prev) => !prev);
       setLikes((prev) => (isLiked ? prev - 1 : prev + 1));
 
@@ -84,24 +83,41 @@ export default function LikeButton({
     } catch (error) {
       console.error("좋아요 요청 처리 실패", error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
+  if (size === "sm") {
+    return (
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleToggleLike();
+        }}
+        disabled={isLoading}
+        className={`flex items-center gap-1 text-xs ${
+          isLiked
+            ? "text-rose-500"
+            : "text-muted-foreground hover:text-rose-500"
+        } transition-colors`}
+      >
+        <Heart className={`h-3.5 w-3.5 ${isLiked ? "fill-rose-500" : ""}`} />
+        <span>{likes.toLocaleString()}</span>
+      </button>
+    );
+  }
+
   return (
-    <button
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        handleToggleLike();
-      }}
-      disabled={loading}
-      className={`flex items-center gap-1 ${
-        isLiked ? "text-rose-500" : "text-gray-500"
-      }`}
+    <Button
+      variant="outline"
+      size="sm"
+      className={`gap-2 ${isLiked ? "text-rose-500" : ""}`}
+      onClick={handleToggleLike}
+      disabled={isLoading}
     >
-      <Heart className={`w-4 h-4 ${isLiked ? "fill-rose-500" : ""}`} />
+      <Heart className={`h-4 w-4 ${isLiked ? "fill-rose-500" : ""}`} />
       <span>{likes.toLocaleString()}</span>
-    </button>
+    </Button>
   );
 }

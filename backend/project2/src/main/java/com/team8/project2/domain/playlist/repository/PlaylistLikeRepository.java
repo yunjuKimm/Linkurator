@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface PlaylistLikeRepository extends JpaRepository<PlaylistLike, PlaylistLike.PlaylistLikeId> {
     /** ✅ 특정 사용자가 특정 플레이리스트를 좋아요했는지 여부 확인 */
-    boolean existsByPlaylistIdAndMemberId(Long playlistId, Long memberId);
+    boolean existsByIdPlaylistIdAndIdMemberId(Long playlistId, Long memberId);
 
     /** ✅ 특정 사용자의 좋아요 데이터 조회 */
     Optional<PlaylistLike> findByPlaylistAndMember(Playlist playlist, Member member);

@@ -48,12 +48,7 @@ export default function AddLinkButton({ playlistId }: AddLinkButtonProps) {
         url: formData.url,
         description: formData.description,
       });
-
-      setFormData({
-        title: "",
-        url: "",
-        description: "",
-      });
+      setFormData({ title: "", url: "", description: "" });
       setOpen(false);
       router.refresh();
     } catch (error) {

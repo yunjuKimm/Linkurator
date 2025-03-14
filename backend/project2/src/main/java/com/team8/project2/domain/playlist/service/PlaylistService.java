@@ -47,8 +47,11 @@ public class PlaylistService {
      * - 정렬 기준 (좋아요, 조회수, 복합)
      */
     public List<PlaylistDto> recommendPlaylist(Long playlistId, String sortType) {
-        List<Long> cachedRecommendations = (List<Long>) redisTemplate.opsForValue().get(RECOMMEND_KEY + playlistId);
-        if (cachedRecommendations != null) {
+        String cachedRecommendationsStr = (String) redisTemplate.opsForValue().get(RECOMMEND_KEY + playlistId);
+        if (cachedRecommendationsStr != null) {
+            List<Long> cachedRecommendations = Arrays.stream(cachedRecommendationsStr.split(","))
+                    .map(Long::parseLong)
+                    .collect(Collectors.toList());
             return getPlaylistsByIds(cachedRecommendations);
         }
 
@@ -75,7 +78,7 @@ public class PlaylistService {
         similarPlaylists.forEach(p -> recommendedPlaylistIds.add(p.getId()));
 
         // 5️⃣ Redis에 추천 데이터 캐싱 (30분 유지)
-        redisTemplate.opsForValue().set(RECOMMEND_KEY + playlistId, new ArrayList<>(recommendedPlaylistIds), Duration.ofMinutes(30));
+        redisTemplate.opsForValue().set(RECOMMEND_KEY + playlistId, recommendedPlaylistIds.stream().map(String::valueOf).collect(Collectors.joining(",")), Duration.ofMinutes(30));
 
         // 6️⃣ 정렬 기준 적용
         return getSortedPlaylists(new ArrayList<>(recommendedPlaylistIds), sortType);

@@ -197,7 +197,7 @@ public class ApiV1PlaylistController {
 //             Member member = rq.getActor();
 //             boolean liked = playlistLikeRepository.existsByPlaylistIdAndMemberId(id, member.getId());
              Long memberId = 1L; // 테스트용
-             boolean liked = playlistLikeRepository.existsByPlaylistIdAndMemberId(id, memberId);
+             boolean liked = playlistLikeRepository.existsByIdPlaylistIdAndIdMemberId(id, memberId);
              return RsData.success("좋아요 상태를 조회하였습니다.", liked);
          } catch (Exception e) {
              return RsData.success("비로그인 상태입니다.", false);
