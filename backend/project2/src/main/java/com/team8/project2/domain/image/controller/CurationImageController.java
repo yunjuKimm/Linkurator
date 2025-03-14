@@ -9,24 +9,30 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.team8.project2.domain.image.service.S3Uploader;
+import com.team8.project2.domain.image.service.CurationImageService;
+import com.team8.project2.global.exception.ServiceException;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/images")
 @RequiredArgsConstructor
-public class ImageController {
+public class CurationImageController {
 
-	private final S3Uploader s3Uploader;
+	private final CurationImageService curationImageService;
 
 	@PostMapping("/upload")
-	public ResponseEntity<String> uploadImage(@RequestParam("file") MultipartFile file) {
+	public ResponseEntity<String> uploadCurationImage(@RequestParam("file") MultipartFile file) {
+		String imageUrl;
 		try {
-			String imageUrl = s3Uploader.uploadFile(file);
-			return ResponseEntity.ok(imageUrl);
+			imageUrl = curationImageService.uploadImage(file);
 		} catch (IOException e) {
 			return ResponseEntity.status(500).body("파일 업로드 실패");
 		}
+		if (imageUrl == null) {
+			throw new ServiceException("500-1", "이미지 업로드에 실패했습니다.");
+		}
+
+		return ResponseEntity.ok(imageUrl);
 	}
 }

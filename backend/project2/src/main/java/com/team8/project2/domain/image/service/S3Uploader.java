@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class S3Uploader {
 	@Value("${spring.cloud.aws.s3.bucket}")
 	private String bucketName;
 
+	@Transactional
 	public String uploadFile(MultipartFile file) throws IOException {
 		String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
 
