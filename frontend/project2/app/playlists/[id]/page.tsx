@@ -24,45 +24,45 @@ export default function PlaylistDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true);
-      try {
-        // 플레이리스트 데이터 가져오기
-        const response = await fetch(
-          `http://localhost:8080/api/v1/playlists/${params.id}`,
-          {
-            credentials: "include",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");
+  async function fetchData() {
+    setIsLoading(true);
+    try {
+      // 플레이리스트 데이터 가져오기
+      const response = await fetch(
+        `http://localhost:8080/api/v1/playlists/${params.id}`,
+        {
+          credentials: "include",
         }
+      );
 
-        const result = await response.json();
-        setPlaylist(result.data);
-
-        // 추천 플레이리스트 가져오기
-        const recResponse = await fetch(
-          `http://localhost:8080/api/v1/playlists/${params.id}/recommendation`,
-          {
-            credentials: "include",
-          }
-        );
-
-        if (recResponse.ok) {
-          const recResult = await recResponse.json();
-          setRecommendedPlaylists(recResult.data || []);
-        }
-      } catch (err) {
-        console.error("데이터 로딩 오류:", err);
-        setError((err as Error).message);
-      } finally {
-        setIsLoading(false);
+      if (!response.ok) {
+        throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");
       }
-    }
 
+      const result = await response.json();
+      setPlaylist(result.data);
+
+      // 추천 플레이리스트 가져오기
+      const recResponse = await fetch(
+        `http://localhost:8080/api/v1/playlists/${params.id}/recommendation`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (recResponse.ok) {
+        const recResult = await recResponse.json();
+        setRecommendedPlaylists(recResult.data || []);
+      }
+    } catch (err) {
+      console.error("데이터 로딩 오류:", err);
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
     if (params.id) {
       fetchData();
     }
@@ -188,7 +188,13 @@ export default function PlaylistDetailPage() {
               <p className="text-muted-foreground mt-1 mb-4">
                 이 플레이리스트에 링크를 추가해보세요.
               </p>
-              <AddLinkButton playlistId={playlist.id} />
+              <AddLinkButton
+                playlistId={playlist.id}
+                onLinkAdded={() => {
+                  // 새 링크가 추가되면 플레이리스트 데이터를 다시 가져옵니다
+                  fetchData();
+                }}
+              />
             </div>
           )}
         </div>

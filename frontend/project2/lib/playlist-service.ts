@@ -1,4 +1,4 @@
-import type { Playlist, PlaylistItem, LinkData } from "@/types/playlist";
+import type { Playlist, LinkData } from "@/types/playlist";
 
 export async function getPlaylists(): Promise<Playlist[]> {
   const response = await fetch("http://localhost:8080/api/v1/playlists", {
@@ -67,6 +67,7 @@ export async function updatePlaylist(
   return result.data;
 }
 
+// addItemToPlaylist 함수가 추가된 아이템을 포함한 전체 플레이리스트를 반환하도록 수정
 export async function addItemToPlaylist(
   playlistId: number,
   itemData: LinkData
@@ -84,7 +85,10 @@ export async function addItemToPlaylist(
     throw new Error("플레이리스트에 항목 추가 실패");
   }
   const result = await response.json();
-  return result.data;
+
+  // 업데이트된 플레이리스트 데이터 가져오기
+  const updatedPlaylist = await getPlaylistById(playlistId);
+  return updatedPlaylist;
 }
 
 export async function deletePlaylistItem(
@@ -93,7 +97,10 @@ export async function deletePlaylistItem(
 ): Promise<void> {
   const response = await fetch(
     `http://localhost:8080/api/v1/playlists/${playlistId}/items/${itemId}`,
-    { method: "DELETE", credentials: "include" }
+    {
+      method: "DELETE",
+      credentials: "include",
+    }
   );
   if (!response.ok) {
     throw new Error("플레이리스트 아이템 삭제 실패");
@@ -125,7 +132,9 @@ export async function recommendPlaylist(
 ): Promise<Playlist[]> {
   const response = await fetch(
     `http://localhost:8080/api/v1/playlists/${playlistId}/recommendation`,
-    { credentials: "include" }
+    {
+      credentials: "include",
+    }
   );
   if (!response.ok) {
     throw new Error("추천 플레이리스트 조회 실패");

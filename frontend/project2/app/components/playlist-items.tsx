@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
-  Clock,
   ExternalLink,
   FileText,
   GripVertical,
@@ -39,6 +38,11 @@ export default function PlaylistItems({
 }: PlaylistItemsProps) {
   const router = useRouter();
   const [items, setItems] = useState<PlaylistItem[]>(initialItems || []);
+
+  // 새 링크가 추가되었을 때 호출되는 함수
+  const handleLinkAdded = (newItem: PlaylistItem) => {
+    setItems((prevItems) => [...prevItems, newItem]);
+  };
 
   const handleDelete = async (itemId: number) => {
     if (window.confirm("이 링크를 플레이리스트에서 삭제하시겠습니까?")) {
@@ -84,7 +88,7 @@ export default function PlaylistItems({
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">링크 목록</h2>
-        <AddLinkButton playlistId={playlistId} />
+        <AddLinkButton playlistId={playlistId} onLinkAdded={handleLinkAdded} />
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
