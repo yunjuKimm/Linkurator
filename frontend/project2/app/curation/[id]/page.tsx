@@ -20,18 +20,19 @@ import CommentSection from "@/app/components/comment-section"
 
 // 큐레이션 데이터 타입
 interface CurationData {
-  id : number
+  id: number
   title: string
   content: string
   authorName: string
   authorImage: string
   createdAt: string
   modifiedAt: string
-  urls: { url: string; linkId? : number }[]
+  urls: { url: string; linkId?: number }[]
   tags: { name: string }[]
   likeCount: number
   viewCount: number // Add viewCount field
   comments: { authorName: string; content: string }[] // 댓글
+  isLiked: boolean
 }
 
 // 링크 메타데이터 타입
@@ -40,8 +41,8 @@ interface LinkMetaData {
   description: string
   image: string
   url: string
-  click? : number
-  linkId? : number
+  click?: number
+  linkId?: number
 }
 
 export default function PostDetail() {
@@ -55,8 +56,8 @@ export default function PostDetail() {
   // API 데이터 호출
   async function fetchData() {
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
 
       const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
         method: "GET",
@@ -66,26 +67,26 @@ export default function PostDetail() {
           "X-Forwarded-For": "127.0.0.1",
           "X-Real-IP": "127.0.0.1",
         },
-      });
+      })
 
       if (!response.ok) {
-        throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.");
+        throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.")
       }
 
-      const data = await response.json();
-      setPost(data.data);
+      const data = await response.json()
+      setPost(data.data)
     } catch (err) {
-      setError((err as Error).message);
-      console.error("Error fetching curation data:", err);
+      setError((err as Error).message)
+      console.error("Error fetching curation data:", err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   // 최초 데이터 불러오기
   useEffect(() => {
-    fetchData();
-  }, [id]);
+    fetchData()
+  }, [id])
 
   // 모든 링크의 메타데이터 가져오기
   useEffect(() => {
@@ -130,6 +131,67 @@ export default function PostDetail() {
 
     fetchAllLinksMetaData()
   }, [post?.urls])
+
+  // 좋아요 상태 확인 함수 추가 (toggleLike 함수 위에 추가)
+  async function checkLikeStatus() {
+    if (!id) return
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/v1/curation/like/${id}/status`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "X-Forwarded-For": "127.0.0.1",
+          "X-Real-IP": "127.0.0.1",
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("좋아요 상태 확인 실패")
+      }
+
+      const data = await response.json()
+
+      // post가 있을 때만 상태 업데이트
+      if (post) {
+        setPost((prev) => (prev ? { ...prev, isLiked: data.data } : prev))
+      }
+    } catch (error) {
+      console.error("좋아요 상태 확인 중 오류:", error)
+    }
+  }
+
+  // 좋아요 토글 API 호출
+  const toggleLike = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/v1/curation/like/${id}`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "X-Forwarded-For": "127.0.0.1",
+          "X-Real-IP": "127.0.0.1",
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("좋아요 처리 실패")
+      }
+
+      // 기존 post 상태를 업데이트하여 즉각적인 UI 반영
+      setPost((prev) =>
+        prev ? { ...prev, likeCount: prev.likeCount + (prev.isLiked ? -1 : 1), isLiked: !prev.isLiked } : prev,
+      )
+    } catch (error) {
+      console.error("좋아요 처리 중 오류:", error)
+    }
+  }
+
+  // 기존 useEffect 아래에 새 useEffect 추가 (모든 링크의 메타데이터 가져오기 useEffect 바로 아래에 추가)
+  useEffect(() => {
+    if (post) {
+      checkLikeStatus()
+    }
+  }, [post, id])
 
   // 큐레이션 삭제 처리
   const handleDeleteCuration = async () => {
@@ -247,28 +309,8 @@ export default function PostDetail() {
     } catch (error) {
       console.error("링크 클릭 처리 중 오류:", error)
     }
-    window.location.reload();
+    window.location.reload()
   }
-
-  // 좋아요 추가 API 호출
-  const likeCuration = async () => {
-    try {
-      const response = await fetch(`http://localhost:8080/api/v1/curation/like/${id}`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("좋아요 추가 실패");
-      }
-
-      // 좋아요 반영을 위해 데이터 갱신
-      fetchData();
-    } catch (error) {
-      console.error("좋아요 추가 중 오류:", error);
-    }
-  };
-  
 
   return (
     <main className="container grid grid-cols-12 gap-6 px-4 py-6">
@@ -320,9 +362,7 @@ export default function PostDetail() {
               />
               <div>
                 <p className="font-medium">{post.authorName}</p>
-                <p className="text-xs text-gray-500">
-                  {`작성된 날짜: ${formatDate(post.createdAt)}`}
-                </p>
+                <p className="text-xs text-gray-500">{`작성된 날짜: ${formatDate(post.createdAt)}`}</p>
               </div>
             </div>
             <button className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">팔로우</button>
@@ -423,8 +463,8 @@ export default function PostDetail() {
 
           <div className="flex items-center justify-between border-t border-b py-4">
             <div className="flex items-center space-x-4">
-              <button onClick={likeCuration} className="flex items-center space-x-1 text-sm">
-                <Heart className="h-5 w-5 text-red-500 fill-red-500" />
+              <button onClick={toggleLike} className="flex items-center space-x-1 text-sm">
+                <Heart className={`h-5 w-5 ${post.isLiked ? "text-red-500 fill-red-500" : "text-gray-500"}`} />
                 <span className="font-medium">{post.likeCount}</span>
               </button>
               <button className="flex items-center space-x-1 text-sm text-gray-500">
