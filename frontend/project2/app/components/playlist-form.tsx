@@ -40,8 +40,12 @@ export default function PlaylistForm({ playlist }: PlaylistFormProps) {
     setIsSubmitting(true)
     try {
       if (playlist) {
-        await updatePlaylist(playlist.id, formData)
-        router.push(`/playlists/${playlist.id}`)
+        const updatedPlaylist = await updatePlaylist(playlist.id, {
+          title: formData.title,
+          description: formData.description,
+          isPublic: formData.isPublic,
+        });
+        router.push(`/playlists/${updatedPlaylist.id}`);
       } else {
         const newPlaylist = await createPlaylist(formData)
         router.push(`/playlists/${newPlaylist.id}`)

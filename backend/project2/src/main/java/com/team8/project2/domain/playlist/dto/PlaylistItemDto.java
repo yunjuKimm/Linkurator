@@ -27,6 +27,9 @@ public class PlaylistItemDto {
      */
     private String itemType;
 
+    private String title;
+    private String description;
+
     /**
      * 플레이리스트 항목 엔티티를 DTO로 변환합니다.
      * @param playlistItem 변환할 플레이리스트 항목 엔티티
@@ -37,6 +40,9 @@ public class PlaylistItemDto {
                 .id(playlistItem.getId())
                 .itemId(playlistItem.getItemId())
                 .itemType(playlistItem.getItemType().name())
+                .title(playlistItem.getLink() != null ? playlistItem.getLink().getTitle() : "")
+                .description(playlistItem.getLink() != null ? playlistItem.getLink().getDescription() : "")
                 .build();
     }
 }
+

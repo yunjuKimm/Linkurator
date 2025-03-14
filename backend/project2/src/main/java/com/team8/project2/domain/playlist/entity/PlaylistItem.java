@@ -1,7 +1,7 @@
 package com.team8.project2.domain.playlist.entity;
 
 import com.team8.project2.domain.curation.curation.entity.Curation;
-import jakarta.annotation.Nullable;
+import com.team8.project2.domain.link.entity.Link;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -56,6 +56,10 @@ public class PlaylistItem {
      */
     @Column(nullable = false)
     private Integer displayOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "itemId", referencedColumnName = "linkId", insertable = false, updatable = false)
+    private Link link;
 
     public enum PlaylistItemType {
         LINK,

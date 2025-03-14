@@ -53,8 +53,8 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.DELETE, "api/v1/admin/**").permitAll()
 				.requestMatchers(HttpMethod.GET, "/h2-console/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/v1/images/upload").permitAll()
 				.requestMatchers("/api/v1/playlists/**").authenticated()
+
 
 				// 권한 설정
 				.requestMatchers("/api/v1/posts/statistics").hasRole("ADMIN")
@@ -87,7 +87,7 @@ public class SecurityConfig {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowCredentials(true);
 		configuration.setAllowedOrigins(List.of("http://localhost:3000")); // 허용할 프론트엔드 주소
-		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"));
 		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Forwarded-For", "X-Real-IP"));
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
