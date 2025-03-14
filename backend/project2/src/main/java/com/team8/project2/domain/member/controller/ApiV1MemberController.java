@@ -51,6 +51,7 @@ public class ApiV1MemberController {
 
         String accessToken = memberService.genAccessToken(member);
         rq.addCookie("accessToken", accessToken);
+        rq.addCookie("role", member.getRole().name());
 
         return new RsData<>(
                 "201-1",
@@ -75,6 +76,7 @@ public class ApiV1MemberController {
         log.info("[accessToken]:" + accessToken);
 
         rq.addCookie("accessToken", accessToken);
+        rq.addCookie("role", member.getRole().name());
         return new RsData<>(
                 "200-1",
                 "%s님 환영합니다.".formatted(member.getUsername()),
