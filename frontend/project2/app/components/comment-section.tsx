@@ -105,6 +105,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         `http://localhost:8080/api/v1/curations/${postId}/comments`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -120,7 +121,7 @@ export default function CommentSection({ postId }: { postId: string }) {
 
       const result = await response.json();
 
-      if (result.code === "200-OK") {
+      if (result.code === "200-2") {
         // API 응답으로 받은 새 댓글 데이터
         const newCommentData: Comment = {
           id: result.data.id,
@@ -179,6 +180,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         `http://localhost:8080/api/v1/curations/${postId}/comments/${commentId}`,
         {
           method: "PUT",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -194,7 +196,7 @@ export default function CommentSection({ postId }: { postId: string }) {
 
       const result = await response.json();
 
-      if (result.code === "200-OK") {
+      if (result.code === "200-2") {
         // 댓글 목록 업데이트
         setComments(
           comments.map((comment) => {
@@ -241,6 +243,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         `http://localhost:8080/api/v1/curations/${postId}/comments/${commentId}`,
         {
           method: "DELETE",
+          credentials: "include",
         }
       );
 
