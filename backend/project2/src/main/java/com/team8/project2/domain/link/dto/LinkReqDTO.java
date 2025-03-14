@@ -22,7 +22,6 @@ public class LinkReqDTO {
     /**
      * 링크 TITLE (필수값)
      */
-    @NotNull
     private String title;
 
     private String description;
