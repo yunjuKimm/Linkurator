@@ -2,23 +2,32 @@ package com.team8.project2.domain.curation.controller;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.net.http.HttpRequest;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
 
+import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
+import com.team8.project2.global.RedisUtils;
 
+import jakarta.servlet.http.HttpServletRequest;
+
+@ActiveProfiles("test")
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class LikeCurationConcurrencyTest {
@@ -35,8 +44,16 @@ class LikeCurationConcurrencyTest {
 	private Long testCurationId;
 	private Long testMemberId;
 
+	@Autowired
+	private HttpServletRequest request;
+
+	@Autowired
+	private RedisUtils redisUtils;
+
 	@BeforeEach
 	void setUp() {
+		redisUtils.clearAllData();
+
 		Curation curation = curationRepository.findById(1L).get();
 		testCurationId = curation.getId();
 
@@ -63,8 +80,9 @@ class LikeCurationConcurrencyTest {
 		latch.await(10, TimeUnit.SECONDS);
 		executorService.shutdown();
 
-		Curation updatedCuration = curationRepository.findById(testCurationId).orElseThrow();
-		System.out.println("Final like count: " + updatedCuration.getLikeCount());
-		assertThat(updatedCuration.getLikeCount()).isBetween(0L, (long)threadCount);
+		CurationDetailResDto dto = curationService.getCuration(testCurationId, request);
+		System.out.println("Final like count: " + dto.getLikeCount());
+
+		assertThat(dto.getLikeCount()).isEqualTo(0L);
 	}
 }
