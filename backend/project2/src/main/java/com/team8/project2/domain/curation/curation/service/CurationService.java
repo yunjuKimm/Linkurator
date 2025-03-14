@@ -153,13 +153,14 @@ public class CurationService {
 	 * @param curationId 삭제할 큐레이션 ID
 	 */
 	@Transactional
-	public void deleteCuration(Long curationId, Long memberId) {
+	public void deleteCuration(Long curationId, Member member) {
 		// 큐레이션이 존재하는지 확인
 		Curation curation = curationRepository.findById(curationId)
 				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
 
 		// 삭제 권한이 있는지 확인 (작성자와 요청자가 같은지 확인)
-		if (!curation.getMember().getId().equals(memberId)) {
+		System.out.println("어드민이야?" + member.isAdmin());
+		if (!curation.getMember().getId().equals(member.getMemberId()) && !member.isAdmin()) {
 			throw new ServiceException("403-1", "권한이 없습니다."); // 권한 없음
 		}
 		curationLinkRepository.deleteByCurationId(curationId);

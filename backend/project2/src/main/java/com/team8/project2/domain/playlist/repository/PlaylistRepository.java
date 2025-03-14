@@ -38,7 +38,7 @@ public interface PlaylistRepository extends JpaRepository<Playlist, Long> {
      *
      * @return 전체 플레이리스트의 조회수 합
      */
-    @Query("SELECT COALESCE(SUM(p.views), 0) FROM Playlist p")
+    @Query("SELECT COALESCE(SUM(p.viewCount), 0) FROM Playlist p")
     long sumTotalViews();
 
     /**
@@ -47,7 +47,7 @@ public interface PlaylistRepository extends JpaRepository<Playlist, Long> {
      *
      * @return 전체 플레이리스트의 좋아요 합
      */
-    @Query("SELECT COALESCE(SUM(p.likes), 0) FROM Playlist p")
+    @Query("SELECT COALESCE(SUM(p.likeCount), 0) FROM Playlist p")
     long sumTotalLikes();
 
 }

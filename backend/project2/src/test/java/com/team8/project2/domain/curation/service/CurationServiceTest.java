@@ -202,7 +202,7 @@ class CurationServiceTest {
 		doNothing().when(curationRepository).deleteById(anyLong());
 
 		// Execute the service method to delete curation
-		curationService.deleteCuration(1L, member.getId());
+		curationService.deleteCuration(1L, member);
 
 		// Verify the delete operation was called once
 		verify(curationRepository, times(1)).deleteById(1L);
@@ -215,7 +215,7 @@ class CurationServiceTest {
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
 		// Check if exception is thrown
-		assertThatThrownBy(() -> curationService.deleteCuration(1L, member.getId()))
+		assertThatThrownBy(() -> curationService.deleteCuration(1L, member))
 				.isInstanceOf(ServiceException.class)
 				.hasMessageContaining("해당 큐레이션을 찾을 수 없습니다.");
 

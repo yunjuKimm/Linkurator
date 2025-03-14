@@ -3,12 +3,7 @@ package com.team8.project2.domain.member.controller;
 import java.util.Map;
 
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.dto.FollowResDto;
@@ -137,4 +132,5 @@ public class ApiV1MemberController {
         FollowingResDto followingResDto = memberService.getFollowingUsers(actor);
         return new RsData<>("200-1", "팔로우 중인 사용자를 조회했습니다.", followingResDto);
     }
+
 }

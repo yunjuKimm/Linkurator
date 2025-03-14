@@ -95,7 +95,7 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 	 *
 	 * @return 전체 큐레이션의 조회수 합산 값
 	 */
-	@Query("SELECT COALESCE(SUM(c.views), 0) FROM Curation c")
+	@Query("SELECT COALESCE(SUM(c.viewCount), 0) FROM Curation c")
 	long sumTotalViews();
 
 	/**
@@ -104,6 +104,6 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 	 *
 	 * @return 전체 큐레이션의 좋아요 합산 값
 	 */
-	@Query("SELECT COALESCE(SUM(c.likes), 0) FROM Curation c")
+	@Query("SELECT COALESCE(SUM(c.likeCount), 0) FROM Curation c")
 	long sumTotalLikes();
 }

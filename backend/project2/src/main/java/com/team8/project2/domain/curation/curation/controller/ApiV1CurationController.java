@@ -79,7 +79,7 @@ public class ApiV1CurationController {
     @DeleteMapping("/{id}")
     public RsData<Void> deleteCuration(@PathVariable Long id) {
         Member member = rq.getActor();
-        curationService.deleteCuration(id, member.getId());
+        curationService.deleteCuration(id, member);
         return new RsData<>("204-1", "글이 성공적으로 삭제되었습니다.", null);
     }
 
