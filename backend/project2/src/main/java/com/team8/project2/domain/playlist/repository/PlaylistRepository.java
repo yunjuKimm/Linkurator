@@ -32,4 +32,22 @@ public interface PlaylistRepository extends JpaRepository<Playlist, Long> {
     List<Playlist> findByTags(@Param("tags") Set<Tag> tags,
                               @Param("playlistId") Long playlistId);
 
+    /**
+     * 총 플레이리스트 조회수를 합산하는 메서드입니다.
+     * 조회수 데이터가 없을 경우 0을 반환합니다.
+     *
+     * @return 전체 플레이리스트의 조회수 합
+     */
+    @Query("SELECT COALESCE(SUM(p.viewCount), 0) FROM Playlist p")
+    long sumTotalViews();
+
+    /**
+     * 총 플레이리스트 좋아요 수를 합산하는 메서드입니다.
+     * 좋아요 데이터가 없을 경우 0을 반환합니다.
+     *
+     * @return 전체 플레이리스트의 좋아요 합
+     */
+    @Query("SELECT COALESCE(SUM(p.likeCount), 0) FROM Playlist p")
+    long sumTotalLikes();
+
 }

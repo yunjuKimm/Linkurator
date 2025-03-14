@@ -172,4 +172,5 @@ public class ApiV1MemberController {
         FollowingResDto followingResDto = memberService.getFollowingUsers(actor);
         return new RsData<>("200-1", "팔로우 중인 사용자를 조회했습니다.", followingResDto);
     }
+
 }

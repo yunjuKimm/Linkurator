@@ -49,6 +49,8 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.DELETE, "/api/v1/curations/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/link/**").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/v1/link/**").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/v1/admin/**").permitAll()
+				.requestMatchers(HttpMethod.DELETE, "api/v1/admin/**").permitAll()
 				.requestMatchers(HttpMethod.GET, "/h2-console/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
 				.requestMatchers("/api/v1/playlists/**").authenticated()
