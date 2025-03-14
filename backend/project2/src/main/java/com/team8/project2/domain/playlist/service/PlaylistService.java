@@ -342,7 +342,7 @@ public class PlaylistService {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
 
-        boolean removed = playlist.getItems().removeIf(item -> item.getItemId().equals(itemId));
+        boolean removed = playlist.getItems().removeIf(item -> item.getId().equals(itemId));
         if (!removed) {
             throw new NotFoundException("해당 플레이리스트 아이템을 찾을 수 없습니다.");
         }
