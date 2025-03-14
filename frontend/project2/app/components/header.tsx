@@ -209,6 +209,12 @@ export default function Header() {
             />
           </Link>
           <nav className="flex items-center space-x-4 text-sm font-medium">
+            <Link
+              href="/explore/playlists"
+              className="transition-colors hover:text-gray-600"
+            >
+              플레이리스트 탐색
+            </Link>
             {isLoggedIn && (
               <Link
                 href="/following"

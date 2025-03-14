@@ -117,13 +117,16 @@ export default function PostList() {
   // 메타 데이터 추출 함수
   const fetchLinkMetaData = async (url: string, curationId: number) => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/link/preview`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: url }), // body에 JSON 형태로 URL을 전달
-      });
+      const response = await fetch(
+        `http://localhost:8080/api/v1/link/preview`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url: url }), // body에 JSON 형태로 URL을 전달
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch link metadata");
@@ -150,7 +153,7 @@ export default function PostList() {
   // 좋아요 토글 함수
   const toggleLike = async (id: number) => {
     try {
-      await fetch(`${API_URL}/api/v1/curation/like/${id}`, {
+      await fetch(`http://localhost:8080/api/v1/curation/like/${id}`, {
         method: "POST",
         credentials: "include",
       });
@@ -244,7 +247,7 @@ export default function PostList() {
   const checkLikedStatus = async (id: number) => {
     try {
       const response = await fetch(
-        `${API_URL}/api/v1/curation/like/${id}/status`,
+        `http://localhost:8080/api/v1/curation/like/${id}/status`,
         {
           credentials: "include",
         }
