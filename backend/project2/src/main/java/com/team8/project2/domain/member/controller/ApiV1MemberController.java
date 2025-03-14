@@ -138,20 +138,20 @@ public class ApiV1MemberController {
     }
 
 
-    @PostMapping("/{memberId}/follow")
+    @PostMapping("/{username}/follow")
     @PreAuthorize("isAuthenticated()")
-    public RsData<FollowResDto> follow(@PathVariable String memberId) {
+    public RsData<FollowResDto> follow(@PathVariable String username) {
         Member actor = rq.getActor();
-        FollowResDto followResDto = memberService.followUser(actor, memberId);
-        return new RsData<>("200-1", "%s님을 팔로우했습니다.".formatted(followResDto.getFollowee()), followResDto);
+        FollowResDto followResDto = memberService.followUser(actor, username);
+        return new RsData<>("200-1", "%s님을 팔로우했습니다.".formatted(username), followResDto);
     }
 
-    @PostMapping("/{memberId}/unfollow")
+    @PostMapping("/{username}/unfollow")
     @PreAuthorize("isAuthenticated()")
-    public RsData<UnfollowResDto> unfollow(@PathVariable String memberId) {
+    public RsData<UnfollowResDto> unfollow(@PathVariable String username) {
         Member actor = rq.getActor();
-        UnfollowResDto unfollowResDto = memberService.unfollowUser(actor, memberId);
-        return new RsData<>("200-1", "%s님을 팔로우 취소했습니다.".formatted(unfollowResDto.getFollowee()), unfollowResDto);
+        UnfollowResDto unfollowResDto = memberService.unfollowUser(actor, username);
+        return new RsData<>("200-1", "%s님을 팔로우 취소했습니다.".formatted(username), unfollowResDto);
     }
 
     @GetMapping("/following")

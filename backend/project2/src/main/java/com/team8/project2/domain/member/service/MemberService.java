@@ -114,8 +114,8 @@ public class MemberService {
 	}
 
 	@Transactional
-	public FollowResDto followUser(Member follower, String followeeId) {
-		Member followee = findByMemberId(followeeId).orElseThrow(
+	public FollowResDto followUser(Member follower, String username) {
+		Member followee = findByUsername(username).orElseThrow(
 			() -> new ServiceException("404-1", "존재하지 않는 사용자입니다."));
 
 		if (follower.getMemberId().equals(followee.getMemberId())) {
@@ -135,7 +135,7 @@ public class MemberService {
 
 	@Transactional
 	public UnfollowResDto unfollowUser(Member follower, String followeeId) {
-		Member followee = findByMemberId(followeeId).orElseThrow(
+		Member followee = findByUsername(followeeId).orElseThrow(
 			() -> new ServiceException("404-1", "존재하지 않는 사용자입니다."));
 
 		if (follower.getMemberId().equals(followee.getMemberId())) {
