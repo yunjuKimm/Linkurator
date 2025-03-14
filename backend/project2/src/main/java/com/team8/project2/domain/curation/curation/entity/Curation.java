@@ -95,9 +95,6 @@ public class Curation {
     @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
-    @OneToMany(mappedBy = "curation", fetch = FetchType.LAZY, orphanRemoval = true)
-    private List<CurationImage> images = new ArrayList<>();
-
     /**
      * 큐레이션 좋아요 수 증가 메서드
      */

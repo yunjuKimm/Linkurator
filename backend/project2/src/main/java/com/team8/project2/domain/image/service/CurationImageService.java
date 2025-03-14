@@ -23,7 +23,7 @@ public class CurationImageService {
 		String imageUrl;
 		imageUrl = s3Uploader.uploadFile(file);
 
-		CurationImage curationImage =  CurationImage.builder()
+		CurationImage curationImage = CurationImage.builder()
 			.imageName(imageUrl)
 			.build();
 		curationImageRepository.save(curationImage);

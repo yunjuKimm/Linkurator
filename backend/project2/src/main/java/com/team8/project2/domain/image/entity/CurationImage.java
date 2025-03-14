@@ -5,15 +5,12 @@ import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import com.team8.project2.domain.curation.curation.entity.Curation;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -29,17 +26,19 @@ import lombok.Setter;
 @Table(name = "curationImages")
 public class CurationImage {
 	@Id
-	@Column(name = "curationImageId")
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "curationImageId", nullable = false)
 	private Long id;
 
+	@Column(name = "imageName", nullable = false, unique = true, updatable = false)
 	private String imageName;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "curationId")
-	private Curation curation;
+	// 이벤트 기반으로 처리하기 위해 외래키 미사용
+	@Column(name = "curationId")
+	private Long curationId;
 
 	@CreatedDate
 	@Setter(AccessLevel.PRIVATE)
-	@Column(name = "uploadedAt", nullable = false)
+	@Column(name = "uploadedAt", nullable = false, updatable = false)
 	private LocalDateTime uploadedAt;
 }
