@@ -12,4 +12,8 @@ public interface CurationImageRepository extends JpaRepository<CurationImage, Lo
 	Optional<CurationImage> findByImageName(String imageUrl);
 
 	List<CurationImage> findByCurationId(Long curationId);
+
+	void deleteByImageName(String imageName);
+
+	void deleteByCurationId(Long curationId);
 }
