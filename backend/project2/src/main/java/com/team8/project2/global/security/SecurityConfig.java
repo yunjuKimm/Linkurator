@@ -53,7 +53,8 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.DELETE, "api/v1/admin/**").permitAll()
 				.requestMatchers(HttpMethod.GET, "/h2-console/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
-				.requestMatchers("/api/v1/playlists/**").permitAll()
+				.requestMatchers("/api/v1/playlists/**").authenticated()
+
 
 				// 권한 설정
 				.requestMatchers("/api/v1/posts/statistics").hasRole("ADMIN")

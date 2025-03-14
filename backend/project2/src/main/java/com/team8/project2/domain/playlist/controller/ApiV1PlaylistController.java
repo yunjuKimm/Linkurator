@@ -3,6 +3,7 @@ package com.team8.project2.domain.playlist.controller;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.service.LinkService;
+import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
@@ -184,8 +185,8 @@ public class ApiV1PlaylistController {
     /** ✅ 좋아요 증가 API */
     @PostMapping("/{id}/like")
     public RsData<Void> likePlaylist(@PathVariable Long id, HttpServletRequest request) {
-//        Long memberId = rq.getActor().getId();
-        Long memberId = 1L; // 테스트용
+        Long memberId = rq.getActor().getId();
+//        Long memberId = 1L; // 테스트용
         playlistService.likePlaylist(id, memberId);
         return RsData.success("좋아요가 변경되었습니다.", null);
     }
@@ -194,10 +195,10 @@ public class ApiV1PlaylistController {
      @GetMapping("/{id}/like/status")
     public RsData<Boolean> likeStatus(@PathVariable Long id, HttpServletRequest request) {
          try {
-//             Member member = rq.getActor();
-//             boolean liked = playlistLikeRepository.existsByPlaylistIdAndMemberId(id, member.getId());
-             Long memberId = 1L; // 테스트용
-             boolean liked = playlistLikeRepository.existsByIdPlaylistIdAndIdMemberId(id, memberId);
+             Member member = rq.getActor();
+             boolean liked = playlistLikeRepository.existsByIdPlaylistIdAndIdMemberId(id, member.getId());
+//             Long memberId = 1L; // 테스트용
+//             boolean liked = playlistLikeRepository.existsByIdPlaylistIdAndIdMemberId(id, memberId);
              return RsData.success("좋아요 상태를 조회하였습니다.", liked);
          } catch (Exception e) {
              return RsData.success("비로그인 상태입니다.", false);
@@ -207,8 +208,8 @@ public class ApiV1PlaylistController {
     /** ✅ 좋아요 취소 API */
     @DeleteMapping("/{id}/like")
     public RsData<Void> unlikePlaylist(@PathVariable Long id) {
-//        Long memberId = rq.getActor().getId();
-        Long memberId = 1L; // 테스트용
+        Long memberId = rq.getActor().getId();
+//        Long memberId = 1L; // 테스트용
         playlistService.unlikePlaylist(id, memberId);
         return RsData.success("좋아요가 취소되었습니다.", null);
     }
