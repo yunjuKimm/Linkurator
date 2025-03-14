@@ -33,7 +33,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Entity
-@Table(name = "reports")
+@Table(name = "Report")
 public class Report {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
