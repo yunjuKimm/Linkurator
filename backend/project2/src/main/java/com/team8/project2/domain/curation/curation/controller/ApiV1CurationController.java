@@ -1,23 +1,36 @@
 package com.team8.project2.domain.curation.curation.controller;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.curation.report.entity.ReportType;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 큐레이션(Curation) API 컨트롤러 클래스입니다.
@@ -40,9 +53,8 @@ public class ApiV1CurationController {
      */
     @PostMapping
     public RsData<CurationResDto> createCuration(@RequestBody CurationReqDTO curationReq) {
-        // Member member = rq.getActor();
+        Member member = rq.getActor();
 
-        Member member = memberService.findByUsername("username").get();
         Curation createdCuration = curationService.createCuration(
                 curationReq.getTitle(),
                 curationReq.getContent(),
@@ -94,11 +106,10 @@ public class ApiV1CurationController {
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
     public RsData<CurationDetailResDto> getCuration(@PathVariable Long id, HttpServletRequest request) {
-
         // 큐레이션 서비스 호출 시 IP를 전달
-        Curation curation = curationService.getCuration(id, request);
+        CurationDetailResDto curationDetailResDto = curationService.getCuration(id, request);
 
-        return new RsData<>("200-1", "조회 성공", CurationDetailResDto.fromEntity(curation));
+        return new RsData<>("200-1", "조회 성공", curationDetailResDto);
     }
 
     /**
@@ -132,9 +143,9 @@ public class ApiV1CurationController {
      * @return 좋아요 성공 응답
      */
     @PostMapping("/like/{id}")
+    @PreAuthorize("isAuthenticated()")
     public RsData<Void> likeCuration(@PathVariable Long id) {
-//        Long memberId = rq.getActor().getId();
-        Long memberId = 1L;
+       Long memberId = rq.getActor().getId();
         curationService.likeCuration(id, memberId);
         return new RsData<>("200-1", "글에 좋아요를 했습니다.", null);
     }
@@ -146,17 +157,28 @@ public class ApiV1CurationController {
      */
     @GetMapping("/like/{id}/status")
     public RsData<Boolean> isCurationLiked(@PathVariable Long id) {
-//        Long memberId = rq.getActor().getId();
-        Long memberId = 1L;
+       Long memberId = rq.getActor().getId();
         boolean isLiked = curationService.isLikedByMember(id, memberId);
         return new RsData<>("200-1", "좋아요 여부 확인 성공", isLiked);
     }
   
     @GetMapping("/following")
+    @Transactional(readOnly = true)
     @PreAuthorize("isAuthenticated()")
     public RsData<List<CurationResDto>> followingCuration() {
         Member actor = rq.getActor();
         List<CurationResDto> curations = curationService.getFollowingCurations(actor);
         return new RsData<>("200-1", "팔로우중인 큐레이터의 큐레이션이 조회되었습니다.", curations);
+    }
+
+    record CurationReportReqDto(@NotNull String reportType) {
+    }
+
+    @PostMapping("/{id}/report")
+    @PreAuthorize("isAuthenticated()")
+    public RsData<Void> reportCuration(@PathVariable Long id, @RequestBody @Valid CurationReportReqDto curationReportReqDto) {
+        ReportType reportType = ReportType.fromString(curationReportReqDto.reportType());
+        curationService.reportCuration(id, reportType);
+        return new RsData<>("200-1", "신고가 접수되었습니다.");
     }
 }

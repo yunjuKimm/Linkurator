@@ -210,23 +210,19 @@ export default function Header() {
           </Link>
           <nav className="flex items-center space-x-4 text-sm font-medium">
             <Link
-              href="/활동외"
-              className="transition-colors hover:text-gray-600"
-            >
-              활동외
-            </Link>
-            <Link
-              href="/북마크"
-              className="transition-colors hover:text-gray-600"
-            >
-              북마크
-            </Link>
-            <Link
               href="/explore/playlists"
               className="transition-colors hover:text-gray-600"
             >
               플레이리스트 탐색
             </Link>
+            {isLoggedIn && (
+              <Link
+                href="/following"
+                className="transition-colors hover:text-gray-600"
+              >
+                팔로잉
+              </Link>
+            )}
           </nav>
         </div>
         <div className="ml-auto flex items-center space-x-4">

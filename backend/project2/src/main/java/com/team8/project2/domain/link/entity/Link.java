@@ -61,12 +61,12 @@ public class Link {
     /**
      * 링크 제목
      */
-    @Column(name = "title", nullable = false)
+    @Column(name = "title")
     private String title;
 
     /**
      * 링크 설명
      */
-    @Column(name = "description", nullable = false)
+    @Column(name = "description")
     private String description;
 }

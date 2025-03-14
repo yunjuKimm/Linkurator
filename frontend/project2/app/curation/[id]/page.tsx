@@ -14,9 +14,15 @@ import {
   Trash2,
   MoreVertical,
   MousePointer,
+  Flag,
 } from "lucide-react";
 import RightSidebar from "@/app/components/right-sidebar";
 import CommentSection from "@/app/components/comment-section";
+import ReportModal from "@/app/components/report-modal";
+
+// API URL을 하드코딩된 값에서 환경 변수로 변경합니다.
+// 파일 상단에 다음 상수를 추가합니다:
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // 큐레이션 데이터 타입
 interface CurationData {
@@ -25,14 +31,18 @@ interface CurationData {
   content: string;
   authorName: string;
   authorImage: string;
+  authorImgUrl: string; // API 응답에 맞게 추가
+  authorId: number; // API 응답에 맞게 추가
   createdAt: string;
   modifiedAt: string;
   urls: { url: string; linkId?: number }[];
   tags: { name: string }[];
   likeCount: number;
-  viewCount: number; // Add viewCount field
-  comments: { authorName: string; content: string }[]; // 댓글
-  isLiked: boolean;
+  viewCount: number;
+  comments: { authorName: string; content: string }[];
+  liked: boolean; // isLiked에서 liked로 변경
+  login: boolean; // 로그인 상태 추가
+  followed: boolean; // 팔로우 상태 추가
 }
 
 // 링크 메타데이터 타입
@@ -54,6 +64,7 @@ export default function PostDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // API 데이터 호출
   async function fetchData() {
@@ -61,18 +72,18 @@ export default function PostDetail() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        `http://localhost:8080/api/v1/curation/${id}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-            "X-Forwarded-For": "127.0.0.1",
-            "X-Real-IP": "127.0.0.1",
-          },
-        }
-      );
+      // 그리고 모든 fetch 호출에서 하드코딩된 URL을 변경합니다.
+      // 예를 들어:
+      // 이렇게 변경합니다:
+      const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "X-Forwarded-For": "127.0.0.1",
+          "X-Real-IP": "127.0.0.1",
+        },
+      });
 
       if (!response.ok) {
         throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.");
@@ -105,19 +116,16 @@ export default function PostDetail() {
       await Promise.all(
         post.urls.map(async ({ url }) => {
           try {
-            const response = await fetch(
-              `http://localhost:8080/api/v1/link/preview`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
-                  "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
-                },
-                credentials: "include", // 쿠키를 포함하여 요청
-                body: JSON.stringify({ url }),
-              }
-            );
+            const response = await fetch(`${API_URL}/api/v1/link/preview`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
+                "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
+              },
+              credentials: "include", // 쿠키를 포함하여 요청
+              body: JSON.stringify({ url }),
+            });
 
             if (!response.ok) {
               throw new Error(
@@ -142,52 +150,17 @@ export default function PostDetail() {
     fetchAllLinksMetaData();
   }, [post?.urls]);
 
-  // 좋아요 상태 확인 함수 추가 (toggleLike 함수 위에 추가)
-  async function checkLikeStatus() {
-    if (!id) return;
-
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/curation/like/${id}/status`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "X-Forwarded-For": "127.0.0.1",
-            "X-Real-IP": "127.0.0.1",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("좋아요 상태 확인 실패");
-      }
-
-      const data = await response.json();
-
-      // post가 있을 때만 상태 업데이트, 그리고 현재 상태와 다를 때만 업데이트
-      if (post && post.isLiked !== data.data) {
-        setPost((prev) => (prev ? { ...prev, isLiked: data.data } : prev));
-      }
-    } catch (error) {
-      console.error("좋아요 상태 확인 중 오류:", error);
-    }
-  }
-
   // 좋아요 토글 API 호출
   const toggleLike = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/curation/like/${id}`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "X-Forwarded-For": "127.0.0.1",
-            "X-Real-IP": "127.0.0.1",
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/api/v1/curation/like/${id}`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "X-Forwarded-For": "127.0.0.1",
+          "X-Real-IP": "127.0.0.1",
+        },
+      });
 
       if (!response.ok) {
         throw new Error("좋아요 처리 실패");
@@ -198,8 +171,8 @@ export default function PostDetail() {
         prev
           ? {
               ...prev,
-              likeCount: prev.likeCount + (prev.isLiked ? -1 : 1),
-              isLiked: !prev.isLiked,
+              likeCount: prev.likeCount + (prev.liked ? -1 : 1),
+              liked: !prev.liked,
             }
           : prev
       );
@@ -208,29 +181,19 @@ export default function PostDetail() {
     }
   };
 
-  // 기존 useEffect 아래에 새 useEffect 추가 (모든 링크의 메타데이터 가져오기 useEffect 바로 아래에 추가)
-  useEffect(() => {
-    if (post && id) {
-      checkLikeStatus();
-    }
-  }, [id]);
-
   // 큐레이션 삭제 처리
   const handleDeleteCuration = async () => {
     if (!confirm("정말로 이 큐레이션을 삭제하시겠습니까?")) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/curation/${id}`,
-        {
-          method: "DELETE",
-          credentials: "include", // 쿠키를 포함하여 요청
-          headers: {
-            "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
-            "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
+        method: "DELETE",
+        credentials: "include", // 쿠키를 포함하여 요청
+        headers: {
+          "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
+          "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
+        },
+      });
 
       if (!response.ok) {
         throw new Error("큐레이션 삭제에 실패했습니다.");
@@ -320,17 +283,14 @@ export default function PostDetail() {
 
     try {
       // 링크 클릭 시 백엔드에 조회수 증가 요청
-      const response = await fetch(
-        `http://localhost:8080/api/v1/link/${linkId}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "X-Forwarded-For": "127.0.0.1",
-            "X-Real-IP": "127.0.0.1",
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/api/v1/link/${linkId}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "X-Forwarded-For": "127.0.0.1",
+          "X-Real-IP": "127.0.0.1",
+        },
+      });
 
       if (response.ok) {
         const result = await response.json();
@@ -339,6 +299,72 @@ export default function PostDetail() {
       console.error("링크 클릭 처리 중 오류:", error);
     }
     window.location.reload();
+  };
+
+  // Add follow function
+  const handleFollow = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/members/${post.authorName}/follow`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("팔로우 처리 실패");
+      }
+
+      // 기존 post 상태를 업데이트하여 즉각적인 UI 반영
+      setPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              followed: true,
+            }
+          : prev
+      );
+    } catch (error) {
+      console.error("팔로우 처리 중 오류:", error);
+    }
+  };
+
+  // Add unfollow function
+  const handleUnfollow = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/members/${post.authorName}/unfollow`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("언팔로우 처리 실패");
+      }
+
+      // 기존 post 상태를 업데이트하여 즉각적인 UI 반영
+      setPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              followed: false,
+            }
+          : prev
+      );
+    } catch (error) {
+      console.error("언팔로우 처리 중 오류:", error);
+    }
   };
 
   return (
@@ -389,7 +415,7 @@ export default function PostDetail() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Image
-                src={post.authorImage || "/placeholder.svg?height=40&width=40"}
+                src={post.authorImgUrl || "/placeholder.svg?height=40&width=40"}
                 alt={post.authorName}
                 width={40}
                 height={40}
@@ -402,9 +428,26 @@ export default function PostDetail() {
                 )}`}</p>
               </div>
             </div>
-            <button className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
-              팔로우
-            </button>
+            {post.login ? (
+              post.authorId !== Number(sessionStorage.getItem("userId")) && (
+                <button
+                  onClick={post.followed ? handleUnfollow : handleFollow}
+                  className={`px-4 py-2 rounded-md transition-colors ${
+                    post.followed
+                      ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {post.followed ? "팔로우중" : "팔로우"}
+                </button>
+              )
+            ) : (
+              <Link href="/auth/login">
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                  로그인하고 팔로우
+                </button>
+              </Link>
+            )}
           </div>
 
           <h1 className="text-3xl font-bold">{post.title}</h1>
@@ -527,7 +570,7 @@ export default function PostDetail() {
               >
                 <Heart
                   className={`h-5 w-5 ${
-                    post.isLiked ? "text-red-500 fill-red-500" : "text-gray-500"
+                    post.liked ? "text-red-500 fill-red-500" : "text-gray-500"
                   }`}
                 />
                 <span className="font-medium">{post.likeCount}</span>
@@ -543,6 +586,12 @@ export default function PostDetail() {
               </button>
               <button className="rounded-md border p-2 hover:bg-gray-50">
                 <Share2 className="h-5 w-5 text-gray-500" />
+              </button>
+              <button
+                className="rounded-md border p-2 hover:bg-gray-50 hover:text-red-500"
+                onClick={() => setShowReportModal(true)}
+              >
+                <Flag className="h-5 w-5 text-gray-500 hover:text-red-500" />
               </button>
             </div>
           </div>
@@ -560,7 +609,7 @@ export default function PostDetail() {
             <h3 className="mb-3 font-semibold">이 글의 작성자</h3>
             <div className="flex items-center space-x-3">
               <Image
-                src={post.authorImage || "/placeholder.svg?height=48&width=48"}
+                src={post.authorImgUrl || "/placeholder.svg?height=48&width=48"}
                 alt={post.authorName}
                 width={48}
                 height={48}
@@ -571,12 +620,35 @@ export default function PostDetail() {
                 <p className="text-xs text-gray-500">15개의 글 작성</p>
               </div>
             </div>
-            <button className="mt-3 w-full rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
-              팔로우
-            </button>
+            {post.login ? (
+              post.authorId !== Number(sessionStorage.getItem("userId")) && (
+                <button
+                  onClick={post.followed ? handleUnfollow : handleFollow}
+                  className={`mt-3 w-full px-4 py-2 rounded-md transition-colors ${
+                    post.followed
+                      ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {post.followed ? "팔로우중" : "팔로우"}
+                </button>
+              )
+            ) : (
+              <Link href="/auth/login">
+                <button className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                  로그인하고 팔로우
+                </button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
+      {/* 신고 모달 */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        curationId={Number(id)}
+      />
     </main>
   );
 }

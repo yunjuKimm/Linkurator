@@ -1,9 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react";
+import { Heart, MessageSquare, Bookmark, Share2, Flag } from "lucide-react";
 import { stripHtml } from "@/lib/htmlutils";
 import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
+import ReportModal from "./report-modal";
+
+// API URL을 하드코딩된 값에서 환경 변수로 변경합니다.
+// 파일 상단에 다음 상수를 추가합니다:
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // Curation 데이터 인터페이스 정의
 interface Curation {
@@ -51,6 +56,10 @@ export default function PostList() {
   const [likedCurations, setLikedCurations] = useState<{
     [key: number]: boolean;
   }>({}); // 좋아요 상태 관리
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [selectedCurationId, setSelectedCurationId] = useState<number | null>(
+    null
+  );
 
   // API 요청 함수
   const fetchCurations = async (params: CurationRequestParams) => {
@@ -65,36 +74,15 @@ export default function PostList() {
         ...(params.content ? { content: params.content } : {}),
       }).toString();
 
-      // API 요청 시 오류 처리 개선
-      try {
-        const response = await fetch(
-          `http://localhost:8080/api/v1/curation?${queryParams}`
-        );
-
-        // 응답 상태 코드 로깅
-        console.log("API 응답 상태:", response.status, response.statusText);
-
-        if (!response.ok) {
-          // 오류 응답의 내용도 확인
-          const errorText = await response.text();
-          console.error("API 오류 응답:", errorText);
-          throw new Error(
-            `Network response was not ok: ${response.status} ${response.statusText}`
-          );
-        }
-
-        const data = await response.json();
-        if (data && data.data) {
-          setCurations(data.data);
-        } else {
-          console.error("No data found in the response");
-          setCurations([]);
-        }
-      } catch (error) {
-        console.error("API 요청 실패:", error);
-        // 빈 배열로 설정하여 UI가 계속 작동하도록 함
-        setCurations([]);
-        throw error; // 상위 catch 블록으로 오류 전파
+      const response = await fetch(`${API_URL}/api/v1/curation?${queryParams}`);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const data = await response.json();
+      if (data && data.data) {
+        setCurations(data.data);
+      } else {
+        console.error("No data found in the response");
       }
     } catch (error) {
       console.error("Error fetching curations:", error);
@@ -167,6 +155,7 @@ export default function PostList() {
     try {
       await fetch(`http://localhost:8080/api/v1/curation/like/${id}`, {
         method: "POST",
+        credentials: "include",
       });
 
       // 상태 업데이트로 UI 갱신
@@ -188,6 +177,12 @@ export default function PostList() {
     } catch (error) {
       console.error("Error toggling like:", error);
     }
+  };
+
+  // 신고 모달 열기 함수 추가
+  const openReportModal = (id: number) => {
+    setSelectedCurationId(id);
+    setReportModalOpen(true);
   };
 
   // 큐레이션마다 메타 데이터 추출
@@ -252,7 +247,10 @@ export default function PostList() {
   const checkLikedStatus = async (id: number) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/v1/curation/like/${id}/status`
+        `http://localhost:8080/api/v1/curation/like/${id}/status`,
+        {
+          credentials: "include",
+        }
       );
       if (!response.ok) throw new Error("Failed to fetch like status");
 
@@ -434,7 +432,7 @@ export default function PostList() {
                   <div className="flex items-center space-x-4">
                     <button
                       className="flex items-center space-x-1 text-sm text-gray-500"
-                      onClick={() => toggleLike(curation.id)} // 좋아요 버튼 클릭 시 likeCuration 호출
+                      onClick={() => toggleLike(curation.id)}
                     >
                       <Heart
                         className={`w-6 h-6 ${
@@ -457,12 +455,23 @@ export default function PostList() {
                     <button>
                       <Share2 className="h-4 w-4 text-gray-500" />
                     </button>
+                    <button onClick={() => openReportModal(curation.id)}>
+                      <Flag className="h-4 w-4 text-gray-500 hover:text-red-500" />
+                    </button>
                   </div>
                 </div>
               </div>
             ))
           )}
         </div>
+      )}
+      {/* 신고 모달 */}
+      {selectedCurationId && (
+        <ReportModal
+          isOpen={reportModalOpen}
+          onClose={() => setReportModalOpen(false)}
+          curationId={selectedCurationId}
+        />
       )}
     </>
   );
