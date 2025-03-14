@@ -78,4 +78,31 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 
 	@Query("SELECT c FROM Curation c WHERE c.member IN (SELECT f.followee FROM Follow f WHERE f.follower.id = :userId) ORDER BY c.createdAt DESC")
 	List<Curation> findFollowingCurations(@Param("userId") Long userId);
+
+	/**
+	 * 일정 개수 이상 신고된 큐레이션을 조회하는 메서드입니다.
+	 *
+	 * @param minReports 최소 신고 개수
+	 * @return 일정 개수 이상 신고된 큐레이션 목록
+	 */
+	@Query("SELECT c.id FROM Curation c WHERE c.reportCount >= :minReports")
+	List<Long> findReportedCurationIds(int minReports);
+
+	/**
+	 * 전체 큐레이션의 조회수를 합산하는 메서드입니다.
+	 * 조회수가 없을 경우 0을 반환합니다.
+	 *
+	 * @return 전체 큐레이션의 조회수 합산 값
+	 */
+	@Query("SELECT COALESCE(SUM(c.views), 0) FROM Curation c")
+	long sumTotalViews();
+
+	/**
+	 * 전체 큐레이션의 좋아요 수를 합산하는 메서드입니다.
+	 * 좋아요 수가 없을 경우 0을 반환합니다.
+	 *
+	 * @return 전체 큐레이션의 좋아요 합산 값
+	 */
+	@Query("SELECT COALESCE(SUM(c.likes), 0) FROM Curation c")
+	long sumTotalLikes();
 }
