@@ -35,6 +35,8 @@ interface CurationData {
   viewCount: number;
   comments: { authorName: string; content: string }[];
   liked: boolean; // isLiked에서 liked로 변경
+  login: boolean; // 로그인 상태 추가
+  followed: boolean; // 팔로우 상태 추가
 }
 
 // 링크 메타데이터 타입
@@ -304,6 +306,72 @@ export default function PostDetail() {
     window.location.reload();
   };
 
+  // Add follow function
+  const handleFollow = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/v1/members/${post.authorName}/follow`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("팔로우 처리 실패");
+      }
+
+      // 기존 post 상태를 업데이트하여 즉각적인 UI 반영
+      setPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              followed: true,
+            }
+          : prev
+      );
+    } catch (error) {
+      console.error("팔로우 처리 중 오류:", error);
+    }
+  };
+
+  // Add unfollow function
+  const handleUnfollow = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/v1/members/${post.authorName}/unfollow`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("언팔로우 처리 실패");
+      }
+
+      // 기존 post 상태를 업데이트하여 즉각적인 UI 반영
+      setPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              followed: false,
+            }
+          : prev
+      );
+    } catch (error) {
+      console.error("언팔로우 처리 중 오류:", error);
+    }
+  };
+
   return (
     <main className="container grid grid-cols-12 gap-6 px-4 py-6">
       <div className="col-span-12 lg:col-span-9">
@@ -365,9 +433,26 @@ export default function PostDetail() {
                 )}`}</p>
               </div>
             </div>
-            <button className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
-              팔로우
-            </button>
+            {post.login ? (
+              post.authorId !== Number(sessionStorage.getItem("userId")) && (
+                <button
+                  onClick={post.followed ? handleUnfollow : handleFollow}
+                  className={`px-4 py-2 rounded-md transition-colors ${
+                    post.followed
+                      ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {post.followed ? "팔로우중" : "팔로우"}
+                </button>
+              )
+            ) : (
+              <Link href="/auth/login">
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                  로그인하고 팔로우
+                </button>
+              </Link>
+            )}
           </div>
 
           <h1 className="text-3xl font-bold">{post.title}</h1>
@@ -534,9 +619,26 @@ export default function PostDetail() {
                 <p className="text-xs text-gray-500">15개의 글 작성</p>
               </div>
             </div>
-            <button className="mt-3 w-full rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
-              팔로우
-            </button>
+            {post.login ? (
+              post.authorId !== Number(sessionStorage.getItem("userId")) && (
+                <button
+                  onClick={post.followed ? handleUnfollow : handleFollow}
+                  className={`mt-3 w-full px-4 py-2 rounded-md transition-colors ${
+                    post.followed
+                      ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {post.followed ? "팔로우중" : "팔로우"}
+                </button>
+              )
+            ) : (
+              <Link href="/auth/login">
+                <button className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                  로그인하고 팔로우
+                </button>
+              </Link>
+            )}
           </div>
         </div>
       </div>

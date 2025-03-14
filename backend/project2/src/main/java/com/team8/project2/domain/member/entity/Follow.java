@@ -60,4 +60,8 @@ public class Follow {
 	public String getFolloweeName() {
 		return followee.getUsername();
 	}
+
+	public String getFolloweeProfileImage() {
+		return followee.getProfileImage();
+	}
 }

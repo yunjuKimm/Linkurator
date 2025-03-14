@@ -1,7 +1,5 @@
 package com.team8.project2.domain.member.dto;
 
-import java.time.LocalDateTime;
-
 import com.team8.project2.domain.member.entity.Follow;
 
 import lombok.Getter;
