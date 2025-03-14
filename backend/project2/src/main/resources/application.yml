@@ -22,6 +22,11 @@ spring:
       port: 6379
       timeout: 6000ms
 
+  cloud:
+    aws:
+      s3:
+        bucket: linkurator-bucket
+
 custom:
   jwt:
     secret-key: abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890

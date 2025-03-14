@@ -1,33 +1,39 @@
 package com.team8.project2.domain.curation.curation.service;
 
-import com.team8.project2.domain.curation.curation.dto.CurationResDto;
-import com.team8.project2.domain.curation.curation.entity.Curation;
-import com.team8.project2.domain.curation.curation.entity.CurationLink;
-import com.team8.project2.domain.curation.curation.entity.CurationTag;
-import com.team8.project2.domain.curation.curation.entity.SearchOrder;
-import com.team8.project2.domain.curation.curation.repository.CurationLinkRepository;
-import com.team8.project2.domain.curation.curation.repository.CurationRepository;
-import com.team8.project2.domain.curation.curation.repository.CurationTagRepository;
-import com.team8.project2.domain.curation.like.entity.Like;
-import com.team8.project2.domain.curation.like.repository.LikeRepository;
-import com.team8.project2.domain.curation.tag.service.TagService;
-import com.team8.project2.domain.link.service.LinkService;
-import com.team8.project2.domain.member.entity.Member;
-import com.team8.project2.domain.member.repository.FollowRepository;
-import com.team8.project2.domain.member.repository.MemberRepository;
-import com.team8.project2.global.exception.ServiceException;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.team8.project2.domain.curation.curation.dto.CurationResDto;
+import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.entity.CurationLink;
+import com.team8.project2.domain.curation.curation.entity.CurationTag;
+import com.team8.project2.domain.curation.curation.entity.SearchOrder;
+import com.team8.project2.domain.curation.curation.event.CurationDeleteEvent;
+import com.team8.project2.domain.curation.curation.event.CurationUpdateEvent;
+import com.team8.project2.domain.curation.curation.repository.CurationLinkRepository;
+import com.team8.project2.domain.curation.curation.repository.CurationRepository;
+import com.team8.project2.domain.curation.curation.repository.CurationTagRepository;
+import com.team8.project2.domain.curation.like.entity.Like;
+import com.team8.project2.domain.curation.like.repository.LikeRepository;
+import com.team8.project2.domain.curation.tag.service.TagService;
+import com.team8.project2.domain.image.entity.CurationImage;
+import com.team8.project2.domain.image.repository.CurationImageRepository;
+import com.team8.project2.domain.link.service.LinkService;
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.MemberRepository;
+import com.team8.project2.global.exception.ServiceException;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 큐레이션 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
@@ -40,17 +46,17 @@ public class CurationService {
 	private final CurationRepository curationRepository;
 	private final CurationLinkRepository curationLinkRepository;
 	private final CurationTagRepository curationTagRepository;
+	private final CurationImageRepository curationImageRepository;
 	private final LinkService linkService;
 	private final TagService tagService;
 	private final MemberRepository memberRepository;
-    private final LikeRepository likeRepository;
+	private final LikeRepository likeRepository;
+	private final ApplicationEventPublisher eventPublisher;
 	private final CurationViewService curationViewService;
 
 	private final RedisTemplate<String, Object> redisTemplate;
 	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
 	private static final String LIKE_COUNT_KEY = "curation:like_count"; // 좋아요 수 저장
-
-	private final FollowRepository followRepository;
 
 
 	/**
@@ -73,7 +79,6 @@ public class CurationService {
 	 */
 	@Transactional
 	public Curation createCuration(String title, String content, List<String> urls, List<String> tags, Member member) {
-
 		Curation curation = Curation.builder()
 			.member(member)
 			.title(title)
@@ -98,6 +103,22 @@ public class CurationService {
 			}).collect(Collectors.toList());
 		curationTagRepository.saveAll(curationTags);
 		curation.setTags(curationTags);
+
+		// 작성한 큐레이션에 이미지가 첨부되어 있다면, 이미지에 큐레이션 번호를 연결 (연결이 이미 있는 이미지는 무시)
+		List<String> imageNames = curation.getImageNames();
+
+		for (int i = 0; i < imageNames.size(); i++) {
+			System.out.println(i + ": " + imageNames.get(i));
+		}
+
+		for (String imageName : imageNames) {
+			Optional<CurationImage> opImage = curationImageRepository.findByImageName(imageName);
+			if (opImage.isPresent()) {
+				CurationImage curationImage = opImage.get();
+				curationImage.setCurationIdIfNull(curation.getId());
+				curationImageRepository.save(curationImage);
+			}
+		}
 
 		return curation;
 	}
@@ -124,8 +145,7 @@ public class CurationService {
 		curation.setTitle(title);
 		curation.setContent(content);
 
-//		 큐레이션 - 링크 연결 업데이트
-
+		// 큐레이션 - 링크 연결 업데이트
 		List<CurationLink> curationLinks = urls.stream()
 			.map(url -> {
 				CurationLink curationLink = new CurationLink();
@@ -134,8 +154,8 @@ public class CurationService {
 		curationLinkRepository.saveAll(curationLinks);
 		curation.getCurationLinks().clear();
 		curation.getCurationLinks().addAll(curationLinks);
-//		 큐레이션 - 태그 연결 업데이트
 
+		// 큐레이션 - 태그 연결 업데이트
 		List<CurationTag> curationTags = tags.stream()
 			.map(tag -> {
 				CurationTag curationTag = new CurationTag();
@@ -145,7 +165,15 @@ public class CurationService {
 		curation.getTags().clear();
 		curation.getTags().addAll(curationTags);
 
-		return curationRepository.save(curation);
+		Curation result = curationRepository.save(curation);
+
+		// 큐레이션 수정 이벤트
+		eventPublisher.publishEvent(CurationUpdateEvent.builder()
+			.curationId(curation.getId())
+			.imageUrls(curation.getImageNames())
+			.build());
+
+		return result;
 	}
 
 	/**
@@ -166,6 +194,9 @@ public class CurationService {
 		curationLinkRepository.deleteByCurationId(curationId);
 		curationTagRepository.deleteByCurationId(curationId);
 		curationRepository.deleteById(curationId);
+
+		// 큐레이션 삭제 이벤트
+		eventPublisher.publishEvent(new CurationDeleteEvent(curationId));
 	}
 
 	/**
@@ -229,7 +260,6 @@ public class CurationService {
 		return curation;
 	}
 
-
 	/**
      * 큐레이션을 검색합니다.
      * @param tags 태그 목록 (선택적)
@@ -288,8 +318,6 @@ public class CurationService {
 	public boolean isLikedByMember(Long curationId, Long memberId) {
 		return likeRepository.existsByCurationIdAndMemberId(curationId, memberId);
 	}
-
-
 
 
 	/**

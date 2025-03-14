@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useParams } from "next/navigation" // `useParams`를 사용하여 params를 받아옵니다.
-import Image from "next/image"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation"; // `useParams`를 사용하여 params를 받아옵니다.
+import Image from "next/image";
+import Link from "next/link";
 import {
   Heart,
   MessageSquare,
@@ -14,241 +14,266 @@ import {
   Trash2,
   MoreVertical,
   MousePointer,
-} from "lucide-react"
-import RightSidebar from "@/app/components/right-sidebar"
-import CommentSection from "@/app/components/comment-section"
+} from "lucide-react";
+import RightSidebar from "@/app/components/right-sidebar";
+import CommentSection from "@/app/components/comment-section";
 
 // 큐레이션 데이터 타입
 interface CurationData {
-  id: number
-  title: string
-  content: string
-  authorName: string
-  authorImage: string
-  createdAt: string
-  modifiedAt: string
-  urls: { url: string; linkId?: number }[]
-  tags: { name: string }[]
-  likeCount: number
-  viewCount: number // Add viewCount field
-  comments: { authorName: string; content: string }[] // 댓글
-  isLiked: boolean
+  id: number;
+  title: string;
+  content: string;
+  authorName: string;
+  authorImage: string;
+  createdAt: string;
+  modifiedAt: string;
+  urls: { url: string; linkId?: number }[];
+  tags: { name: string }[];
+  likeCount: number;
+  viewCount: number; // Add viewCount field
+  comments: { authorName: string; content: string }[]; // 댓글
+  isLiked: boolean;
 }
 
 // 링크 메타데이터 타입
 interface LinkMetaData {
-  title: string
-  description: string
-  image: string
-  url: string
-  click?: number
-  linkId?: number
+  title: string;
+  description: string;
+  image: string;
+  url: string;
+  click?: number;
+  linkId?: number;
 }
 
 export default function PostDetail() {
-  const { id } = useParams() // useParams로 id 값을 받습니다.
-  const [post, setPost] = useState<CurationData | null>(null)
-  const [linksMetaData, setLinksMetaData] = useState<Map<string, LinkMetaData>>(new Map())
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [showActionMenu, setShowActionMenu] = useState(false)
+  const { id } = useParams(); // useParams로 id 값을 받습니다.
+  const [post, setPost] = useState<CurationData | null>(null);
+  const [linksMetaData, setLinksMetaData] = useState<Map<string, LinkMetaData>>(
+    new Map()
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showActionMenu, setShowActionMenu] = useState(false);
 
   // API 데이터 호출
   async function fetchData() {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          Accept: "application/json",
-          "X-Forwarded-For": "127.0.0.1",
-          "X-Real-IP": "127.0.0.1",
-        },
-      })
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curation/${id}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.")
+        throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.");
       }
 
-      const data = await response.json()
-      setPost(data.data)
+      const data = await response.json();
+      setPost(data.data);
     } catch (err) {
-      setError((err as Error).message)
-      console.error("Error fetching curation data:", err)
+      setError((err as Error).message);
+      console.error("Error fetching curation data:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   // 최초 데이터 불러오기
   useEffect(() => {
-    fetchData()
-  }, [id])
+    fetchData();
+  }, [id]);
 
   // 모든 링크의 메타데이터 가져오기
   useEffect(() => {
-    if (!post?.urls?.length) return
+    if (!post?.urls?.length) return;
 
     // 각 URL에 대한 메타데이터 가져오기
     async function fetchAllLinksMetaData() {
-      const newLinksMetaData = new Map<string, LinkMetaData>()
+      const newLinksMetaData = new Map<string, LinkMetaData>();
 
       // 모든 URL에 대해 병렬로 메타데이터 가져오기
       await Promise.all(
         post.urls.map(async ({ url }) => {
           try {
-            const response = await fetch(`http://localhost:8080/api/v1/link/preview`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
-                "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
-              },
-              credentials: "include", // 쿠키를 포함하여 요청
-              body: JSON.stringify({ url }),
-            })
+            const response = await fetch(
+              `http://localhost:8080/api/v1/link/preview`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
+                  "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
+                },
+                credentials: "include", // 쿠키를 포함하여 요청
+                body: JSON.stringify({ url }),
+              }
+            );
 
             if (!response.ok) {
-              throw new Error(`링크 메타데이터를 가져오는 데 실패했습니다: ${url}`)
+              throw new Error(
+                `링크 메타데이터를 가져오는 데 실패했습니다: ${url}`
+              );
             }
 
-            const data = await response.json()
-            console.log(data)
+            const data = await response.json();
+            console.log(data);
             if (data.data) {
-              newLinksMetaData.set(url, data.data)
+              newLinksMetaData.set(url, data.data);
             }
           } catch (error) {
-            console.error(`Error fetching metadata for ${url}:`, error)
+            console.error(`Error fetching metadata for ${url}:`, error);
           }
-        }),
-      )
+        })
+      );
 
-      setLinksMetaData(newLinksMetaData)
+      setLinksMetaData(newLinksMetaData);
     }
 
-    fetchAllLinksMetaData()
-  }, [post?.urls])
+    fetchAllLinksMetaData();
+  }, [post?.urls]);
 
   // 좋아요 상태 확인 함수 추가 (toggleLike 함수 위에 추가)
   async function checkLikeStatus() {
-    if (!id) return
+    if (!id) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/curation/like/${id}/status`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "X-Forwarded-For": "127.0.0.1",
-          "X-Real-IP": "127.0.0.1",
-        },
-      })
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curation/like/${id}/status`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("좋아요 상태 확인 실패")
+        throw new Error("좋아요 상태 확인 실패");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
-      // post가 있을 때만 상태 업데이트
-      if (post) {
-        setPost((prev) => (prev ? { ...prev, isLiked: data.data } : prev))
+      // post가 있을 때만 상태 업데이트, 그리고 현재 상태와 다를 때만 업데이트
+      if (post && post.isLiked !== data.data) {
+        setPost((prev) => (prev ? { ...prev, isLiked: data.data } : prev));
       }
     } catch (error) {
-      console.error("좋아요 상태 확인 중 오류:", error)
+      console.error("좋아요 상태 확인 중 오류:", error);
     }
   }
 
   // 좋아요 토글 API 호출
   const toggleLike = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/curation/like/${id}`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "X-Forwarded-For": "127.0.0.1",
-          "X-Real-IP": "127.0.0.1",
-        },
-      })
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curation/like/${id}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("좋아요 처리 실패")
+        throw new Error("좋아요 처리 실패");
       }
 
       // 기존 post 상태를 업데이트하여 즉각적인 UI 반영
       setPost((prev) =>
-        prev ? { ...prev, likeCount: prev.likeCount + (prev.isLiked ? -1 : 1), isLiked: !prev.isLiked } : prev,
-      )
+        prev
+          ? {
+              ...prev,
+              likeCount: prev.likeCount + (prev.isLiked ? -1 : 1),
+              isLiked: !prev.isLiked,
+            }
+          : prev
+      );
     } catch (error) {
-      console.error("좋아요 처리 중 오류:", error)
+      console.error("좋아요 처리 중 오류:", error);
     }
-  }
+  };
 
   // 기존 useEffect 아래에 새 useEffect 추가 (모든 링크의 메타데이터 가져오기 useEffect 바로 아래에 추가)
   useEffect(() => {
-    if (post) {
-      checkLikeStatus()
+    if (post && id) {
+      checkLikeStatus();
     }
-  }, [post, id])
+  }, [id]);
 
   // 큐레이션 삭제 처리
   const handleDeleteCuration = async () => {
-    if (!confirm("정말로 이 큐레이션을 삭제하시겠습니까?")) return
+    if (!confirm("정말로 이 큐레이션을 삭제하시겠습니까?")) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/curation/${id}`, {
-        method: "DELETE",
-        credentials: "include", // 쿠키를 포함하여 요청
-        headers: {
-          "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
-          "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
-        },
-      })
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curation/${id}`,
+        {
+          method: "DELETE",
+          credentials: "include", // 쿠키를 포함하여 요청
+          headers: {
+            "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
+            "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("큐레이션 삭제에 실패했습니다.")
+        throw new Error("큐레이션 삭제에 실패했습니다.");
       }
 
       // 삭제 성공 시 홈으로 리다이렉트
-      window.location.href = "/"
+      window.location.href = "/";
     } catch (error) {
-      console.error("큐레이션 삭제 중 오류 발생:", error)
-      alert("삭제 중 오류가 발생했습니다.")
+      console.error("큐레이션 삭제 중 오류 발생:", error);
+      alert("삭제 중 오류가 발생했습니다.");
     }
-  }
+  };
 
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
     try {
-      const date = new Date(dateString)
+      const date = new Date(dateString);
       if (isNaN(date.getTime())) {
-        return "유효하지 않은 날짜"
+        return "유효하지 않은 날짜";
       }
 
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, "0")
-      const day = String(date.getDate()).padStart(2, "0")
-      const hours = String(date.getHours()).padStart(2, "0")
-      const minutes = String(date.getMinutes()).padStart(2, "0")
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
 
-      return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`
+      return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
     } catch (error) {
-      console.error("Date formatting error:", error)
-      return "날짜 형식 오류"
+      console.error("Date formatting error:", error);
+      return "날짜 형식 오류";
     }
-  }
+  };
 
   // URL에서 도메인 추출 함수
   const extractDomain = (url: string) => {
     try {
-      return new URL(url).hostname
+      return new URL(url).hostname;
     } catch (error) {
-      console.error("URL parsing error:", error)
-      return url
+      console.error("URL parsing error:", error);
+      return url;
     }
-  }
+  };
 
   // 로딩 상태 처리
   if (loading) {
@@ -256,7 +281,7 @@ export default function PostDetail() {
       <div className="flex justify-center items-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -267,7 +292,7 @@ export default function PostDetail() {
           <p>⚠️ {error}</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!post) {
@@ -278,52 +303,62 @@ export default function PostDetail() {
           <p>요청하신 큐레이션 정보가 존재하지 않습니다.</p>
         </div>
       </div>
-    )
+    );
   }
 
   // 수정 여부 확인
   const isModified =
-    Math.floor(new Date(post.modifiedAt).getTime() / 1000) !== Math.floor(new Date(post.createdAt).getTime() / 1000)
+    Math.floor(new Date(post.modifiedAt).getTime() / 1000) !==
+    Math.floor(new Date(post.createdAt).getTime() / 1000);
 
   // URL 배열이 있는지 확인
-  const hasUrls = post.urls && post.urls.length > 0
+  const hasUrls = post.urls && post.urls.length > 0;
 
   // 링크 클릭 처리 함수 추가
   const handleLinkClick = async (url: string, linkId?: number) => {
-    if (!linkId) return
+    if (!linkId) return;
 
     try {
       // 링크 클릭 시 백엔드에 조회수 증가 요청
-      const response = await fetch(`http://localhost:8080/api/v1/link/${linkId}`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "X-Forwarded-For": "127.0.0.1",
-          "X-Real-IP": "127.0.0.1",
-        },
-      })
+      const response = await fetch(
+        `http://localhost:8080/api/v1/link/${linkId}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
 
       if (response.ok) {
-        const result = await response.json()
+        const result = await response.json();
       }
     } catch (error) {
-      console.error("링크 클릭 처리 중 오류:", error)
+      console.error("링크 클릭 처리 중 오류:", error);
     }
-    window.location.reload()
-  }
+    window.location.reload();
+  };
 
   return (
     <main className="container grid grid-cols-12 gap-6 px-4 py-6">
       <div className="col-span-12 lg:col-span-9">
         <div className="mb-6 flex justify-between items-center">
-          <Link href="/" className="inline-flex items-center text-sm text-gray-500 hover:text-black">
+          <Link
+            href="/"
+            className="inline-flex items-center text-sm text-gray-500 hover:text-black"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             홈으로 돌아가기
           </Link>
 
           {/* 큐레이션 수정/삭제 버튼 */}
           <div className="relative">
-            <button onClick={() => setShowActionMenu(!showActionMenu)} className="p-2 rounded-full hover:bg-gray-100">
+            <button
+              onClick={() => setShowActionMenu(!showActionMenu)}
+              className="p-2 rounded-full hover:bg-gray-100"
+            >
               <MoreVertical className="h-5 w-5 text-gray-500" />
             </button>
 
@@ -362,38 +397,52 @@ export default function PostDetail() {
               />
               <div>
                 <p className="font-medium">{post.authorName}</p>
-                <p className="text-xs text-gray-500">{`작성된 날짜: ${formatDate(post.createdAt)}`}</p>
+                <p className="text-xs text-gray-500">{`작성된 날짜: ${formatDate(
+                  post.createdAt
+                )}`}</p>
               </div>
             </div>
-            <button className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">팔로우</button>
+            <button className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
+              팔로우
+            </button>
           </div>
 
           <h1 className="text-3xl font-bold">{post.title}</h1>
           <div className="flex items-center space-x-2 mt-1 mb-4">
-            <p className="text-sm text-gray-500">조회수 {post.viewCount || 0}</p>
+            <p className="text-sm text-gray-500">
+              조회수 {post.viewCount || 0}
+            </p>
           </div>
 
           {/* 링크 카드 섹션 - 여러 URL 지원 */}
           {hasUrls && (
             <div className="my-6 space-y-4">
-              <h2 className="text-xl font-semibold">링크 ({post.urls.length}개)</h2>
+              <h2 className="text-xl font-semibold">
+                링크 ({post.urls.length}개)
+              </h2>
 
               {/* 각 URL마다 별도의 카드 생성 */}
               {post.urls.map(({ url }, index) => (
-                <div key={`${url}-${index}`} className="rounded-lg border shadow-sm overflow-hidden">
+                <div
+                  key={`${url}-${index}`}
+                  className="rounded-lg border shadow-sm overflow-hidden"
+                >
                   <div
                     className={`bg-gradient-to-r ${
                       index % 3 === 0
                         ? "from-blue-50 to-indigo-50"
                         : index % 3 === 1
-                          ? "from-green-50 to-teal-50"
-                          : "from-purple-50 to-pink-50"
+                        ? "from-green-50 to-teal-50"
+                        : "from-purple-50 to-pink-50"
                     } p-6`}
                   >
                     <div className="flex flex-col sm:flex-row items-start sm:items-center">
                       <div className="mr-0 sm:mr-4 mb-4 sm:mb-0 flex-shrink-0">
                         <Image
-                          src={linksMetaData.get(url)?.image || "/placeholder.svg?height=80&width=80"}
+                          src={
+                            linksMetaData.get(url)?.image ||
+                            "/placeholder.svg?height=80&width=80"
+                          }
                           alt="링크 썸네일"
                           width={80}
                           height={80}
@@ -402,20 +451,29 @@ export default function PostDetail() {
                       </div>
                       <div className="flex-1">
                         <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                          {linksMetaData.get(url)?.title || "링크 제목을 불러오는 중..."}
+                          {linksMetaData.get(url)?.title ||
+                            "링크 제목을 불러오는 중..."}
                         </h2>
                         <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                          {linksMetaData.get(url)?.description || "설명을 불러오는 중..."}
+                          {linksMetaData.get(url)?.description ||
+                            "설명을 불러오는 중..."}
                         </p>
                         <div className="flex items-center text-sm">
-                          <span className="text-blue-600 truncate max-w-[200px]">{extractDomain(url)}</span>
+                          <span className="text-blue-600 truncate max-w-[200px]">
+                            {extractDomain(url)}
+                          </span>
                           <span className="mx-2 text-gray-300">|</span>
                           <a
                             href={url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-gray-500 hover:text-gray-700"
-                            onClick={() => handleLinkClick(url, linksMetaData.get(url)?.linkId)}
+                            onClick={() =>
+                              handleLinkClick(
+                                url,
+                                linksMetaData.get(url)?.linkId
+                              )
+                            }
                           >
                             바로가기
                           </a>
@@ -441,14 +499,14 @@ export default function PostDetail() {
                   tag.name === "포털"
                     ? "bg-blue-100 text-blue-800"
                     : tag.name === "개발"
-                      ? "bg-green-100 text-green-800"
-                      : tag.name === "디자인"
-                        ? "bg-purple-100 text-purple-800"
-                        : tag.name === "AI"
-                          ? "bg-red-100 text-red-800"
-                          : tag.name === "생산성"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-gray-100 text-gray-800"
+                    ? "bg-green-100 text-green-800"
+                    : tag.name === "디자인"
+                    ? "bg-purple-100 text-purple-800"
+                    : tag.name === "AI"
+                    ? "bg-red-100 text-red-800"
+                    : tag.name === "생산성"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-gray-100 text-gray-800"
                 }`}
               >
                 #{tag.name}
@@ -457,14 +515,21 @@ export default function PostDetail() {
           </div>
 
           <div
-            className="prose prose-sm sm:prose lg:prose-lg max-w-none"
+            className="prose prose-sm sm:prose lg:prose-lg max-w-none ql-editor-content"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
 
           <div className="flex items-center justify-between border-t border-b py-4">
             <div className="flex items-center space-x-4">
-              <button onClick={toggleLike} className="flex items-center space-x-1 text-sm">
-                <Heart className={`h-5 w-5 ${post.isLiked ? "text-red-500 fill-red-500" : "text-gray-500"}`} />
+              <button
+                onClick={toggleLike}
+                className="flex items-center space-x-1 text-sm"
+              >
+                <Heart
+                  className={`h-5 w-5 ${
+                    post.isLiked ? "text-red-500 fill-red-500" : "text-gray-500"
+                  }`}
+                />
                 <span className="font-medium">{post.likeCount}</span>
               </button>
               <button className="flex items-center space-x-1 text-sm text-gray-500">
@@ -513,6 +578,5 @@ export default function PostDetail() {
         </div>
       </div>
     </main>
-  )
+  );
 }
-
