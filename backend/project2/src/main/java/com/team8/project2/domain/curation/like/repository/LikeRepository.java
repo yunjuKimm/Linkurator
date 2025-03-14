@@ -20,4 +20,13 @@ public interface LikeRepository extends JpaRepository<Like, LikeId> {
      * @return 좋아요 정보
      */
     Optional<Like> findByCurationAndMember(Curation curation, Member member);
+
+    /**
+     * 특정 큐레이션과 특정 회원에 대한 좋아요 정보가 존재하는지 확인합니다.
+     * @param curationId 좋아요를 조회할 큐레이션 ID
+     * @param memberId 좋아요를 조회할 회원 ID
+     * @return 좋아요 정보 존재 여부
+     */
+    boolean existsByCurationIdAndMemberId(Long curationId, Long memberId);
+
 }

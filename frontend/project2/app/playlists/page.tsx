@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import PlaylistGrid from "@/app/components/playlist-grid";
 import Link from "next/link";
@@ -16,5 +16,6 @@ export default function PlaylistsPage() {
       </header>
       <PlaylistGrid />
     </div>
-  );
+  )
 }
+

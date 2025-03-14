@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Bookmark, Edit, Eye, LinkIcon, Share2 } from "lucide-react";
@@ -168,5 +169,6 @@ export default async function PlaylistDetailPage({
         </div>
       </div>
     </div>
-  );
+  )
 }
+

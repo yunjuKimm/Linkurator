@@ -64,6 +64,17 @@ public class BaseInitData {
 					.build();
 				memberRepository.save(member3);
 
+				Member member4 = Member.builder()
+						.email("admin@gmail.com")
+						.role(RoleEnum.ADMIN)
+						.memberId("admin")
+						.username("admin")
+						.password("password")
+						.profileImage("http://localhost:8080/images/team10-logo.png")
+						.introduce("admin")
+						.build();
+				memberRepository.save(member4);
+
 				// member3가 member를 follow
 				Follow follow = new Follow();
 				follow.setFollowerAndFollowee(member3, member);
