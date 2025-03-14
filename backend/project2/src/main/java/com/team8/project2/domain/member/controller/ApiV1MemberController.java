@@ -2,13 +2,9 @@ package com.team8.project2.domain.member.controller;
 
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.dto.FollowResDto;
@@ -26,6 +22,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/members")
 @RequiredArgsConstructor
@@ -65,6 +62,7 @@ public class ApiV1MemberController {
     record LoginResBody(MemberResDTO item, String accessToken) {}
     @PostMapping("/login")
     public RsData<LoginResBody> login(@RequestBody @Valid LoginReqBody reqBody) {
+        log.info("[login.reqBody.userName]:"+reqBody.username);
         Member member = memberService.findByMemberId(reqBody.username).orElseThrow(
                 () -> new ServiceException("401-1", "잘못된 아이디입니다.")
         );
@@ -74,6 +72,7 @@ public class ApiV1MemberController {
         }
 
         String accessToken = memberService.genAccessToken(member);
+        log.info("[accessToken]:" + accessToken);
 
         rq.addCookie("accessToken", accessToken);
         return new RsData<>(
@@ -87,12 +86,32 @@ public class ApiV1MemberController {
     }
     @GetMapping("/me")
     public RsData<MemberResDTO> getMyInfo() {
-        Member member = rq.getActor();  // JWT에서 인증된 사용자 정보 가져오기
-        return new RsData<>("200-2", "내 정보 조회 성공", MemberResDTO.fromEntity(member));
+        log.info("🔍 [/me] 요청 수신됨");
+
+        // ✅ JWT에서 사용자 정보 가져오기
+        Member member = rq.getActor();
+
+        if (member == null) {
+            log.warn("⚠️ [/me] 인증된 사용자 정보 없음 (rq.getActor() == null)");
+            throw new ServiceException("401-3", "유효하지 않은 인증 정보입니다.");
+        }
+
+        log.info("[/me] 사용자 인증 성공 - ID: {}, Username: {}", member.getId(), member.getUsername());
+
+        try {
+            MemberResDTO memberResDTO = MemberResDTO.fromEntity(member);
+            log.info("[/me] MemberResDTO 변환 성공: {}", memberResDTO);
+            return new RsData<>("200-2", "내 정보 조회 성공", memberResDTO);
+        } catch (Exception e) {
+            log.error("[/me] MemberResDTO 변환 중 오류 발생: ", e);
+            throw new ServiceException("500-1", "사용자 정보 변환 중 오류 발생");
+        }
+        // return new RsData<>("200-2", "내 정보 조회 성공", MemberResDTO.fromEntity(member));
     }
     @PostMapping("/logout")
     public RsData<Void> logout() {
         rq.removeCookie("accessToken"); // JWT 삭제
+
         return new RsData<>("200-3", "로그아웃 되었습니다.");
     }
 
@@ -113,6 +132,22 @@ public class ApiV1MemberController {
 
         return new RsData<>("200-4", "큐레이터 정보 조회 성공", responseData);
     }
+
+    @PutMapping("/{memberId}")
+    @PreAuthorize("isAuthenticated()")
+    public RsData<MemberResDTO> updateMember(
+            @PathVariable String memberId,
+            @RequestBody @Valid MemberReqDTO updateDTO) {
+
+        Member actor = rq.getActor();
+        if (actor == null || !actor.getMemberId().equals(memberId)) {
+            throw new ServiceException("403-1", "권한이 없습니다.");
+        }
+
+        Member updatedMember = memberService.updateMember(memberId, updateDTO);
+        return new RsData<>("200-5", "회원 정보가 수정되었습니다.", MemberResDTO.fromEntity(updatedMember));
+    }
+
 
     @PostMapping("/{memberId}/follow")
     @PreAuthorize("isAuthenticated()")
@@ -137,4 +172,5 @@ public class ApiV1MemberController {
         FollowingResDto followingResDto = memberService.getFollowingUsers(actor);
         return new RsData<>("200-1", "팔로우 중인 사용자를 조회했습니다.", followingResDto);
     }
+
 }
