@@ -1,6 +1,7 @@
 package com.team8.project2.domain.admin.service;
 
 import com.team8.project2.domain.admin.dto.StatsResDto;
+import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
@@ -37,9 +38,14 @@ public class AdminService {
         memberRepository.deleteById(memberId);
     }
 
-    // ✅ 일정 개수 이상 신고된 큐레이션 조회
-    public List<Long> getReportedCurations(int minReports) {
-        return curationRepository.findReportedCurationIds(minReports);
+    /**
+     * 일정 개수 이상 신고된 큐레이션 목록을 조회하는 메서드
+     *
+     * @param minReports 최소 신고 개수
+     * @return 신고된 큐레이션 목록
+     */
+    public List<Curation> getReportedCurations(int minReports) {
+        return curationRepository.findReportedCurations(minReports);
     }
 
     // ✅ 큐레이션 & 플레이리스트 통계 조회
