@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -27,6 +28,16 @@ public class S3Uploader {
 	private String bucketName;
 
 	@Transactional
+	public void deleteFile(String imageName) {
+		DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+			.bucket(bucketName)
+			.key(imageName)
+			.build();
+
+		s3Client.deleteObject(deleteObjectRequest);
+	}
+
+	@Transactional
 	public String uploadFile(MultipartFile file) throws IOException {
 		String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
 
@@ -38,7 +49,7 @@ public class S3Uploader {
 
 		s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-		return "https://" + bucketName + ".s3.amazonaws.com/" + fileName;
+		return fileName;
 	}
 
 	private String getPresignedUrl(String fileName) {
@@ -49,5 +60,9 @@ public class S3Uploader {
 
 		PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
 		return presignedRequest.url().toString();
+	}
+
+	public String getBaseUrl() {
+		return "https://" + bucketName + ".s3.amazonaws.com/";
 	}
 }

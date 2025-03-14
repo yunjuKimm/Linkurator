@@ -134,17 +134,22 @@ public class Curation {
         return member.getProfileImage();
     }
 
-    public List<String> getImageUrls() {
-        List<String> imageUrls = new ArrayList<>();
+    public List<String> getImageNames() {
+        List<String> imageFileNames = new ArrayList<>();
         Document document = Jsoup.parse(content);
         Elements images = document.select("img[src]");
 
         for (Element img : images) {
             String src = img.attr("src");
             if (src.startsWith("https://linkurator-bucket")) {
-                imageUrls.add(src);
+                String fileName = extractFileNameFromUrl(src);
+                imageFileNames.add(fileName);
             }
         }
-        return imageUrls;
+        return imageFileNames;
+    }
+
+    private String extractFileNameFromUrl(String fileUrl) {
+        return fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
     }
 }

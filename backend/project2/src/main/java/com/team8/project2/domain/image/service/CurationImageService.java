@@ -20,14 +20,14 @@ public class CurationImageService {
 
 	@Transactional
 	public String uploadImage(MultipartFile file) throws IOException {
-		String imageUrl;
-		imageUrl = s3Uploader.uploadFile(file);
+		String imageName;
+		imageName = s3Uploader.uploadFile(file);
 
 		CurationImage curationImage = CurationImage.builder()
-			.imageName(imageUrl)
+			.imageName(imageName)
 			.build();
 		curationImageRepository.save(curationImage);
 
-		return imageUrl;
+		return s3Uploader.getBaseUrl() + imageName;
 	}
 }

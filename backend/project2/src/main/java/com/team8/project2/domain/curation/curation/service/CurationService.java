@@ -1,6 +1,5 @@
 package com.team8.project2.domain.curation.curation.service;
 
-import java.awt.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -96,7 +95,7 @@ public class CurationService {
 		curation.setTags(curationTags);
 
 		// 작성한 큐레이션에 이미지가 첨부되어 있다면, 이미지에 큐레이션 번호를 연결 (연결이 이미 있는 이미지는 무시)
-		List<String> imageUrls = curation.getImageUrls();
+		List<String> imageUrls = curation.getImageNames();
 		for (String imageUrl : imageUrls) {
 			Optional<CurationImage> opImage = curationImageRepository.findByImageName(imageUrl);
 			if (opImage.isPresent()) {
@@ -156,7 +155,7 @@ public class CurationService {
 		// 큐레이션 수정 이벤트
 		eventPublisher.publishEvent(CurationUpdateEvent.builder()
 			.curationId(curation.getId())
-			.imageUrls(curation.getImageUrls())
+			.imageUrls(curation.getImageNames())
 			.build());
 
 		return result;
