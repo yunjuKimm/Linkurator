@@ -1,6 +1,7 @@
 package com.team8.project2.domain.playlist.entity;
 
 import com.team8.project2.domain.curation.tag.entity.Tag;
+import com.team8.project2.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -126,5 +127,9 @@ public class Playlist {
     @Column
     private LocalDateTime modifiedAt;
 
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = false)
+    private Member member;
 
 }

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
-  Clock,
   ExternalLink,
   FileText,
   GripVertical,
@@ -39,6 +38,11 @@ export default function PlaylistItems({
 }: PlaylistItemsProps) {
   const router = useRouter();
   const [items, setItems] = useState<PlaylistItem[]>(initialItems || []);
+
+  // 새 링크가 추가되었을 때 호출되는 함수
+  const handleLinkAdded = (newItem: PlaylistItem) => {
+    setItems((prevItems) => [...prevItems, newItem]);
+  };
 
   const handleDelete = async (itemId: number) => {
     if (window.confirm("이 링크를 플레이리스트에서 삭제하시겠습니까?")) {
@@ -84,7 +88,7 @@ export default function PlaylistItems({
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">링크 목록</h2>
-        <AddLinkButton playlistId={playlistId} />
+        <AddLinkButton playlistId={playlistId} onLinkAdded={handleLinkAdded} />
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -133,19 +137,22 @@ export default function PlaylistItems({
                           </p>
                         )}
 
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        {/* URL을 설명 아래에 표시 */}
+                        <div className="overflow-x-auto">
                           <a
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:underline flex items-center gap-1"
+                            className="text-sm text-gray-500 underline hover:text-gray-700 flex items-center gap-1"
                           >
                             <ExternalLink className="h-3 w-3" />
-                            <span className="truncate max-w-[200px] text-black">
+                            <span className="truncate max-w-[300px]">
                               {item.url}
                             </span>
                           </a>
                         </div>
+
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground"></div>
                       </div>
 
                       <div className="flex items-center gap-2">

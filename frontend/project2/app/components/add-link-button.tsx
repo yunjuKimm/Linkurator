@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -17,12 +19,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { addItemToPlaylist } from "@/lib/playlist-service";
+import type { PlaylistItem } from "@/types/playlist";
 
 interface AddLinkButtonProps {
   playlistId: number;
+  onLinkAdded?: (newItem: PlaylistItem) => void; // 새 콜백 prop 추가
 }
 
-export default function AddLinkButton({ playlistId }: AddLinkButtonProps) {
+export default function AddLinkButton({
+  playlistId,
+  onLinkAdded,
+}: AddLinkButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,11 +50,19 @@ export default function AddLinkButton({ playlistId }: AddLinkButtonProps) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await addItemToPlaylist(playlistId, {
+      const result = await addItemToPlaylist(playlistId, {
         title: formData.title,
         url: formData.url,
         description: formData.description,
       });
+
+      // 새 아이템이 추가되었을 때 콜백 호출
+      if (onLinkAdded && result.items && result.items.length > 0) {
+        // 가장 최근에 추가된 아이템을 찾음
+        const newItem = result.items[result.items.length - 1];
+        onLinkAdded(newItem);
+      }
+
       setFormData({ title: "", url: "", description: "" });
       setOpen(false);
       router.refresh();
@@ -99,7 +114,7 @@ export default function AddLinkButton({ playlistId }: AddLinkButtonProps) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">설명 (선택사항)</Label>
+              <Label htmlFor="description">설명</Label>
               <Textarea
                 id="description"
                 name="description"

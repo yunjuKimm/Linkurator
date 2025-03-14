@@ -10,10 +10,12 @@ import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.repository.PlaylistLikeRepository;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
+import com.team8.project2.global.Rq;
 import com.team8.project2.global.exception.BadRequestException;
 import com.team8.project2.global.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,10 +37,10 @@ public class PlaylistService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final MemberRepository memberRepository;
     private final PlaylistLikeRepository playlistLikeRepository;
-    private static final String VIEW_COUNT_KEY = "playlist:view_count"; // 조회수 저장
-    private static final String LIKE_COUNT_KEY = "playlist:like_count"; // 좋아요 수 저장
+    private static final String VIEW_COUNT_KEY = "playlist:view_count:"; // 조회수 저장
+    private static final String LIKE_COUNT_KEY = "playlist:like_count:"; // 좋아요 수 저장
     private static final String RECOMMEND_KEY = "playlist:recommend:"; // 추천 캐싱
-
+    private final Rq rq;
 
     /**
      * ✅ 플레이리스트 추천 로직
@@ -48,11 +50,18 @@ public class PlaylistService {
      */
     public List<PlaylistDto> recommendPlaylist(Long playlistId, String sortType) {
         String cachedRecommendationsStr = (String) redisTemplate.opsForValue().get(RECOMMEND_KEY + playlistId);
-        if (cachedRecommendationsStr != null) {
-            List<Long> cachedRecommendations = Arrays.stream(cachedRecommendationsStr.split(","))
-                    .map(Long::parseLong)
-                    .collect(Collectors.toList());
-            return getPlaylistsByIds(cachedRecommendations);
+        if (cachedRecommendationsStr != null && !cachedRecommendationsStr.isEmpty()) {
+            try {
+                List<Long> cachedRecommendations = Arrays.stream(cachedRecommendationsStr.split(","))
+                        .map(Long::parseLong)
+                        .collect(Collectors.toList());
+                System.out.println("Redis 캐시 HIT Playlist ID " + playlistId + " | 추천 리스트: " + cachedRecommendations);
+                return getPlaylistsByIds(cachedRecommendations);
+            } catch (NumberFormatException e) {
+                // 캐시 데이터 오류 발생 시 캐시 삭제 후 재계산
+                redisTemplate.delete(RECOMMEND_KEY + playlistId);
+                System.err.println("Redis 캐시 데이터 형식 오류로 캐시 삭제: " + RECOMMEND_KEY + playlistId);
+            }
         }
 
         // 1️⃣ 최근 24시간 동안 인기 플레이리스트 추천
@@ -65,9 +74,18 @@ public class PlaylistService {
 
         // 3️⃣ 태그 기반 유사 플레이리스트 추천
         Playlist currentPlaylist = playlistRepository.findById(playlistId)
-                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+                .orElse(null);
 
-        List<Playlist> similarPlaylists = findSimilarPlaylistsByTag(currentPlaylist);
+//        List<Playlist> similarPlaylists = findSimilarPlaylistsByTag(currentPlaylist);
+        List<Playlist> similarPlaylists = (currentPlaylist != null)
+                ? findSimilarPlaylistsByTag(currentPlaylist) : Collections.emptyList();
+
+        // 현재 사용자의 플레이리스트 조회
+        Member currentMember = rq.getActor();
+        List<Long> memberPlaylistIds = playlistRepository.findByMember(currentMember)
+                .stream()
+                .map(Playlist::getId)
+                .collect(Collectors.toList());
 
         // 4️⃣ 추천 결과 병합
         Set<Long> recommendedPlaylistIds = new HashSet<>();
@@ -77,8 +95,20 @@ public class PlaylistService {
         addRecommendations(recommendedPlaylistIds, popularPlaylists);
         similarPlaylists.forEach(p -> recommendedPlaylistIds.add(p.getId()));
 
+        // 현재 사용자의 플레이리스트 제외
+        recommendedPlaylistIds.removeAll(memberPlaylistIds);
+
+        // 추천해줄 플레이리스트 없을 경우 랜덤으로 뽑음
+        if (recommendedPlaylistIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         // 5️⃣ Redis에 추천 데이터 캐싱 (30분 유지)
-        redisTemplate.opsForValue().set(RECOMMEND_KEY + playlistId, recommendedPlaylistIds.stream().map(String::valueOf).collect(Collectors.joining(",")), Duration.ofMinutes(30));
+        redisTemplate.opsForValue().set(RECOMMEND_KEY + playlistId, recommendedPlaylistIds.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(",")), Duration.ofMinutes(30));
+
+        System.out.println("Redis 캐시 저장 완료 Playlist ID " + playlistId + " | 추천 리스트: " + recommendedPlaylistIds);
 
         // 6️⃣ 정렬 기준 적용
         return getSortedPlaylists(new ArrayList<>(recommendedPlaylistIds), sortType);
@@ -93,10 +123,22 @@ public class PlaylistService {
         List<Playlist> allPlaylists = playlistRepository.findAll();
         List<Playlist> similarPlaylists = new ArrayList<>();
 
+        // currentPlaylist의 태그 null 체크
+        Set<String> currentTags = currentPlaylist.getTagNames();
+        if (currentTags == null) {
+            currentTags = new HashSet<>();
+        }
+
         for (Playlist other : allPlaylists) {
             if (!other.getId().equals(currentPlaylist.getId())) {
-                Set<String> commonTags = new HashSet<>(currentPlaylist.getTagNames()); // ✅ 수정
-                commonTags.retainAll(other.getTagNames()); // ✅ 수정
+                // other 플레이리스트의 태그 null 체크
+                Set<String> otherTags = other.getTagNames();
+                if (otherTags == null) {
+                    otherTags = new HashSet<>();
+                }
+
+                Set<String> commonTags = new HashSet<>(currentTags);
+                commonTags.retainAll(otherTags);
 
                 if (commonTags.size() >= 3) {
                     similarPlaylists.add(other);
@@ -106,11 +148,12 @@ public class PlaylistService {
 
         if (similarPlaylists.isEmpty()) {
             Collections.shuffle(allPlaylists);
-            return allPlaylists.stream().limit(5).collect(Collectors.toList());
+            return allPlaylists.stream().limit(3).collect(Collectors.toList());
         }
 
         return similarPlaylists;
     }
+
 
     /**
      * ✅ 정렬 기준에 따라 플레이리스트 정렬
@@ -136,18 +179,24 @@ public class PlaylistService {
         return playlists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
     }
 
-    /** ✅ 추천된 Playlist ID 리스트로 PlaylistDto 리스트 반환 */
+    /**
+     * ✅ 추천된 Playlist ID 리스트로 PlaylistDto 리스트 반환
+     */
     private List<PlaylistDto> getPlaylistsByIds(List<Long> playlistIds) {
         List<Playlist> playlists = playlistRepository.findAllById(playlistIds);
         return playlists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
     }
 
-    /** ✅ 조회수 증가 */
-    public void recordPlaylistView(Long playlistId) {
-        redisTemplate.opsForZSet().incrementScore(VIEW_COUNT_KEY, playlistId.toString(), 1);
-    }
+//    /**
+//     * ✅ 조회수 증가
+//     */
+//    public void recordPlaylistView(Long playlistId) {
+//        redisTemplate.opsForZSet().incrementScore(VIEW_COUNT_KEY, playlistId.toString(), 1);
+//    }
 
-    /** ✅ 조회수 증가 (10분 제한) */
+    /**
+     * ✅ 조회수 증가 (10분 제한)
+     */
 //    public void recordPlaylistView(Long playlistId, Long memberId) {
 //        String viewKey = "viewed:" + memberId + ":" + playlistId; // Redis 키 생성
 //
@@ -170,11 +219,6 @@ public class PlaylistService {
 //        playlistRepository.save(playlist);
 //    }
 
-
-//    /** ✅ 좋아요 증가 */
-//    public void likePlaylist(Long playlistId) {
-//        redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, playlistId.toString(), 1);
-//    }
 
     @Transactional
     public void likePlaylist(Long playlistId, Long memberId) {
@@ -209,7 +253,9 @@ public class PlaylistService {
     }
 
 
-    /** ✅ 좋아요 취소 */
+    /**
+     * ✅ 좋아요 취소
+     */
     @Transactional
     public void unlikePlaylist(Long playlistId, Long memberId) {
         Playlist playlist = playlistRepository.findById(playlistId)
@@ -226,10 +272,18 @@ public class PlaylistService {
         }
     }
 
-    /** ✅ 추천 리스트 병합 */
+    /**
+     * ✅ 추천 리스트 병합
+     */
     private void addRecommendations(Set<Long> recommendedPlaylistIds, Set<Object> redisResults) {
         if (redisResults != null) {
-            redisResults.forEach(id -> recommendedPlaylistIds.add(Long.parseLong(id.toString())));
+            for (Object id : redisResults) {
+                try {
+                    recommendedPlaylistIds.add(Long.parseLong(id.toString()));
+                } catch (NumberFormatException e) {
+                    System.err.println("addRecommendations() 오류: 파싱 불가한 값 = " + id);
+                }
+            }
         }
     }
 
@@ -245,10 +299,13 @@ public class PlaylistService {
         // 아래 validatePlaylistData 호출을 제거합니다.
         // validatePlaylistData(request.getTitle(), request.getDescription()); // 삭제됨
 
+        Member currentMember = rq.getActor();
+
         Playlist playlist = Playlist.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .isPublic(request.getIsPublic())
+                .member(currentMember)
                 .build();
 
         return PlaylistDto.fromEntity(playlistRepository.save(playlist));
@@ -264,20 +321,69 @@ public class PlaylistService {
         Playlist playlist = playlistRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
 
-        playlist.incrementViewCount();
-        playlistRepository.save(playlist);
+        long view = Optional.ofNullable(redisTemplate.opsForZSet().score(VIEW_COUNT_KEY, id.toString()))
+                .orElse(0.0)
+                .longValue();
+        playlist.setViewCount(view);
+
+        if (playlist.getItems() == null) {
+            playlist.setItems(new ArrayList<>());
+        }
+
+        redisTemplate.opsForZSet().incrementScore(VIEW_COUNT_KEY, id.toString(), 1);
+        System.out.println( "조회수 증가: Playlist ID " + id + " | 현재 조회수: " + redisTemplate.opsForZSet().score(VIEW_COUNT_KEY, id.toString()));
 
         return PlaylistDto.fromEntity(playlist);
     }
 
     /**
-     * 모든 플레이리스트를 조회합니다.
+     * Redis에 저장된 조회수 DB에 동기화
+     */
+    @Scheduled(fixedRate = 600000)
+    public void syncViewCountsToDB() {
+        Set<String> keys = redisTemplate.keys(VIEW_COUNT_KEY + "*");
+
+        if (keys != null) {
+            for (String key : keys) {
+                try {
+                    String idStr = key.replace(VIEW_COUNT_KEY, "").trim();
+                    if (idStr.isEmpty()) continue;
+
+                    Long id = Long.parseLong(idStr);
+
+                    Double redisViewCount = redisTemplate.opsForZSet().score(VIEW_COUNT_KEY, id.toString());
+                    if (redisViewCount == null) {
+                        redisViewCount = 0.0;
+                    }
+
+                    Playlist playlist = playlistRepository.findById(id).orElse(null);
+                    if (playlist != null) {
+                        playlist.setViewCount(redisViewCount.longValue());
+                        playlistRepository.save(playlist);
+                    }
+                    else {
+                        System.out.println("Playlist not found in DB for ID: " + id);
+                    }
+                } catch (NumberFormatException e) {
+                    System.err.println("syncViewCountsToDB() 오류: 잘못된 키 형식 " + key);
+                    redisTemplate.delete(key);
+                }
+            }
+        }
+    }
+
+
+
+
+    /**
+     * 사용자의 모든 플레이리스트를 조회합니다.
      *
      * @return 플레이리스트 목록 DTO 리스트
      * 예외 대신 빈 리스트 반환
      */
     public List<PlaylistDto> getAllPlaylists() {
-        List<Playlist> playlists = playlistRepository.findAll();
+        Member currentMember = rq.getActor();
+        List<Playlist> playlists = playlistRepository.findByMember(currentMember);
 
         return playlists.stream()
                 .map(PlaylistDto::fromEntity)
@@ -287,7 +393,7 @@ public class PlaylistService {
     /**
      * 기존 플레이리스트를 수정합니다.
      *
-     * @param id 수정할 플레이리스트 ID
+     * @param id      수정할 플레이리스트 ID
      * @param request 수정할 데이터
      * @return 수정된 플레이리스트 DTO
      */
@@ -312,11 +418,16 @@ public class PlaylistService {
         if (!playlistRepository.existsById(id)) {
             throw new NotFoundException("해당 플레이리스트를 찾을 수 없습니다.");
         }
+        if (playlistLikeRepository.existsById_PlaylistId(id)) {
+            playlistLikeRepository.deleteById_PlaylistId(id);
+        }
         playlistRepository.deleteById(id);
     }
 
 
-    /** 플레이리스트 아이템 추가 */
+    /**
+     * 플레이리스트 아이템 추가
+     */
     public PlaylistDto addPlaylistItem(Long playlistId, Long itemId, PlaylistItem.PlaylistItemType itemType) {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
@@ -336,7 +447,9 @@ public class PlaylistService {
         return PlaylistDto.fromEntity(playlist);
     }
 
-    /** 플레이리스트 아이템 삭제 */
+    /**
+     * 플레이리스트 아이템 삭제
+     */
     @Transactional
     public void deletePlaylistItem(Long playlistId, Long itemId) {
         Playlist playlist = playlistRepository.findById(playlistId)
@@ -350,7 +463,9 @@ public class PlaylistService {
         playlistRepository.save(playlist);
     }
 
-    /** 플레이리스트 아이템 순서 변경 */
+    /**
+     * 플레이리스트 아이템 순서 변경
+     */
     @Transactional
     public PlaylistDto updatePlaylistItemOrder(Long playlistId, List<Long> orderedItemIds) {
         Playlist playlist = playlistRepository.findById(playlistId)

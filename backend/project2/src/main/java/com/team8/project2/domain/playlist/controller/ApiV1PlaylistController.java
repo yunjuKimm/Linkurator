@@ -61,14 +61,12 @@ public class ApiV1PlaylistController {
      */
     @GetMapping("/{id}")
     public RsData<PlaylistDto> getPlaylist(@PathVariable Long id, HttpServletRequest request) {
-        playlistService.recordPlaylistView(id);
-
         PlaylistDto playlist = playlistService.getPlaylist(id);
         return RsData.success("플레이리스트 조회 성공", playlist);
     }
 
     /**
-     * 모든 플레이리스트를 조회합니다.
+     * 사용자의 모든 플레이리스트를 조회합니다.
      *
      * @return 플레이리스트 목록
      */
@@ -173,13 +171,6 @@ public class ApiV1PlaylistController {
         PlaylistDto updatedPlaylist =
                 playlistService.updatePlaylistItemOrder(id, orderedItemIds);
         return RsData.success("플레이리스트 아이템 순서가 변경되었습니다.", updatedPlaylist);
-    }
-
-    /** ✅ 조회수 증가 API */
-    @PostMapping("/{id}/view")
-    public RsData<Void> recordPlaylistView(@PathVariable Long id) {
-        playlistService.recordPlaylistView(id);
-        return RsData.success("조회수가 증가되었습니다.", null);
     }
 
     /** ✅ 좋아요 증가 API */
