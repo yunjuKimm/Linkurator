@@ -131,57 +131,29 @@ export default function PostList() {
     }
   }
 
-  // 좋아요 상태를 확인하는 API 호출
-  const fetchLikeStatus = async () => {
-    try {
-      const response = await fetch(`http://localhost:8080/api/v1/curation/like/${id}/status`);
-      if (!response.ok) {
-        throw new Error("좋아요 상태 가져오기 실패");
-      }
+  // 좋아요 추가 API 호출 함수
+  // 좋아요 토글 함수
+const toggleLike = async (id: number) => {
+  try {
+    await fetch(`http://localhost:8080/api/v1/curation/like/${id}`, {
+      method: "POST",
+    });
 
-      const data = await response.json();
-      setPost((prev) => 
-        prev ? { 
-          ...prev, 
-          liked: data.data  // 서버에서 받은 liked 상태
-        } : { liked: data.data, likeCount: 0 }
-      );
-    } catch (error) {
-      console.error("좋아요 상태 확인 중 오류:", error);
-    }
-  };
+    // 상태 업데이트로 UI 갱신
+    setCurations((prev) =>
+      prev.map((curation) =>
+        curation.id === id
+          ? { ...curation, likeCount: likedCurations[id] ? curation.likeCount - 1 : curation.likeCount + 1 }
+          : curation
+      )
+    );
 
-  // 좋아요 토글 API 호출
-  const toggleLike = async () => {
-    try {
-      const response = await fetch(`http://localhost:8080/api/v1/curation/like/${id}`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("좋아요 처리 실패");
-      }
-
-      // 서버에서 응답받은 데이터를 기반으로 상태를 업데이트하여 UI 반영
-      const data = await response.json();
-      setPost((prev) => 
-        prev ? { 
-          ...prev, 
-          likeCount: data.likeCount,  // 서버에서 갱신된 likeCount
-          liked: data.liked          // 서버에서 갱신된 liked 상태
-        } : prev
-      );
-    } catch (error) {
-      console.error("좋아요 처리 중 오류:", error);
-    }
-  };
-
-  // 컴포넌트 렌더링 시 좋아요 상태를 가져옴
-  useEffect(() => {
-    fetchLikeStatus();
-  }, [id]);
-
+    // 좋아요 상태 토글
+    setLikedCurations((prev) => ({ ...prev, [id]: !prev[id] }));
+  } catch (error) {
+    console.error("Error toggling like:", error);
+  }
+};
 
 
 
