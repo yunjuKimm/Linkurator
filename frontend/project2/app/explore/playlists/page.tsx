@@ -46,10 +46,6 @@ import type { Playlist } from "@/types/playlist";
 // 정렬 옵션 타입
 type SortOption = "latest" | "popular" | "mostLiked";
 
-// Workaround for TypeScript errors
-const CustomButton = Button as any;
-const CustomBadge = Badge as any;
-
 export default function ExplorePlaylists() {
   const router = useRouter();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -244,24 +240,24 @@ export default function ExplorePlaylists() {
           </div>
 
           <div className="flex gap-2">
-            <CustomButton
+            <Button
               variant="outline"
               size="icon"
               onClick={() => setShowFilterDialog(true)}
             >
               <SlidersHorizontal className="h-4 w-4" />
-            </CustomButton>
+            </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <CustomButton variant="outline" size="sm" className="gap-1">
+                <Button variant="outline" size="sm" className="gap-1">
                   <ArrowUpDown className="h-3.5 w-3.5" />
                   {sortBy === "latest"
                     ? "최신순"
                     : sortBy === "popular"
                     ? "인기순"
                     : "좋아요순"}
-                </CustomButton>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setSortBy("latest")}>
@@ -288,7 +284,7 @@ export default function ExplorePlaylists() {
           <p className="mt-2 text-muted-foreground">
             검색 조건을 변경하거나 필터를 초기화해보세요.
           </p>
-          <CustomButton
+          <Button
             variant="outline"
             className="mt-4"
             onClick={() => {
@@ -302,7 +298,7 @@ export default function ExplorePlaylists() {
             }}
           >
             필터 초기화
-          </CustomButton>
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -355,14 +351,14 @@ export default function ExplorePlaylists() {
                         setSelectedPlaylistId(playlist.id);
                       }}
                     >
-                      <CustomButton
+                      <Button
                         size="sm"
                         variant="ghost"
                         className="h-7 px-2 text-xs"
                       >
                         <Plus className="h-3.5 w-3.5 mr-1" />내 플레이리스트에
                         추가
-                      </CustomButton>
+                      </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
@@ -377,11 +373,9 @@ export default function ExplorePlaylists() {
                           <p className="text-muted-foreground mb-4">
                             아직 플레이리스트가 없습니다.
                           </p>
-                          <CustomButton
-                            onClick={() => router.push("/playlists/new")}
-                          >
+                          <Button onClick={() => router.push("/playlists/new")}>
                             새 플레이리스트 만들기
-                          </CustomButton>
+                          </Button>
                         </div>
                       ) : (
                         <div className="grid gap-4 py-4 max-h-[300px] overflow-y-auto">
@@ -401,21 +395,21 @@ export default function ExplorePlaylists() {
                                   </p>
                                 )}
                               </div>
-                              <CustomBadge variant="outline">
+                              <Badge variant="outline">
                                 {userPlaylist.items?.length || 0} 링크
-                              </CustomBadge>
+                              </Badge>
                             </div>
                           ))}
                         </div>
                       )}
 
                       <DialogFooter>
-                        <CustomButton
+                        <Button
                           variant="outline"
                           onClick={() => setSelectedPlaylistId(null)}
                         >
                           취소
-                        </CustomButton>
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -505,7 +499,7 @@ export default function ExplorePlaylists() {
           </div>
 
           <DialogFooter>
-            <CustomButton
+            <Button
               variant="outline"
               onClick={() => {
                 setFilterOptions({
@@ -517,10 +511,8 @@ export default function ExplorePlaylists() {
               }}
             >
               초기화
-            </CustomButton>
-            <CustomButton onClick={() => setShowFilterDialog(false)}>
-              적용하기
-            </CustomButton>
+            </Button>
+            <Button onClick={() => setShowFilterDialog(false)}>적용하기</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
