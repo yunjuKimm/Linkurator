@@ -10,6 +10,7 @@ interface FollowingUser {
   followee: string;
   profileImage: string;
   followedAt: string;
+  isFollowing: boolean;
 }
 
 export default function FollowingPage() {
@@ -40,7 +41,12 @@ export default function FollowingPage() {
 
       const data = await response.json();
       if (data && data.data && data.data.following) {
-        setFollowingUsers(data.data.following);
+        setFollowingUsers(
+          data.data.following.map((user: any) => ({
+            ...user,
+            isFollowing: true,
+          }))
+        );
         setIsLoggedIn(true);
       } else {
         setFollowingUsers([]);
@@ -68,9 +74,13 @@ export default function FollowingPage() {
         throw new Error("언팔로우에 실패했습니다.");
       }
 
-      // 성공적으로 언팔로우한 경우, 목록에서 해당 사용자 제거
+      // 성공적으로 언팔로우한 경우, 해당 사용자의 상태만 변경
       setFollowingUsers((prevUsers) =>
-        prevUsers.filter((user) => user.followee !== username)
+        prevUsers.map((user) =>
+          user.followee === username
+            ? { ...user, isFollowing: false, followedAt: "" }
+            : user
+        )
       );
     } catch (error) {
       console.error("Error unfollowing user:", error);
@@ -92,8 +102,17 @@ export default function FollowingPage() {
         throw new Error("팔로우에 실패했습니다.");
       }
 
-      // 팔로우 목록 다시 불러오기
-      fetchFollowingUsers();
+      // 현재 날짜를 ISO 문자열로 생성
+      const currentDate = new Date().toISOString();
+
+      // 해당 사용자의 상태만 변경
+      setFollowingUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.followee === username
+            ? { ...user, isFollowing: true, followedAt: currentDate }
+            : user
+        )
+      );
     } catch (error) {
       console.error("Error following user:", error);
     }
@@ -201,18 +220,29 @@ export default function FollowingPage() {
                   <h3 className="font-medium text-blue-600 hover:underline">
                     {user.followee}
                   </h3>
-                  <p className="text-sm text-gray-500">
-                    {formatDate(user.followedAt)}부터 팔로우 중
-                  </p>
+                  {user.isFollowing && user.followedAt && (
+                    <p className="text-sm text-gray-500">
+                      {formatDate(user.followedAt)}부터 팔로우 중
+                    </p>
+                  )}
                 </div>
               </Link>
               <div className="ml-auto">
-                <button
-                  onClick={() => handleUnfollow(user.followee)}
-                  className="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300"
-                >
-                  팔로우중
-                </button>
+                {user.isFollowing ? (
+                  <button
+                    onClick={() => handleUnfollow(user.followee)}
+                    className="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300"
+                  >
+                    팔로우중
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleFollow(user.followee)}
+                    className="rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"
+                  >
+                    팔로우
+                  </button>
+                )}
               </div>
             </div>
           ))}
