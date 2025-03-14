@@ -321,8 +321,6 @@ public class PlaylistService {
         Playlist playlist = playlistRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
 
-        boolean isNewView = redisTemplate.opsForValue().setIfAbsent(VIEW_COUNT_KEY, String.valueOf(true), Duration.ofMinutes(10));
-
         long view = Optional.ofNullable(redisTemplate.opsForZSet().score(VIEW_COUNT_KEY, id.toString()))
                 .orElse(0.0)
                 .longValue();

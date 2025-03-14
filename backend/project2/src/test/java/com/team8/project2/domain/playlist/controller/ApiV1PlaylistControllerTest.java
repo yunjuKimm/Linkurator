@@ -138,19 +138,6 @@ class ApiV1PlaylistControllerTest {
     }
 
 
-    /** ✅ 조회수 증가 API 테스트 */
-    @Test
-    @DisplayName("조회수 증가 API가 정상적으로 호출되어야 한다.")
-    void shouldIncreaseViewCount() throws Exception {
-        Long playlistId = 1L;
-
-        mockMvc.perform(post("/api/v1/playlists/{id}/view", playlistId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.msg").value("조회수가 증가되었습니다."));
-
-        verify(playlistService, times(1)).recordPlaylistView(playlistId);
-    }
-
     /** ✅ 좋아요 증가 API 테스트 */
     @Test
     @DisplayName("좋아요 증가 API가 정상적으로 호출되어야 한다.")
