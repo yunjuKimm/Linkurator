@@ -331,7 +331,7 @@ public class CurationService {
 		// 큐레이션 정보는 바로 업데이트하지 않음
 	}
 
-	@Scheduled(fixedRate = 60000) // 1분마다 실행
+	@Scheduled(fixedRate = 600000) // 10분마다 실행
 	public void syncLikesToDatabase() {
 		// Redis에서 모든 큐레이션의 좋아요 개수를 가져와서 DB에 업데이트
 		Set<String> keys = redisTemplate.keys("curation_like:*");
