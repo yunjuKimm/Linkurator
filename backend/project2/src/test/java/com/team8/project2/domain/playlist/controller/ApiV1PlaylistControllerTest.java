@@ -128,19 +128,100 @@ class ApiV1PlaylistControllerTest {
                 .andExpect(jsonPath("$.data.title").value("테스트 플레이리스트"));
     }
 
+
+    /** ✅ 조회수 증가 API 테스트 */
     @Test
-    @DisplayName("플레이리스트의 추천 목록을 조회할 수 있다.")
-    void getRecommendedPlaylists() throws Exception {
-        // Given
+    @DisplayName("조회수 증가 API가 정상적으로 호출되어야 한다.")
+    void shouldIncreaseViewCount() throws Exception {
+        Long playlistId = 1L;
+
+        mockMvc.perform(post("/api/v1/playlists/{id}/view", playlistId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.msg").value("조회수가 증가되었습니다."));
+
+        verify(playlistService, times(1)).recordPlaylistView(playlistId);
+    }
+
+    /** ✅ 좋아요 증가 API 테스트 */
+    @Test
+    @DisplayName("좋아요 증가 API가 정상적으로 호출되어야 한다.")
+    void shouldIncreaseLikeCount() throws Exception {
+        Long playlistId = 1L;
+
+        mockMvc.perform(post("/api/v1/playlists/{id}/like", playlistId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.msg").value("좋아요가 증가되었습니다."));
+
+        verify(playlistService, times(1)).likePlaylist(playlistId);
+    }
+
+    /** ✅ 추천 API 테스트 */
+    @Test
+    @DisplayName("플레이리스트의 추천 목록을 정렬하여 조회할 수 있다.")
+    void getRecommendedPlaylistsWithSorting() throws Exception {
+        Long playlistId = 1L;
+
+        // ✅ 정렬 기준 추가
+        String sortType1 = "views";
+        String sortType2 = "likes";
+        String sortType3 = "combined";
+
+        List<PlaylistDto> recommended = List.of(
+                PlaylistDto.builder().id(2L).title("추천 플레이리스트1").description("설명1").build(),
+                PlaylistDto.builder().id(3L).title("추천 플레이리스트2").description("설명2").build()
+        );
+
+        // ✅ 모든 정렬 옵션에 대해 Stubbing 설정
+        when(playlistService.recommendPlaylist(playlistId, sortType1)).thenReturn(recommended);
+        when(playlistService.recommendPlaylist(playlistId, sortType2)).thenReturn(recommended);
+        when(playlistService.recommendPlaylist(playlistId, sortType3)).thenReturn(recommended);
+
+        // ✅ "views" 정렬 기준으로 요청 (컨트롤러에서 `combined`이 기본값이므로, 명시적으로 요청해야 함)
+        mockMvc.perform(get("/api/v1/playlists/{id}/recommendation", playlistId)
+                        .param("sortType", sortType1) // views
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].title").value("추천 플레이리스트1"))
+                .andExpect(jsonPath("$.data[1].title").value("추천 플레이리스트2"));
+
+        // ✅ "likes" 정렬 기준으로 요청
+        mockMvc.perform(get("/api/v1/playlists/{id}/recommendation", playlistId)
+                        .param("sortType", sortType2) // likes
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].title").value("추천 플레이리스트1"))
+                .andExpect(jsonPath("$.data[1].title").value("추천 플레이리스트2"));
+
+        // ✅ "combined" 정렬 기준으로 요청
+        mockMvc.perform(get("/api/v1/playlists/{id}/recommendation", playlistId)
+                        .param("sortType", sortType3) // combined
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].title").value("추천 플레이리스트1"))
+                .andExpect(jsonPath("$.data[1].title").value("추천 플레이리스트2"));
+
+        // ✅ verify를 통해 모든 정렬 옵션에 대한 호출을 검증
+        verify(playlistService, times(1)).recommendPlaylist(playlistId, sortType1);
+        verify(playlistService, times(1)).recommendPlaylist(playlistId, sortType2);
+        verify(playlistService, times(1)).recommendPlaylist(playlistId, sortType3);
+    }
+
+    @Test
+    @DisplayName("플레이리스트 추천 기능이 정렬 기준에 따라 정상 동작해야 한다.")
+    void shouldReturnRecommendedPlaylistsSorted() throws Exception {
         Long playlistId = 1L;
         List<PlaylistDto> recommended = List.of(
                 PlaylistDto.builder().id(2L).title("추천 플레이리스트1").description("설명1").build(),
                 PlaylistDto.builder().id(3L).title("추천 플레이리스트2").description("설명2").build()
         );
-        when(playlistService.recommendPlaylist(playlistId)).thenReturn(recommended);
 
-        // When & Then
+        when(playlistService.recommendPlaylist(playlistId, "likes")).thenReturn(recommended);
+
         mockMvc.perform(get("/api/v1/playlists/{id}/recommendation", playlistId)
+                        .param("sortType", "likes")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-1"))
@@ -149,6 +230,7 @@ class ApiV1PlaylistControllerTest {
                 .andExpect(jsonPath("$.data[0].id").value(2))
                 .andExpect(jsonPath("$.data[0].title").value("추천 플레이리스트1"))
                 .andExpect(jsonPath("$.data[1].id").value(3));
-    }
 
+        verify(playlistService, times(1)).recommendPlaylist(playlistId, "likes");
+    }
 }

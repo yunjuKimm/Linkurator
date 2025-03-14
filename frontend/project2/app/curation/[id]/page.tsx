@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "next/navigation"; // `useParams`를 사용하여 params를 받아옵니다.
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -13,12 +13,10 @@ import {
   Edit,
   Trash2,
   MoreVertical,
+  MousePointer,
 } from "lucide-react";
 import RightSidebar from "@/app/components/right-sidebar";
 import CommentSection from "@/app/components/comment-section";
-import AddToPlaylistModal from "@/app/components/add-to-playlist-modal";
-import SidebarSkeleton from "@/app/components/skeleton/sidebar-skeleton";
-import CurationDetailSkeleton from "@/app/components/skeleton/curation-detail";
 
 // 큐레이션 데이터 타입
 interface CurationData {
@@ -29,10 +27,12 @@ interface CurationData {
   authorImage: string;
   createdAt: string;
   modifiedAt: string;
-  urls: { url: string }[];
+  urls: { url: string; linkId?: number }[];
   tags: { name: string }[];
-  likes: number;
+  likeCount: number;
+  viewCount: number; // Add viewCount field
   comments: { authorName: string; content: string }[]; // 댓글
+  isLiked: boolean;
 }
 
 // 링크 메타데이터 타입
@@ -41,10 +41,12 @@ interface LinkMetaData {
   description: string;
   image: string;
   url: string;
+  click?: number;
+  linkId?: number;
 }
 
-export default function CurationDetail() {
-  const { id } = useParams();
+export default function PostDetail() {
+  const { id } = useParams(); // useParams로 id 값을 받습니다.
   const [post, setPost] = useState<CurationData | null>(null);
   const [linksMetaData, setLinksMetaData] = useState<Map<string, LinkMetaData>>(
     new Map()
@@ -52,38 +54,42 @@ export default function CurationDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
-  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
 
   // API 데이터 호출
-  useEffect(() => {
-    if (!id) return;
+  async function fetchData() {
+    try {
+      setLoading(true);
+      setError(null);
 
-    async function fetchData() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch(
-          `http://localhost:8080/api/v1/curation/${id}`
-        );
-
-        if (!response.ok) {
-          throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.");
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curation/${id}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
         }
+      );
 
-        const data = await response.json();
-        setPost(data.data);
-      } catch (err) {
-        setError((err as Error).message);
-        console.error("Error fetching curation data:", err);
-      } finally {
-        // 스켈레톤 UI가 잠시 보이도록 약간의 지연 추가 (실제 환경에서는 제거 가능)
-        setTimeout(() => {
-          setLoading(false);
-        }, 500);
+      if (!response.ok) {
+        throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.");
       }
-    }
 
+      const data = await response.json();
+      setPost(data.data);
+    } catch (err) {
+      setError((err as Error).message);
+      console.error("Error fetching curation data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 최초 데이터 불러오기
+  useEffect(() => {
     fetchData();
   }, [id]);
 
@@ -103,7 +109,12 @@ export default function CurationDetail() {
               `http://localhost:8080/api/v1/link/preview`,
               {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
+                  "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
+                },
+                credentials: "include", // 쿠키를 포함하여 요청
                 body: JSON.stringify({ url }),
               }
             );
@@ -115,6 +126,7 @@ export default function CurationDetail() {
             }
 
             const data = await response.json();
+            console.log(data);
             if (data.data) {
               newLinksMetaData.set(url, data.data);
             }
@@ -130,6 +142,79 @@ export default function CurationDetail() {
     fetchAllLinksMetaData();
   }, [post?.urls]);
 
+  // 좋아요 상태 확인 함수 추가 (toggleLike 함수 위에 추가)
+  async function checkLikeStatus() {
+    if (!id) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curation/like/${id}/status`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("좋아요 상태 확인 실패");
+      }
+
+      const data = await response.json();
+
+      // post가 있을 때만 상태 업데이트, 그리고 현재 상태와 다를 때만 업데이트
+      if (post && post.isLiked !== data.data) {
+        setPost((prev) => (prev ? { ...prev, isLiked: data.data } : prev));
+      }
+    } catch (error) {
+      console.error("좋아요 상태 확인 중 오류:", error);
+    }
+  }
+
+  // 좋아요 토글 API 호출
+  const toggleLike = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curation/like/${id}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("좋아요 처리 실패");
+      }
+
+      // 기존 post 상태를 업데이트하여 즉각적인 UI 반영
+      setPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              likeCount: prev.likeCount + (prev.isLiked ? -1 : 1),
+              isLiked: !prev.isLiked,
+            }
+          : prev
+      );
+    } catch (error) {
+      console.error("좋아요 처리 중 오류:", error);
+    }
+  };
+
+  // 기존 useEffect 아래에 새 useEffect 추가 (모든 링크의 메타데이터 가져오기 useEffect 바로 아래에 추가)
+  useEffect(() => {
+    if (post && id) {
+      checkLikeStatus();
+    }
+  }, [id]);
+
   // 큐레이션 삭제 처리
   const handleDeleteCuration = async () => {
     if (!confirm("정말로 이 큐레이션을 삭제하시겠습니까?")) return;
@@ -139,6 +224,11 @@ export default function CurationDetail() {
         `http://localhost:8080/api/v1/curation/${id}`,
         {
           method: "DELETE",
+          credentials: "include", // 쿠키를 포함하여 요청
+          headers: {
+            "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
+            "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
+          },
         }
       );
 
@@ -185,28 +275,12 @@ export default function CurationDetail() {
     }
   };
 
-  // 로딩 상태 처리 - 스켈레톤 UI로 대체
+  // 로딩 상태 처리
   if (loading) {
     return (
-      <main className="container grid grid-cols-12 gap-6 px-4 py-6">
-        <div className="col-span-12 lg:col-span-9">
-          <div className="mb-6 flex justify-between items-center">
-            <Link
-              href="/"
-              className="inline-flex items-center text-sm text-gray-500 hover:text-black"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              홈으로 돌아가기
-            </Link>
-          </div>
-          <CurationDetailSkeleton />
-        </div>
-        <div className="col-span-12 lg:col-span-3">
-          <div className="sticky top-6 space-y-6">
-            <SidebarSkeleton />
-          </div>
-        </div>
-      </main>
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
     );
   }
 
@@ -240,6 +314,33 @@ export default function CurationDetail() {
   // URL 배열이 있는지 확인
   const hasUrls = post.urls && post.urls.length > 0;
 
+  // 링크 클릭 처리 함수 추가
+  const handleLinkClick = async (url: string, linkId?: number) => {
+    if (!linkId) return;
+
+    try {
+      // 링크 클릭 시 백엔드에 조회수 증가 요청
+      const response = await fetch(
+        `http://localhost:8080/api/v1/link/${linkId}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+      }
+    } catch (error) {
+      console.error("링크 클릭 처리 중 오류:", error);
+    }
+    window.location.reload();
+  };
+
   return (
     <main className="container grid grid-cols-12 gap-6 px-4 py-6">
       <div className="col-span-12 lg:col-span-9">
@@ -252,7 +353,7 @@ export default function CurationDetail() {
             홈으로 돌아가기
           </Link>
 
-          {/* 큐레이션 수정/삭제/플레이리스트 추가 버튼 */}
+          {/* 큐레이션 수정/삭제 버튼 */}
           <div className="relative">
             <button
               onClick={() => setShowActionMenu(!showActionMenu)}
@@ -278,16 +379,6 @@ export default function CurationDetail() {
                     <Trash2 className="mr-2 h-4 w-4" />
                     큐레이션 삭제
                   </button>
-                  <button
-                    onClick={() => {
-                      setShowActionMenu(false);
-                      setShowPlaylistModal(true);
-                    }}
-                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    <Bookmark className="mr-2 h-4 w-4" />
-                    플레이리스트에 추가
-                  </button>
                 </div>
               </div>
             )}
@@ -297,26 +388,18 @@ export default function CurationDetail() {
         <article className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Link href={`/${post.authorName}`} className="group">
-                <Image
-                  src={
-                    post.authorImage || "/placeholder.svg?height=40&width=40"
-                  }
-                  alt={post.authorName}
-                  width={40}
-                  height={40}
-                  className="rounded-full"
-                />
-              </Link>
+              <Image
+                src={post.authorImage || "/placeholder.svg?height=40&width=40"}
+                alt={post.authorName}
+                width={40}
+                height={40}
+                className="rounded-full"
+              />
               <div>
-                <Link href={`/${post.authorName}`} className="group">
-                  <p className="font-medium">{post.authorName}</p>
-                </Link>
-                <p className="text-xs text-gray-500">
-                  {isModified
-                    ? `수정된 날짜: ${formatDate(post.modifiedAt)}`
-                    : `작성된 날짜: ${formatDate(post.createdAt)}`}
-                </p>
+                <p className="font-medium">{post.authorName}</p>
+                <p className="text-xs text-gray-500">{`작성된 날짜: ${formatDate(
+                  post.createdAt
+                )}`}</p>
               </div>
             </div>
             <button className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
@@ -325,6 +408,11 @@ export default function CurationDetail() {
           </div>
 
           <h1 className="text-3xl font-bold">{post.title}</h1>
+          <div className="flex items-center space-x-2 mt-1 mb-4">
+            <p className="text-sm text-gray-500">
+              조회수 {post.viewCount || 0}
+            </p>
+          </div>
 
           {/* 링크 카드 섹션 - 여러 URL 지원 */}
           {hasUrls && (
@@ -380,9 +468,20 @@ export default function CurationDetail() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-gray-500 hover:text-gray-700"
+                            onClick={() =>
+                              handleLinkClick(
+                                url,
+                                linksMetaData.get(url)?.linkId
+                              )
+                            }
                           >
                             바로가기
                           </a>
+                          <span className="mx-2 text-gray-300">|</span>
+                          <div className="flex items-center text-gray-500">
+                            <MousePointer className="h-3 w-3 mr-1" />
+                            <span>{linksMetaData.get(url)?.click || 0}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -422,9 +521,16 @@ export default function CurationDetail() {
 
           <div className="flex items-center justify-between border-t border-b py-4">
             <div className="flex items-center space-x-4">
-              <button className="flex items-center space-x-1 text-sm">
-                <Heart className="h-5 w-5 text-red-500 fill-red-500" />
-                <span className="font-medium">{post.likes}</span>
+              <button
+                onClick={toggleLike}
+                className="flex items-center space-x-1 text-sm"
+              >
+                <Heart
+                  className={`h-5 w-5 ${
+                    post.isLiked ? "text-red-500 fill-red-500" : "text-gray-500"
+                  }`}
+                />
+                <span className="font-medium">{post.likeCount}</span>
               </button>
               <button className="flex items-center space-x-1 text-sm text-gray-500">
                 <MessageSquare className="h-5 w-5" />
@@ -442,7 +548,7 @@ export default function CurationDetail() {
           </div>
 
           {/* 댓글 섹션 */}
-          {typeof id === "string" && <CommentSection postId={id} />}
+          <CommentSection postId={id} />
         </article>
       </div>
 
@@ -453,21 +559,15 @@ export default function CurationDetail() {
           <div className="rounded-lg border p-4">
             <h3 className="mb-3 font-semibold">이 글의 작성자</h3>
             <div className="flex items-center space-x-3">
-              <Link href={`/${post.authorName}`} className="group">
-                <Image
-                  src={
-                    post.authorImage || "/placeholder.svg?height=48&width=48"
-                  }
-                  alt={post.authorName}
-                  width={48}
-                  height={48}
-                  className="rounded-full"
-                />
-              </Link>
+              <Image
+                src={post.authorImage || "/placeholder.svg?height=48&width=48"}
+                alt={post.authorName}
+                width={48}
+                height={48}
+                className="rounded-full"
+              />
               <div>
-                <Link href={`/${post.authorName}`} className="group">
-                  <p className="font-medium">{post.authorName}</p>
-                </Link>
+                <p className="font-medium">{post.authorName}</p>
                 <p className="text-xs text-gray-500">15개의 글 작성</p>
               </div>
             </div>
@@ -477,67 +577,6 @@ export default function CurationDetail() {
           </div>
         </div>
       </div>
-
-      {/* 플레이리스트 추가 모달 렌더링 */}
-      {showPlaylistModal && (
-        <AddToPlaylistModal
-          curationId={post.id}
-          onClose={() => setShowPlaylistModal(false)}
-        />
-      )}
-      <style jsx global>{`
-        .ql-editor-content {
-          font-family: inherit;
-        }
-        .ql-editor-content h1,
-        .ql-editor-content h2,
-        .ql-editor-content h3,
-        .ql-editor-content h4,
-        .ql-editor-content h5,
-        .ql-editor-content h6 {
-          font-weight: bold;
-          margin-top: 1em;
-          margin-bottom: 0.5em;
-        }
-        .ql-editor-content h1 {
-          font-size: 2em;
-        }
-        .ql-editor-content h2 {
-          font-size: 1.5em;
-        }
-        .ql-editor-content h3 {
-          font-size: 1.17em;
-        }
-        .ql-editor-content p {
-          margin-bottom: 1em;
-        }
-        .ql-editor-content ul,
-        .ql-editor-content ol {
-          padding-left: 2em;
-          margin-bottom: 1em;
-        }
-        .ql-editor-content blockquote {
-          border-left: 4px solid #ccc;
-          padding-left: 16px;
-          margin: 0 0 1em;
-        }
-        .ql-editor-content pre {
-          background-color: #f0f0f0;
-          border-radius: 3px;
-          padding: 5px 10px;
-          margin-bottom: 1em;
-        }
-        .ql-editor-content code {
-          background-color: #f0f0f0;
-          padding: 2px 4px;
-          border-radius: 3px;
-          font-family: monospace;
-        }
-        .ql-editor-content img {
-          max-width: 100%;
-          height: auto;
-        }
-      `}</style>
     </main>
   );
 }

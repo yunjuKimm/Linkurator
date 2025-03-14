@@ -11,13 +11,12 @@ import com.team8.project2.domain.playlist.repository.PlaylistRepository;
 import com.team8.project2.domain.curation.tag.entity.Tag;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.Duration;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -31,6 +30,128 @@ import java.util.stream.Collectors;
 public class PlaylistService {
 
     private final PlaylistRepository playlistRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private static final String VIEW_COUNT_KEY = "playlist:view_count"; // 조회수 저장
+    private static final String LIKE_COUNT_KEY = "playlist:like_count"; // 좋아요 수 저장
+    private static final String RECOMMEND_KEY = "playlist:recommend:"; // 추천 캐싱
+
+
+    /**
+     * ✅ 플레이리스트 추천 로직
+     * - 24시간 내 인기 추천 포함
+     * - 태그 기반 유사 플레이리스트 추천
+     * - 정렬 기준 (좋아요, 조회수, 복합)
+     */
+    public List<PlaylistDto> recommendPlaylist(Long playlistId, String sortType) {
+        List<Long> cachedRecommendations = (List<Long>) redisTemplate.opsForValue().get(RECOMMEND_KEY + playlistId);
+        if (cachedRecommendations != null) {
+            return getPlaylistsByIds(cachedRecommendations);
+        }
+
+        // 1️⃣ 최근 24시간 동안 인기 플레이리스트 추천
+        Set<Object> trendingRecent = redisTemplate.opsForZSet().reverseRange("trending:24h", 0, 5);
+        Set<Object> popularRecent = redisTemplate.opsForZSet().reverseRange("popular:24h", 0, 5);
+
+        // 2️⃣ 전체 인기 플레이리스트 추천 (조회수 + 좋아요)
+        Set<Object> trendingPlaylists = redisTemplate.opsForZSet().reverseRange(VIEW_COUNT_KEY, 0, 5);
+        Set<Object> popularPlaylists = redisTemplate.opsForZSet().reverseRange(LIKE_COUNT_KEY, 0, 5);
+
+        // 3️⃣ 태그 기반 유사 플레이리스트 추천
+        Playlist currentPlaylist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        List<Playlist> similarPlaylists = findSimilarPlaylistsByTag(currentPlaylist);
+
+        // 4️⃣ 추천 결과 병합
+        Set<Long> recommendedPlaylistIds = new HashSet<>();
+        addRecommendations(recommendedPlaylistIds, trendingRecent);
+        addRecommendations(recommendedPlaylistIds, popularRecent);
+        addRecommendations(recommendedPlaylistIds, trendingPlaylists);
+        addRecommendations(recommendedPlaylistIds, popularPlaylists);
+        similarPlaylists.forEach(p -> recommendedPlaylistIds.add(p.getId()));
+
+        // 5️⃣ Redis에 추천 데이터 캐싱 (30분 유지)
+        redisTemplate.opsForValue().set(RECOMMEND_KEY + playlistId, new ArrayList<>(recommendedPlaylistIds), Duration.ofMinutes(30));
+
+        // 6️⃣ 정렬 기준 적용
+        return getSortedPlaylists(new ArrayList<>(recommendedPlaylistIds), sortType);
+    }
+
+    /**
+     * ✅ 태그 기반 유사 플레이리스트 찾기
+     * - 3개 이상의 태그가 일치하면 유사한 플레이리스트로 추천
+     * - 3개 미만이면 랜덤 추천
+     */
+    private List<Playlist> findSimilarPlaylistsByTag(Playlist currentPlaylist) {
+        List<Playlist> allPlaylists = playlistRepository.findAll();
+        List<Playlist> similarPlaylists = new ArrayList<>();
+
+        for (Playlist other : allPlaylists) {
+            if (!other.getId().equals(currentPlaylist.getId())) {
+                Set<String> commonTags = new HashSet<>(currentPlaylist.getTagNames()); // ✅ 수정
+                commonTags.retainAll(other.getTagNames()); // ✅ 수정
+
+                if (commonTags.size() >= 3) {
+                    similarPlaylists.add(other);
+                }
+            }
+        }
+
+        if (similarPlaylists.isEmpty()) {
+            Collections.shuffle(allPlaylists);
+            return allPlaylists.stream().limit(5).collect(Collectors.toList());
+        }
+
+        return similarPlaylists;
+    }
+
+    /**
+     * ✅ 정렬 기준에 따라 플레이리스트 정렬
+     * - 좋아요 순, 조회수 순, 복합 점수 순
+     */
+    private List<PlaylistDto> getSortedPlaylists(List<Long> playlistIds, String sortType) {
+        List<Playlist> playlists = new ArrayList<>(playlistRepository.findAllById(playlistIds));
+
+        switch (sortType) {
+            case "likes":
+                playlists.sort(Comparator.comparingLong(Playlist::getLikeCount).reversed());
+                break;
+            case "views":
+                playlists.sort(Comparator.comparingLong(Playlist::getViewCount).reversed());
+                break;
+            case "combined":
+                playlists.sort(Comparator.comparingLong((Playlist p) -> p.getViewCount() + p.getLikeCount()).reversed());
+                break;
+            default:
+                break;
+        }
+
+        return playlists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
+    }
+
+    /** ✅ 추천된 Playlist ID 리스트로 PlaylistDto 리스트 반환 */
+    private List<PlaylistDto> getPlaylistsByIds(List<Long> playlistIds) {
+        List<Playlist> playlists = playlistRepository.findAllById(playlistIds);
+        return playlists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
+    }
+
+    /** ✅ 조회수 증가 */
+    public void recordPlaylistView(Long playlistId) {
+        redisTemplate.opsForZSet().incrementScore(VIEW_COUNT_KEY, playlistId.toString(), 1);
+    }
+
+    /** ✅ 좋아요 증가 */
+    public void likePlaylist(Long playlistId) {
+        redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, playlistId.toString(), 1);
+    }
+
+    /** ✅ 추천 리스트 병합 */
+    private void addRecommendations(Set<Long> recommendedPlaylistIds, Set<Object> redisResults) {
+        if (redisResults != null) {
+            redisResults.forEach(id -> recommendedPlaylistIds.add(Long.parseLong(id.toString())));
+        }
+    }
+
 
     /**
      * 새로운 플레이리스트를 생성합니다.
@@ -109,21 +230,6 @@ public class PlaylistService {
         playlistRepository.deleteById(id);
     }
 
-    /**
-     * 플레이리스트 제목과 설명의 유효성을 검사합니다.
-     *
-     * @param title 제목
-     * @param description 설명
-     */
-    // ✅ 삭제: Bean Validation 적용으로 인해 해당 검증 메서드가 더 이상 필요하지 않습니다.
-//    private void validatePlaylistData(String title, String description) {
-//        if (title == null || title.trim().isEmpty()) {
-//            throw new BadRequestException("플레이리스트 제목은 필수 입력 사항입니다.");
-//        }
-//        if (description == null || description.trim().isEmpty()) {
-//            throw new BadRequestException("플레이리스트 설명은 필수 입력 사항입니다.");
-//        }
-//    }
 
     /** 플레이리스트 아이템 추가 */
     public PlaylistDto addPlaylistItem(Long playlistId, Long itemId, PlaylistItem.PlaylistItemType itemType) {
@@ -181,23 +287,6 @@ public class PlaylistService {
 
         playlistRepository.save(playlist);
         return PlaylistDto.fromEntity(playlist);
-    }
-
-    /** 플레이리스트 추천 */
-    public List<PlaylistDto> recommendPlaylist(Long playlistId) {
-        Playlist currentPlaylist  = playlistRepository.findById(playlistId)
-                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
-
-        Set<Tag> currentTags = currentPlaylist.getTags();
-        if (currentTags == null || currentTags.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<Playlist> recommendedPlaylists = playlistRepository.findByTags(currentTags, playlistId);
-
-        return recommendedPlaylists.stream()
-                .map(PlaylistDto::fromEntity)
-                .collect(Collectors.toList());
     }
 
 

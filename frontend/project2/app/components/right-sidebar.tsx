@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "next/link"
 
 export default function RightSidebar() {
   return (
@@ -44,5 +44,6 @@ export default function RightSidebar() {
         </div>
       </div>
     </div>
-  );
+  )
 }
+

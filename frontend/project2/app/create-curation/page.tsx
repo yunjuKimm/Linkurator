@@ -105,6 +105,7 @@ export default function CreateCurationPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(requestData),
       });
 

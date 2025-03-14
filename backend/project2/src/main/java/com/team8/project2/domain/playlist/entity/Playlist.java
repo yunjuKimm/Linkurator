@@ -1,5 +1,6 @@
 package com.team8.project2.domain.playlist.entity;
 
+import com.team8.project2.domain.curation.curation.entity.CurationTag;
 import com.team8.project2.domain.curation.tag.entity.Tag;
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 플레이리스트(Playlist) 엔티티 클래스입니다.
@@ -47,6 +49,15 @@ public class Playlist {
     private boolean isPublic = true;
 
     /**
+     * ✅ 플레이리스트 조회수 및 좋아요 수 추가
+     */
+    @Column(nullable = false)
+    private long viewCount = 0L; // 기본값 0
+
+    @Column(nullable = false)
+    private long likeCount = 0L; // 기본값 0
+
+    /**
      * 플레이리스트에 포함된 항목 목록 (1:N 관계)
      */
     @OneToMany(mappedBy = "playlist", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -71,9 +82,34 @@ public class Playlist {
      */
     @ManyToMany
     @JoinTable(
-            name="PlaylistTag",
-            joinColumns = @JoinColumn(name="playlist_id"),
-            inverseJoinColumns = @JoinColumn(name="tag_id")
+            name = "PlaylistTag",
+            joinColumns = @JoinColumn(name = "playlist_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
     )
     private Set<Tag> tags = new HashSet<>();
+
+    /**
+     * ✅ 태그 목록을 문자열 Set으로 변환하여 반환
+     */
+    public Set<String> getTagNames() {
+        return this.tags.stream()
+                .map(Tag::getName)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * ✅ 조회수 증가 메서드
+     */
+    public void incrementViewCount() {
+        this.viewCount += 1;
+    }
+
+    /**
+     * ✅ 좋아요 증가 메서드
+     */
+    public void incrementLikeCount() {
+        this.likeCount += 1;
+    }
+
+
 }
