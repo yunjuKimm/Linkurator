@@ -14,9 +14,15 @@ import {
   Trash2,
   MoreVertical,
   MousePointer,
+  Flag,
 } from "lucide-react";
 import RightSidebar from "@/app/components/right-sidebar";
 import CommentSection from "@/app/components/comment-section";
+import ReportModal from "@/app/components/report-modal";
+
+// API URL을 하드코딩된 값에서 환경 변수로 변경합니다.
+// 파일 상단에 다음 상수를 추가합니다:
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // 큐레이션 데이터 타입
 interface CurationData {
@@ -58,6 +64,7 @@ export default function PostDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // API 데이터 호출
   async function fetchData() {
@@ -65,18 +72,18 @@ export default function PostDetail() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        `http://localhost:8080/api/v1/curation/${id}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-            "X-Forwarded-For": "127.0.0.1",
-            "X-Real-IP": "127.0.0.1",
-          },
-        }
-      );
+      // 그리고 모든 fetch 호출에서 하드코딩된 URL을 변경합니다.
+      // 예를 들어:
+      // 이렇게 변경합니다:
+      const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "X-Forwarded-For": "127.0.0.1",
+          "X-Real-IP": "127.0.0.1",
+        },
+      });
 
       if (!response.ok) {
         throw new Error("큐레이션 데이터를 가져오는 데 실패했습니다.");
@@ -109,19 +116,16 @@ export default function PostDetail() {
       await Promise.all(
         post.urls.map(async ({ url }) => {
           try {
-            const response = await fetch(
-              `http://localhost:8080/api/v1/link/preview`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
-                  "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
-                },
-                credentials: "include", // 쿠키를 포함하여 요청
-                body: JSON.stringify({ url }),
-              }
-            );
+            const response = await fetch(`${API_URL}/api/v1/link/preview`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
+                "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
+              },
+              credentials: "include", // 쿠키를 포함하여 요청
+              body: JSON.stringify({ url }),
+            });
 
             if (!response.ok) {
               throw new Error(
@@ -149,17 +153,14 @@ export default function PostDetail() {
   // 좋아요 토글 API 호출
   const toggleLike = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/curation/like/${id}`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "X-Forwarded-For": "127.0.0.1",
-            "X-Real-IP": "127.0.0.1",
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/api/v1/curation/like/${id}`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "X-Forwarded-For": "127.0.0.1",
+          "X-Real-IP": "127.0.0.1",
+        },
+      });
 
       if (!response.ok) {
         throw new Error("좋아요 처리 실패");
@@ -185,17 +186,14 @@ export default function PostDetail() {
     if (!confirm("정말로 이 큐레이션을 삭제하시겠습니까?")) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/curation/${id}`,
-        {
-          method: "DELETE",
-          credentials: "include", // 쿠키를 포함하여 요청
-          headers: {
-            "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
-            "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
+        method: "DELETE",
+        credentials: "include", // 쿠키를 포함하여 요청
+        headers: {
+          "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
+          "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
+        },
+      });
 
       if (!response.ok) {
         throw new Error("큐레이션 삭제에 실패했습니다.");
@@ -285,17 +283,14 @@ export default function PostDetail() {
 
     try {
       // 링크 클릭 시 백엔드에 조회수 증가 요청
-      const response = await fetch(
-        `http://localhost:8080/api/v1/link/${linkId}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "X-Forwarded-For": "127.0.0.1",
-            "X-Real-IP": "127.0.0.1",
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/api/v1/link/${linkId}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "X-Forwarded-For": "127.0.0.1",
+          "X-Real-IP": "127.0.0.1",
+        },
+      });
 
       if (response.ok) {
         const result = await response.json();
@@ -310,7 +305,7 @@ export default function PostDetail() {
   const handleFollow = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/v1/members/${post.authorName}/follow`,
+        `${API_URL}/api/v1/members/${post.authorName}/follow`,
         {
           method: "POST",
           credentials: "include",
@@ -343,7 +338,7 @@ export default function PostDetail() {
   const handleUnfollow = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/v1/members/${post.authorName}/unfollow`,
+        `${API_URL}/api/v1/members/${post.authorName}/unfollow`,
         {
           method: "POST",
           credentials: "include",
@@ -592,6 +587,12 @@ export default function PostDetail() {
               <button className="rounded-md border p-2 hover:bg-gray-50">
                 <Share2 className="h-5 w-5 text-gray-500" />
               </button>
+              <button
+                className="rounded-md border p-2 hover:bg-gray-50 hover:text-red-500"
+                onClick={() => setShowReportModal(true)}
+              >
+                <Flag className="h-5 w-5 text-gray-500 hover:text-red-500" />
+              </button>
             </div>
           </div>
 
@@ -642,6 +643,12 @@ export default function PostDetail() {
           </div>
         </div>
       </div>
+      {/* 신고 모달 */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        curationId={Number(id)}
+      />
     </main>
   );
 }
