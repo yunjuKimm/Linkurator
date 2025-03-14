@@ -25,12 +25,17 @@ import com.team8.project2.domain.curation.curation.repository.CurationRepository
 import com.team8.project2.domain.curation.curation.repository.CurationTagRepository;
 import com.team8.project2.domain.curation.like.entity.Like;
 import com.team8.project2.domain.curation.like.repository.LikeRepository;
+import com.team8.project2.domain.curation.report.entity.Report;
+import com.team8.project2.domain.curation.report.entity.ReportType;
+import com.team8.project2.domain.curation.report.repository.ReportRepository;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.domain.image.entity.CurationImage;
 import com.team8.project2.domain.image.repository.CurationImageRepository;
 import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.FollowRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
+import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.exception.ServiceException;
 
@@ -60,7 +65,9 @@ public class CurationService {
 	private final RedisTemplate<String, Object> redisTemplate;
 	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
 	private static final String LIKE_COUNT_KEY = "curation:like_count"; // 좋아요 수 저장
-
+	private final FollowRepository followRepository;
+	private final MemberService memberService;
+	private final ReportRepository reportRepository;
 
 	/**
 	 * ✅ 특정 큐레이터의 큐레이션 개수를 반환하는 메서드 추가
@@ -251,15 +258,18 @@ public class CurationService {
 		boolean isNewView = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(true), Duration.ofMinutes(10));
 		System.out.println("Redis Key Set? " + isNewView + " | Key: " + key);
 
-		boolean isLiked = false;
-		if (rq.isLogin()) {
-			System.out.println("rq.longin ===========================");
-			Member actor = rq.getActor();
-			isLiked = isLikedByMember(curationId, actor.getId());
-		}
-		
 		Curation curation = curationRepository.findById(curationId)
 				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+
+		boolean isLogin = false;
+		boolean isLiked = false;
+		boolean isFollowed = false;
+		if (rq.isLogin()) {
+			isLogin = true;
+			Member actor = rq.getActor();
+			isLiked = isLikedByMember(curationId, actor.getId());
+			isFollowed = memberService.isFollowed(curation.getMemberId(), actor.getId());
+		}
 
 		if (isNewView) {
 			curationViewService.increaseViewCount(curation);
@@ -267,7 +277,7 @@ public class CurationService {
 			System.out.println("조회수 증가 안 함 (이미 조회된 IP)");
 		}
 
-		return CurationDetailResDto.fromEntity(curation, isLiked);
+		return CurationDetailResDto.fromEntity(curation, isLiked, isFollowed, isLogin);
 	}
 
 	/**
@@ -342,4 +352,23 @@ public class CurationService {
 				.collect(Collectors.toList());
 	}
 
+	@Transactional
+	public void reportCuration(Long curationId, ReportType reportType) {
+		Member actor = rq.getActor();
+		Curation curation = curationRepository.findById(curationId)
+			.orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 큐레이션입니다."));
+
+		// 같은 사유로 이미 신고한 큐레이션 거부
+		if (reportRepository.existsByCurationIdAndReporterIdAndReportType(curationId, actor.getId(), reportType)) {
+			throw new ServiceException("400-1", "이미 같은 사유로 신고한 큐레이션입니다.");
+		}
+
+		Report report = Report.builder()
+			.reportType(reportType)
+			.curation(curation)
+			.reporter(actor)
+			.build();
+
+		reportRepository.save(report);
+	}
 }

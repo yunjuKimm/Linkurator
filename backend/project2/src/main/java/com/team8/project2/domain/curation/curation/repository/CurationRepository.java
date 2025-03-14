@@ -1,6 +1,7 @@
 package com.team8.project2.domain.curation.curation.repository;
 
 import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.member.entity.Member;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -106,4 +107,6 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 	 */
 	@Query("SELECT COALESCE(SUM(c.likeCount), 0) FROM Curation c")
 	long sumTotalLikes();
+
+	long countByMember(Member member);
 }
