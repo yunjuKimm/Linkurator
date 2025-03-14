@@ -42,10 +42,15 @@ public class AdminService {
      * 일정 개수 이상 신고된 큐레이션 목록을 조회하는 메서드
      *
      * @param minReports 최소 신고 개수
-     * @return 신고된 큐레이션 목록
+     * @return 신고된 큐레이션 ID 목록
      */
-    public List<Curation> getReportedCurations(int minReports) {
-        return curationRepository.findReportedCurations(minReports);
+    public List<Long> getReportedCurations(int minReports) {
+        List<Curation> reportedCurations = curationRepository.findReportedCurations(minReports);
+
+        // 신고된 큐레이션의 ID 리스트를 반환
+        return reportedCurations.stream()
+                .map(Curation::getId)
+                .toList();
     }
 
     // ✅ 큐레이션 & 플레이리스트 통계 조회
