@@ -60,7 +60,7 @@ export default function EditPostPage() {
         if (data.code === "200-1") {
           const curation: CurationData = data.data;
 
-          // 데이터 설정
+          // 데이�� 설정
           setTitle(curation.title);
           setContent(curation.content);
 

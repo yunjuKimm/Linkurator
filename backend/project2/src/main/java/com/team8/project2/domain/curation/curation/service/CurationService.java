@@ -25,6 +25,9 @@ import com.team8.project2.domain.curation.curation.repository.CurationRepository
 import com.team8.project2.domain.curation.curation.repository.CurationTagRepository;
 import com.team8.project2.domain.curation.like.entity.Like;
 import com.team8.project2.domain.curation.like.repository.LikeRepository;
+import com.team8.project2.domain.curation.report.entity.Report;
+import com.team8.project2.domain.curation.report.entity.ReportType;
+import com.team8.project2.domain.curation.report.repository.ReportRepository;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.domain.image.entity.CurationImage;
 import com.team8.project2.domain.image.repository.CurationImageRepository;
@@ -64,6 +67,7 @@ public class CurationService {
 	private static final String LIKE_COUNT_KEY = "curation:like_count"; // 좋아요 수 저장
 	private final FollowRepository followRepository;
 	private final MemberService memberService;
+	private final ReportRepository reportRepository;
 
 	/**
 	 * ✅ 특정 큐레이터의 큐레이션 개수를 반환하는 메서드 추가
@@ -348,4 +352,23 @@ public class CurationService {
 				.collect(Collectors.toList());
 	}
 
+	@Transactional
+	public void reportCuration(Long curationId, ReportType reportType) {
+		Member actor = rq.getActor();
+		Curation curation = curationRepository.findById(curationId)
+			.orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 큐레이션입니다."));
+
+		// 같은 사유로 이미 신고한 큐레이션 거부
+		if (reportRepository.existsByCurationIdAndReporterIdAndReportType(curationId, actor.getId(), reportType)) {
+			throw new ServiceException("400-1", "이미 같은 사유로 신고한 큐레이션입니다.");
+		}
+
+		Report report = Report.builder()
+			.reportType(reportType)
+			.curation(curation)
+			.reporter(actor)
+			.build();
+
+		reportRepository.save(report);
+	}
 }
