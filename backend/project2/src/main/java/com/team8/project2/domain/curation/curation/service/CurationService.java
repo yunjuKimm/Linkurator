@@ -12,6 +12,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
@@ -30,6 +31,7 @@ import com.team8.project2.domain.image.repository.CurationImageRepository;
 import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
+import com.team8.project2.global.Rq;
 import com.team8.project2.global.exception.ServiceException;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,6 +55,7 @@ public class CurationService {
 	private final LikeRepository likeRepository;
 	private final ApplicationEventPublisher eventPublisher;
 	private final CurationViewService curationViewService;
+	private final Rq rq;
 
 	private final RedisTemplate<String, Object> redisTemplate;
 	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
@@ -205,7 +208,7 @@ public class CurationService {
 	 * @return 조회된 큐레이션 객체
 	 */
 	@Transactional
-	public Curation getCuration(Long curationId, HttpServletRequest request) {
+	public CurationDetailResDto getCuration(Long curationId, HttpServletRequest request) {
 		String ip = request.getHeader("X-Forwarded-For");
 
 		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
@@ -248,6 +251,13 @@ public class CurationService {
 		boolean isNewView = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(true), Duration.ofMinutes(10));
 		System.out.println("Redis Key Set? " + isNewView + " | Key: " + key);
 
+		boolean isLiked = false;
+		if (rq.isLogin()) {
+			System.out.println("rq.longin ===========================");
+			Member actor = rq.getActor();
+			isLiked = isLikedByMember(curationId, actor.getId());
+		}
+		
 		Curation curation = curationRepository.findById(curationId)
 				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
 
@@ -257,7 +267,7 @@ public class CurationService {
 			System.out.println("조회수 증가 안 함 (이미 조회된 IP)");
 		}
 
-		return curation;
+		return CurationDetailResDto.fromEntity(curation, isLiked);
 	}
 
 	/**
