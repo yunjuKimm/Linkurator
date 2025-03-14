@@ -41,11 +41,40 @@ export default function ProfilePage() {
 
     // 사용자 프로필 정보 가져오기
     useEffect(() => {
+        // 이미 세션에 사용자 정보가 있는지 확인
+        const savedLoginStatus = sessionStorage.getItem("isLoggedIn")
+        const savedUserName = sessionStorage.getItem("userName")
+
+        // 이미 로그인 정보가 있으면 API 호출 스킵
+        if (savedLoginStatus === "true" && savedUserName) {
+            setIsLoading(false)
+            setProfile({
+                id: Number(sessionStorage.getItem("userId") || "0"),
+                memberId: savedUserName,
+                username: sessionStorage.getItem("userName") || "",
+                email: sessionStorage.getItem("userEmail") || "",
+                profileImage: sessionStorage.getItem("userImage") || "",
+                introduce: sessionStorage.getItem("userIntroduce") || "",
+            })
+            setFormData({
+                username: sessionStorage.getItem("userName") || "",
+                email: sessionStorage.getItem("userEmail") || "",
+                profileImage: sessionStorage.getItem("userImage") || "",
+                introduce: sessionStorage.getItem("userIntroduce") || "",
+            })
+            return
+        }
+
         const fetchUserProfile = async () => {
             setIsLoading(true)
             try {
                 const response = await fetch("http://localhost:8080/api/v1/members/me", {
                     credentials: "include",
+                    // 캐시 제어 추가
+                    cache: "no-store",
+                    headers: {
+                        "Cache-Control": "no-cache",
+                    },
                 })
 
                 if (!response.ok) {
@@ -71,6 +100,14 @@ export default function ProfilePage() {
                         profileImage: data.data.profileImage || "",
                         introduce: data.data.introduce || "",
                     })
+
+                    // 세션 스토리지에 사용자 정보 저장
+                    sessionStorage.setItem("userName", data.data.username || "")
+                    sessionStorage.setItem("userEmail", data.data.email || "")
+                    sessionStorage.setItem("userImage", data.data.profileImage || "")
+                    sessionStorage.setItem("userIntroduce", data.data.introduce || "")
+                    sessionStorage.setItem("userId", data.data.id?.toString() || "0")
+                    sessionStorage.setItem("isLoggedIn", "true")
                 } else {
                     throw new Error("프로필 데이터가 없습니다.")
                 }
@@ -88,7 +125,7 @@ export default function ProfilePage() {
         }
 
         fetchUserProfile()
-    }, [router, toast])
+    }, [])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
@@ -169,7 +206,7 @@ export default function ProfilePage() {
             window.dispatchEvent(new Event("logout"))
 
             // 홈으로 리다이렉트
-            router.push("/curation")
+            router.push("/home")
         } catch (error) {
             console.error("계정 삭제 오류:", error)
             toast({
@@ -196,7 +233,7 @@ export default function ProfilePage() {
     return (
         <div className="container max-w-2xl mx-auto py-10 px-4">
             <div className="mb-6">
-                <Link href="/" className="inline-flex items-center text-sm text-gray-500 hover:text-black">
+                <Link href="/home" className="inline-flex items-center text-sm text-gray-500 hover:text-black">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     홈으로 돌아가기
                 </Link>

@@ -3,8 +3,6 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-
-
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,24 +21,29 @@ export default function LoginPage() {
     password: "",
   })
 
-  // ✅ 페이지 로드 시 /me 요청하여 로그인 상태 확인
+  // 클라이언트 사이드에서만 실행되는 코드를 분리
+  const isBrowser = typeof window !== "undefined"
+
+  // 페이지 로드 시 로그인 상태 확인
   useEffect(() => {
+    if (!isBrowser) return // 서버 사이드에서는 실행하지 않음
+
     const checkLoginStatus = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/v1/members/me", {
-          method: "GET",
+        const response = await fetch("http://localhost:8080/api/v1/members/me", {
           credentials: "include",
         })
-        if (res.ok) {
-          // ✅ 이미 로그인된 상태면 홈으로 이동
-          router.push("/index")
+
+        if (response.ok) {
+          // 이미 로그인된 상태면 홈으로 이동
+          router.push("/home")
         }
       } catch (error) {
         console.error("로그인 상태 확인 오류:", error)
       }
     }
     checkLoginStatus()
-  }, [router])
+  }, [router, isBrowser])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -49,46 +52,76 @@ export default function LoginPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
 
     try {
+      // 로그인 요청
       const response = await fetch("http://localhost:8080/api/v1/members/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
         body: JSON.stringify({
           username: formData.memberId,
           password: formData.password,
         }),
-        credentials: "include",
-      });
+      })
 
-      if (response.ok) {
-
-        // ✅ /me API 호출하여 로그인 상태 확인
-        const meResponse = await fetch("http://localhost:8080/api/v1/members/me", {
-          credentials: "include",
-        });
-
-        if (meResponse.ok) {
-          console.log("✅ /me 요청 성공, 로그인 유지됨");
-          window.dispatchEvent(new Event("login")); // ✅ 헤더 업데이트 이벤트 실행
-          sessionStorage.setItem("isLoggedIn", "true");
-          router.push("/index");
-        } else {
-          console.warn("⚠️ /me 요청 실패 (401 가능성 있음)", meResponse.status);
-        }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "아이디 또는 비밀번호가 올바르지 않습니다.");
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.msg || "로그인에 실패했습니다.")
       }
-    } catch (error) {
-      console.error("🚨 서버 연결 오류:", error);
+
+      const loginData = await response.json()
+
+      if (loginData) {
+        try {
+          // 사용자 정보 가져오기
+          const userResponse = await fetch("http://localhost:8080/api/v1/members/me", {
+            credentials: "include",
+          })
+
+          if (!userResponse.ok) {
+            throw new Error("사용자 정보를 가져오는데 실패했습니다.")
+          }
+
+          const userData = await userResponse.json()
+
+          if (userData && userData.data) {
+            sessionStorage.setItem("isLoggedIn", "true")
+            sessionStorage.setItem("userName", userData.data.username || "사용자")
+            sessionStorage.setItem("userImage", userData.data.profileImage || "/placeholder.svg?height=32&width=32")
+            sessionStorage.setItem("userId", userData.data.id || "")
+          }
+
+          // 로그인 이벤트 발생
+          window.dispatchEvent(new Event("login"))
+
+          // 로그인 성공 메시지
+          toast({
+            title: "로그인 성공",
+            description: "환영합니다!",
+          })
+
+          // 페이지 이동 대신 window.location을 사용하여 전체 페이지 새로고침과 함께 이동
+          setTimeout(() => {
+            window.location.href = "/home"
+          }, 200)
+        } catch (error) {
+          console.warn("사용자 정보 요청 실패", error)
+          setError("로그인 세션을 유지하는데 문제가 발생했습니다.")
+        }
+      }
+    } catch (error: any) {
+      console.error("로그인 오류:", error)
+      setError(error.message || "아이디 또는 비밀번호가 올바르지 않습니다.")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
       <div className="container flex items-center justify-center min-h-[80vh]">
@@ -151,3 +184,4 @@ export default function LoginPage() {
       </div>
   )
 }
+

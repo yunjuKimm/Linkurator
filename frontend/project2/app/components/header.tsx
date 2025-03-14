@@ -14,23 +14,35 @@ export default function Header() {
   const [userImage, setUserImage] = useState("/placeholder.svg?height=32&width=32")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement | null>(null)
 
-  console.log("🔥 [Header] 컴포넌트 렌더링됨. isLoggedIn:", isLoggedIn)
+  // 클라이언트 사이드에서만 실행되는 코드를 분리
+  const isBrowser = typeof window !== "undefined"
 
   const checkLoginStatus = async () => {
-    console.log("🔄 [checkLoginStatus] 실행됨...")
+    if (!isBrowser) return // 서버 사이드에서는 실행하지 않음
+
+    console.log("로그인 상태 확인 중...")
+
+    // 이미 세션에 로그인 정보가 있으면 API 호출 스킵
+    const savedLoginStatus = sessionStorage.getItem("isLoggedIn")
+    if (savedLoginStatus === "true") {
+      setIsLoggedIn(true)
+      setUserName(sessionStorage.getItem("userName") || "사용자")
+      setUserImage(sessionStorage.getItem("userImage") || "/placeholder.svg?height=32&width=32")
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     try {
       const response = await fetch("http://localhost:8080/api/v1/members/me", {
         credentials: "include",
       })
 
-      console.log("🛠 [API] /me 요청 결과:", response.status)
-
       if (response.ok) {
         const data = await response.json()
-        console.log("✅ [API] 사용자 정보:", data)
+        console.log("사용자 정보:", data)
 
         if (data.data) {
           setIsLoggedIn(true)
@@ -49,7 +61,7 @@ export default function Header() {
         clearSessionData()
       }
     } catch (error) {
-      console.error("🚨 [오류] 로그인 상태 확인 중:", error)
+      console.error("로그인 상태 확인 중 오류:", error)
       setIsLoggedIn(false)
       clearSessionData()
     } finally {
@@ -58,6 +70,8 @@ export default function Header() {
   }
 
   const clearSessionData = () => {
+    if (!isBrowser) return // 서버 사이드에서는 실행하지 않음
+
     sessionStorage.removeItem("isLoggedIn")
     sessionStorage.removeItem("userName")
     sessionStorage.removeItem("userImage")
@@ -66,23 +80,54 @@ export default function Header() {
 
   // 페이지 이동 시마다 로그인 상태 확인
   useEffect(() => {
-    checkLoginStatus()
-  }, [pathname])
+    if (!isBrowser) return // 서버 사이드에서는 실행하지 않음
+
+    // 경로가 변경되었을 때만 로그인 상태 확인
+    const prevPathname = sessionStorage.getItem("prevPathname")
+    if (prevPathname !== pathname) {
+      sessionStorage.setItem("prevPathname", pathname)
+      checkLoginStatus()
+    }
+  }, [pathname, isBrowser])
 
   // 초기 로그인 상태 확인 및 이벤트 리스너 설정
   useEffect(() => {
-    console.log("📌 [useEffect] 실행됨 - 로그인 상태 확인 시작")
+    if (!isBrowser) return // 서버 사이드에서는 실행하지 않음
+
+    console.log("헤더 컴포넌트 마운트 - 로그인 상태 확인 시작")
     const savedLoginStatus = sessionStorage.getItem("isLoggedIn")
     if (savedLoginStatus === "true") {
       setIsLoggedIn(true)
       setUserName(sessionStorage.getItem("userName") || "사용자")
       setUserImage(sessionStorage.getItem("userImage") || "/placeholder.svg?height=32&width=32")
+      setIsLoading(false)
     } else {
       checkLoginStatus()
     }
 
-    window.addEventListener("login", checkLoginStatus)
-    window.addEventListener("logout", checkLoginStatus)
+    const handleLoginEvent = () => {
+      console.log("로그인 이벤트 감지됨")
+      // 즉시 로그인 상태 업데이트
+      const savedLoginStatus = sessionStorage.getItem("isLoggedIn")
+      if (savedLoginStatus === "true") {
+        setIsLoggedIn(true)
+        setUserName(sessionStorage.getItem("userName") || "사용자")
+        setUserImage(sessionStorage.getItem("userImage") || "/placeholder.svg?height=32&width=32")
+        setIsLoading(false)
+      } else {
+        // 세션 스토리지에 정보가 없으면 API 호출
+        checkLoginStatus()
+      }
+    }
+
+    const handleLogoutEvent = () => {
+      setIsLoggedIn(false)
+      clearSessionData()
+      setIsLoading(false)
+    }
+
+    window.addEventListener("login", handleLoginEvent)
+    window.addEventListener("logout", handleLogoutEvent)
 
     // 드롭다운 외부 클릭 시 닫기
     const handleClickOutside = (event: MouseEvent) => {
@@ -94,30 +139,35 @@ export default function Header() {
     document.addEventListener("mousedown", handleClickOutside)
 
     return () => {
-      window.removeEventListener("login", checkLoginStatus)
-      window.removeEventListener("logout", checkLoginStatus)
+      window.removeEventListener("login", handleLoginEvent)
+      window.removeEventListener("logout", handleLogoutEvent)
       document.removeEventListener("mousedown", handleClickOutside)
     }
-  }, [])
+  }, [isBrowser])
 
   const handleLogout = async () => {
-    console.log("🔴 [로그아웃] 요청 시작...")
+    if (!isBrowser) return // 서버 사이드에서는 실행하지 않음
+
+    console.log("로그아웃 요청 시작...")
     try {
-      const res = await fetch("http://localhost:8080/api/v1/members/logout", {
+      const response = await fetch("http://localhost:8080/api/v1/members/logout", {
         method: "POST",
         credentials: "include",
       })
-      if (res.ok) {
+
+      if (response.ok) {
         setIsLoggedIn(false)
         setUserName("")
         setUserImage("/placeholder.svg?height=32&width=32")
         document.cookie = "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;"
         clearSessionData()
         window.dispatchEvent(new Event("logout"))
-        router.push("/")
+        window.location.href = "/home"
+      } else {
+        console.error("로그아웃 실패")
       }
     } catch (error) {
-      console.error("🚨 [로그아웃 오류]:", error)
+      console.error("로그아웃 오류:", error)
     }
     setIsDropdownOpen(false)
   }
@@ -126,7 +176,7 @@ export default function Header() {
       <header className="border-b">
         <div className="container flex h-14 items-center px-4">
           <div className="flex items-center space-x-4">
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/home" className="flex items-center space-x-2">
               <Image src="/placeholder.svg?height=32&width=32" alt="Logo" width={32} height={32} className="rounded" />
             </Link>
             <nav className="flex items-center space-x-4 text-sm font-medium">
