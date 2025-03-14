@@ -1,101 +1,127 @@
-import type { Playlist, PlaylistItem, LinkData } from "@/types/playlist";
+import type { Playlist } from "@/types/playlist";
 
-export async function getPlaylists(): Promise<Playlist[]> {
+// 플레이리스트 생성
+export async function createPlaylist(data: {
+  title: string;
+  description?: string;
+  isPublic?: boolean;
+}): Promise<Playlist> {
   const response = await fetch("http://localhost:8080/api/v1/playlists", {
-    cache: "no-store",
-  })
-  if (!response.ok) {
-    throw new Error("플레이리스트 데이터를 불러오지 못했습니다.")
-  }
-  const result = await response.json()
-  return result.data
-}
-
-export async function getPlaylistById(id: number): Promise<Playlist> {
-  const response = await fetch(`http://localhost:8080/api/v1/playlists/${id}`, {
-    cache: "no-store",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+    credentials: "include",
   });
+
   if (!response.ok) {
-    throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");
+    throw new Error("플레이리스트 생성에 실패했습니다.");
   }
+
   const result = await response.json();
   return result.data;
 }
 
-export async function createPlaylist(data: {
-  title: string;
-  description: string;
-  isPublic: boolean;
-  thumbnailUrl?: string;
-}): Promise<Playlist> {
-  const response = await fetch("http://localhost:8080/api/v1/playlists", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  })
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error("플레이리스트 생성 에러:", errorText)
-    throw new Error("플레이리스트 생성 실패")
-  }
-  const result = await response.json()
-  return result.data
-}
-
+// 플레이리스트 수정
 export async function updatePlaylist(
   id: number,
   data: {
-    title: string;
-    description: string;
-    isPublic: boolean;
-    thumbnailUrl?: string;
+    title?: string;
+    description?: string;
+    isPublic?: boolean;
   }
-
 ): Promise<Playlist> {
   const response = await fetch(`http://localhost:8080/api/v1/playlists/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(data),
-  })
+    credentials: "include",
+  });
+
   if (!response.ok) {
-    throw new Error("플레이리스트 수정 실패")
+    throw new Error("플레이리스트 수정에 실패했습니다.");
   }
-  const result = await response.json()
-  return result.data
+
+  const result = await response.json();
+  return result.data;
 }
 
+// 플레이리스트 조회
+export async function getPlaylistById(id: number): Promise<Playlist | null> {
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/v1/playlists/${id}`,
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error("플레이리스트 조회에 실패했습니다.");
+    }
+
+    const result = await response.json();
+    return result.data;
+  } catch (error) {
+    console.error("플레이리스트 조회 오류:", error);
+    return null;
+  }
+}
+
+// 플레이리스트 아이템 추가
 export async function addItemToPlaylist(
   playlistId: number,
-  itemData: LinkData
+  item: {
+    title: string;
+    url: string;
+    description?: string;
+  }
 ): Promise<Playlist> {
   const response = await fetch(
     `http://localhost:8080/api/v1/playlists/${playlistId}/items/link`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(itemData),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(item),
+      credentials: "include",
     }
   );
+
   if (!response.ok) {
-    throw new Error("플레이리스트에 항목 추가 실패");
+    throw new Error("플레이리스트에 아이템 추가에 실패했습니다.");
   }
+
   const result = await response.json();
   return result.data;
 }
 
+// 플레이리스트 아이템 삭제
 export async function deletePlaylistItem(
   playlistId: number,
   itemId: number
 ): Promise<void> {
   const response = await fetch(
     `http://localhost:8080/api/v1/playlists/${playlistId}/items/${itemId}`,
-    { method: "DELETE" }
+    {
+      method: "DELETE",
+      credentials: "include",
+    }
   );
+
   if (!response.ok) {
-    throw new Error("플레이리스트 아이템 삭제 실패");
+    throw new Error("플레이리스트 아이템 삭제에 실패했습니다.");
   }
 }
 
+// 플레이리스트 아이템 순서 변경
 export async function updatePlaylistItemOrder(
   playlistId: number,
   orderedItemIds: number[]
@@ -104,27 +130,62 @@ export async function updatePlaylistItemOrder(
     `http://localhost:8080/api/v1/playlists/${playlistId}/items/order`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(orderedItemIds),
+      credentials: "include",
     }
   );
+
   if (!response.ok) {
-    throw new Error("플레이리스트 아이템 순서 변경 실패");
+    throw new Error("플레이리스트 아이템 순서 변경에 실패했습니다.");
   }
+
   const result = await response.json();
   return result.data;
 }
 
+// 추천 플레이리스트 가져오기
 export async function recommendPlaylist(
-  playlistId: number
+  playlistId: number,
+  sortType = "combined"
 ): Promise<Playlist[]> {
-  const response = await fetch(
-    `http://localhost:8080/api/v1/playlists/${playlistId}/recommendation`
-  );
-  if (!response.ok) {
-    throw new Error("추천 플레이리스트 조회 실패");
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/v1/playlists/${playlistId}/recommendation?sortType=${sortType}`,
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("추천 플레이리스트 조회에 실패했습니다.");
+    }
+
+    const result = await response.json();
+    return result.data || [];
+  } catch (error) {
+    console.error("추천 플레이리스트 조회 오류:", error);
+    return [];
   }
-  const result = await response.json();
-  return result.data;
 }
 
+// 모든 플레이리스트 가져오기
+export async function getAllPlaylists(): Promise<Playlist[]> {
+  try {
+    const response = await fetch("http://localhost:8080/api/v1/playlists", {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("플레이리스트 목록 조회에 실패했습니다.");
+    }
+
+    const result = await response.json();
+    return result.data || [];
+  } catch (error) {
+    console.error("플레이리스트 목록 조회 오류:", error);
+    return [];
+  }
+}
