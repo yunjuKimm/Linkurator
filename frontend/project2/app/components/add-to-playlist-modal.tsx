@@ -29,6 +29,111 @@ interface AddToPlaylistModalProps {
   onClose: () => void;
 }
 
+// 추가: LinkMetaData 인터페이스를 정의
+interface LinkMetaData {
+  title?: string;
+  description?: string;
+}
+
+/**
+ * Helper function: 큐레이션 데이터를 받아서 해당 플레이리스트에 큐레이션 헤더와 각 링크 항목을 추가합니다.
+ * 메타데이터 호출 실패 시 fallback으로 기본 정보를 사용합니다.
+ * @returns 추가된 링크 개수
+ */
+async function addCurationToPlaylist(
+  playlistId: number,
+  curationData: any
+): Promise<number> {
+  // 큐레이션 데이터에서 필요한 정보 추출
+  const {
+    id,
+    title: curationTitle,
+    content: curationContent,
+    urls,
+  } = curationData.data;
+
+  // 1. 큐레이션 헤더 추가 (그룹 헤더로 사용)
+  const headerResponse = await fetch(
+    `http://localhost:8080/api/v1/playlists/${playlistId}/items/link`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        title: `[큐레이션] ${curationTitle}`,
+        url: `${window.location.origin}/curation/${id}`,
+        description: `큐레이션: ${curationTitle} - ${curationContent
+          .substring(0, 100)
+          .replace(/<[^>]*>/g, "")}...`,
+      }),
+    }
+  );
+  if (!headerResponse.ok) {
+    throw new Error("큐레이션 헤더 추가에 실패했습니다.");
+  }
+
+  // 2. 각 링크 항목 추가
+  let addedCount = 0;
+  console.log("처리할 URL 항목:", urls);
+  for (const urlItem of urls) {
+    // URL이 없으면 건너뜁니다.
+    if (!urlItem.url) {
+      console.warn("URL이 없는 항목 건너뜀:", urlItem);
+      continue;
+    }
+
+    let linkData: LinkMetaData = {};
+    try {
+      const metaResponse = await fetch(
+        `http://localhost:8080/api/v1/link/preview`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ url: urlItem.url }),
+        }
+      );
+      if (metaResponse.ok) {
+        const metaJson = await metaResponse.json();
+        linkData = metaJson.data || {};
+      } else {
+        console.warn(
+          `메타데이터 가져오기 실패 (${urlItem.url}):`,
+          await metaResponse.text()
+        );
+        // 실패 시 기본값 사용
+        linkData = { title: urlItem.title || "링크", description: "" };
+      }
+    } catch (error) {
+      console.error(`메타데이터 가져오기 중 오류 (${urlItem.url}):`, error);
+      linkData = { title: urlItem.title || "링크", description: "" };
+    }
+
+    const addLinkResponse = await fetch(
+      `http://localhost:8080/api/v1/playlists/${playlistId}/items/link`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: linkData.title || urlItem.title || "링크",
+          url: urlItem.url,
+          description: (linkData.description || "") + ` [큐레이션ID:${id}]`,
+        }),
+      }
+    );
+    if (addLinkResponse.ok) {
+      addedCount++;
+    } else {
+      console.warn(
+        `링크 추가 실패 (${urlItem.url}):`,
+        await addLinkResponse.text()
+      );
+    }
+  }
+  return addedCount;
+}
+
 export default function AddToPlaylistModal({
   curationId,
   isOpen,
@@ -70,36 +175,58 @@ export default function AddToPlaylistModal({
     fetchPlaylists();
   }, [isOpen]);
 
-  // 큐레이션을 선택한 플레이리스트에 추가하는 API 호출
+  // 기존 플레이리스트에 큐레이션 추가 함수
   const handleAddCuration = async () => {
     if (!selectedPlaylistId) return;
 
     try {
       setIsSubmitting(true);
-      const res = await fetch(
-        `http://localhost:8080/api/v1/playlists/${selectedPlaylistId}/items/curation`,
+
+      // 1. 큐레이션 데이터를 가져옵니다.
+      const curationResponse = await fetch(
+        `http://localhost:8080/api/v1/curation/${curationId}`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ curationId }),
         }
       );
+      if (!curationResponse.ok) {
+        throw new Error("큐레이션 정보를 가져오는데 실패했습니다.");
+      }
+      const curationData = await curationResponse.json();
+      console.log("큐레이션 데이터:", curationData.data);
 
-      if (!res.ok) throw new Error("큐레이션 추가에 실패했습니다.");
+      // urls 배열이 없거나 비어있으면 경고 후 종료
+      if (
+        !curationData.data.urls ||
+        !Array.isArray(curationData.data.urls) ||
+        curationData.data.urls.length === 0
+      ) {
+        toast.warning("이 큐레이션에는 추가할 링크가 없습니다.");
+        onClose();
+        return;
+      }
 
-      toast.success("큐레이션이 플레이리스트에 추가되었습니다.");
+      // 2. 큐레이션을 플레이리스트에 추가
+      const addedCount = await addCurationToPlaylist(
+        selectedPlaylistId,
+        curationData
+      );
+      toast.success(
+        `큐레이션의 ${addedCount}개 링크가 플레이리스트에 추가되었습니다.`
+      );
+      if (addedCount > 0) {
+        router.push(`/playlists/${selectedPlaylistId}`);
+      }
       onClose();
-      router.refresh();
     } catch (error) {
-      console.error(error);
+      console.error("큐레이션 추가 중 오류:", error);
       toast.error("큐레이션 추가 중 오류가 발생했습니다.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 새 플레이리스트 생성 및 큐레이션 추가
+  // 새 플레이리스트를 생성하고 큐레이션을 추가하는 함수
   const handleCreateAndAddToPlaylist = async () => {
     if (!newPlaylistTitle.trim()) {
       toast.error("플레이리스트 제목을 입력해주세요.");
@@ -120,39 +247,53 @@ export default function AddToPlaylistModal({
           isPublic: true,
         }),
       });
-
       if (!createRes.ok) throw new Error("플레이리스트 생성에 실패했습니다.");
-
       const newPlaylist = await createRes.json();
       const newPlaylistId = newPlaylist.data.id;
 
-      // 2. 생성된 플레이리스트에 큐레이션 추가
-      const addRes = await fetch(
-        `http://localhost:8080/api/v1/playlists/${newPlaylistId}/items/curation`,
+      // 2. 큐레이션 데이터를 가져옵니다.
+      const curationResponse = await fetch(
+        `http://localhost:8080/api/v1/curation/${curationId}`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ curationId }),
         }
       );
+      if (!curationResponse.ok) {
+        throw new Error("큐레이션 정보를 가져오는데 실패했습니다.");
+      }
+      const curationData = await curationResponse.json();
+      console.log("큐레이션 데이터:", curationData.data);
+      if (
+        !curationData.data.urls ||
+        !Array.isArray(curationData.data.urls) ||
+        curationData.data.urls.length === 0
+      ) {
+        toast.warning("이 큐레이션에는 추가할 링크가 없습니다.");
+        router.push(`/playlists/${newPlaylistId}`);
+        onClose();
+        return;
+      }
 
-      if (!addRes.ok) throw new Error("큐레이션 추가에 실패했습니다.");
-
-      toast.success("새 플레이리스트가 생성되고 큐레이션이 추가되었습니다.");
+      // 3. 큐레이션을 새 플레이리스트에 추가
+      const addedCount = await addCurationToPlaylist(
+        newPlaylistId,
+        curationData
+      );
+      toast.success(
+        `새 플레이리스트가 생성되고 큐레이션의 ${addedCount}개 링크가 추가되었습니다.`
+      );
+      router.push(`/playlists/${newPlaylistId}`);
       onClose();
-      router.refresh();
     } catch (error) {
-      console.error(error);
+      console.error("플레이리스트 생성 중 오류:", error);
       toast.error("플레이리스트 생성 중 오류가 발생했습니다.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 새 플레이리스트 생성 페이지로 이동
+  // 플레이리스트 생성 페이지로 이동 (세션 스토리지에 현재 URL 저장)
   const goToCreatePlaylist = () => {
-    // 현재 URL을 세션 스토리지에 저장하여 생성 후 돌아올 수 있게 함
     if (typeof window !== "undefined") {
       sessionStorage.setItem(
         "returnAfterPlaylistCreate",
@@ -243,7 +384,6 @@ export default function AddToPlaylistModal({
                     ))}
                   </div>
                 </RadioGroup>
-
                 <div className="mt-4 flex justify-center">
                   <Button
                     variant="outline"
