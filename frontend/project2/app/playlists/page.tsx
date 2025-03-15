@@ -8,56 +8,36 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getLikedPlaylists, checkLoginStatus } from "@/lib/playlist-service";
+import type { Playlist } from "@/types/playlist";
 
 export default function PlaylistsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("my");
-  const [likedPlaylists, setLikedPlaylists] = useState([]);
+  const [likedPlaylists, setLikedPlaylists] = useState<Playlist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 로그인 상태 확인
   useEffect(() => {
-    const checkLoginStatus = async () => {
-      // 세션 스토리지에서 로그인 상태 확인
-      const savedLoginStatus = sessionStorage.getItem("isLoggedIn");
-
-      if (savedLoginStatus === "true") {
-        setIsLoggedIn(true);
-        return;
-      }
-
+    const verifyLoginStatus = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:8080/api/v1/members/me",
-          {
-            credentials: "include",
-          }
-        );
+        const loggedIn = await checkLoginStatus();
+        setIsLoggedIn(loggedIn);
 
-        if (response.ok) {
-          setIsLoggedIn(true);
-          sessionStorage.setItem("isLoggedIn", "true");
-        } else {
-          setIsLoggedIn(false);
-          sessionStorage.removeItem("isLoggedIn");
-
-          // 로그인이 필요한 탭인 경우 에러 메시지 설정
-          if (activeTab === "my") {
-            setError("로그인이 필요한 서비스입니다.");
-          }
+        if (!loggedIn && activeTab === "my") {
+          setError("로그인이 필요한 서비스입니다.");
         }
       } catch (error) {
         console.error("로그인 상태 확인 오류:", error);
         setIsLoggedIn(false);
-        sessionStorage.removeItem("isLoggedIn");
       }
     };
 
-    checkLoginStatus();
+    verifyLoginStatus();
   }, [activeTab]);
 
   // URL에서 탭 파라미터 가져오기
@@ -73,28 +53,22 @@ export default function PlaylistsPage() {
   // 좋아요한 플레이리스트 가져오기
   useEffect(() => {
     async function fetchLikedPlaylists() {
+      if (activeTab !== "liked") return;
+
       try {
         setIsLoading(true);
         setError(null);
 
-        const res = await fetch(
-          "http://localhost:8080/api/v1/playlists/liked",
-          {
-            credentials: "include",
-          }
-        );
-
-        if (!res.ok) {
-          if (res.status === 401) {
-            setError("좋아요한 플레이리스트를 보려면 로그인이 필요합니다.");
-            setIsLoggedIn(false);
-            return;
-          }
-          throw new Error("좋아요한 플레이리스트를 불러오지 못했습니다.");
+        // 로그인 상태 확인
+        if (!isLoggedIn) {
+          setError("좋아요한 플레이리스트를 보려면 로그인이 필요합니다.");
+          setIsLoading(false);
+          return;
         }
 
-        const result = await res.json();
-        setLikedPlaylists(result.data || []);
+        // 서비스 모듈 함수 사용
+        const playlists = await getLikedPlaylists();
+        setLikedPlaylists(playlists);
       } catch (error) {
         console.error("좋아요한 플레이리스트 로딩 실패", error);
         setError((error as Error).message);
@@ -103,10 +77,8 @@ export default function PlaylistsPage() {
       }
     }
 
-    if (activeTab === "liked") {
-      fetchLikedPlaylists();
-    }
-  }, [activeTab]);
+    fetchLikedPlaylists();
+  }, [activeTab, isLoggedIn]);
 
   // 탭 변경 핸들러
   const handleTabChange = (value: string) => {
@@ -122,19 +94,11 @@ export default function PlaylistsPage() {
 
   // 좋아요 상태 변경 시 목록 업데이트
   const handleLikeStatusChange = async () => {
-    if (activeTab === "liked") {
+    if (activeTab === "liked" && isLoggedIn) {
       try {
         setIsLoading(true);
-        const res = await fetch(
-          "http://localhost:8080/api/v1/playlists/liked",
-          {
-            credentials: "include",
-          }
-        );
-        if (res.ok) {
-          const result = await res.json();
-          setLikedPlaylists(result.data || []);
-        }
+        const playlists = await getLikedPlaylists();
+        setLikedPlaylists(playlists);
       } catch (error) {
         console.error("좋아요한 플레이리스트 업데이트 실패", error);
       } finally {
@@ -214,6 +178,7 @@ export default function PlaylistsPage() {
             <LikedPlaylistGrid
               playlists={likedPlaylists}
               onLikeStatusChange={handleLikeStatusChange}
+              isLoading={isLoading}
             />
           ) : (
             <div className="text-center py-12 bg-gray-50 rounded-lg border">

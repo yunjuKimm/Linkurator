@@ -177,3 +177,144 @@ export async function getAllPlaylists(): Promise<Playlist[]> {
     return [];
   }
 }
+
+// 좋아요한 플레이리스트 목록 가져오기
+export async function getLikedPlaylists(): Promise<Playlist[]> {
+  try {
+    const response = await fetch(
+      "http://localhost:8080/api/v1/playlists/liked",
+      {
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("좋아요한 플레이리스트를 불러오지 못했습니다.");
+    }
+
+    const result = await response.json();
+    return result.data || [];
+  } catch (error) {
+    console.error("좋아요한 플레이리스트 조회 오류:", error);
+    throw error;
+  }
+}
+
+// 플레이리스트 좋아요 상태 확인
+export async function getPlaylistLikeStatus(
+  playlistId: number
+): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/v1/playlists/${playlistId}/like/status`,
+      {
+        method: "GET",
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      // 401 에러는 로그인이 필요한 경우이므로 false 반환
+      if (response.status === 401) {
+        return false;
+      }
+      throw new Error("좋아요 상태 조회 실패");
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error("좋아요 상태 조회 오류:", error);
+    return false;
+  }
+}
+
+// 플레이리스트 좋아요 수 가져오기
+export async function getPlaylistLikeCount(
+  playlistId: number
+): Promise<number> {
+  try {
+    // 기존 코드에서 사용하던 정확한 엔드포인트로 수정
+    const response = await fetch(
+      `http://localhost:8080/api/v1/playlists/${playlistId}/like/count`,
+      {
+        credentials: "include", // 인증 정보 포함
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("좋아요 수 조회 실패");
+    }
+
+    const data = await response.json();
+    return data.data || 0; // 데이터가 없는 경우 0 반환
+  } catch (error) {
+    console.error("좋아요 수 조회 오류:", error);
+    // 에러 발생 시 초기값 사용
+    return 0;
+  }
+}
+
+// 플레이리스트 좋아요 추가
+export async function likePlaylist(playlistId: number): Promise<void> {
+  const response = await fetch(
+    `http://localhost:8080/api/v1/playlists/${playlistId}/like`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("좋아요 추가 실패");
+  }
+}
+
+// 플레이리스트 좋아요 취소
+export async function unlikePlaylist(playlistId: number): Promise<void> {
+  const response = await fetch(
+    `http://localhost:8080/api/v1/playlists/${playlistId}/like`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("좋아요 취소 실패");
+  }
+}
+
+// 로그인 상태 확인
+export async function checkLoginStatus(): Promise<boolean> {
+  try {
+    // 세션 스토리지에서 로그인 상태 확인
+    const savedLoginStatus = sessionStorage.getItem("isLoggedIn");
+
+    if (savedLoginStatus === "true") {
+      return true;
+    }
+
+    const response = await fetch("http://localhost:8080/api/v1/members/me", {
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      sessionStorage.setItem("isLoggedIn", "true");
+      return true;
+    } else {
+      sessionStorage.removeItem("isLoggedIn");
+      return false;
+    }
+  } catch (error) {
+    console.error("로그인 상태 확인 오류:", error);
+    sessionStorage.removeItem("isLoggedIn");
+    return false;
+  }
+}

@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface LikedPlaylistGridProps {
   playlists: Playlist[];
   onLikeStatusChange?: () => void;
+  isLoading?: boolean;
 }
 
 const formatDate = (dateString: string): string => {
@@ -30,9 +31,9 @@ const formatDate = (dateString: string): string => {
 export default function LikedPlaylistGrid({
   playlists,
   onLikeStatusChange,
+  isLoading = false,
 }: LikedPlaylistGridProps) {
   const [likedPlaylists, setLikedPlaylists] = useState<Playlist[]>(playlists);
-  const [isLoading, setIsLoading] = useState(false);
 
   // props로 받은 플레이리스트가 변경되면 상태 업데이트
   useEffect(() => {
