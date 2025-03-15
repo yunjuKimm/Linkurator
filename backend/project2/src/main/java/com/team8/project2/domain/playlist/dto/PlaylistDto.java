@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -65,6 +66,7 @@ public class PlaylistDto {
                 .viewCount(playlist.getViewCount())  // ✅ 추가
                 .likeCount(playlist.getLikeCount())  // ✅ 추가
                 .items(playlist.getItems().stream()
+                        .sorted(Comparator.comparing(item -> item.getDisplayOrder()))
                         .map(PlaylistItemDto::fromEntity)
                         .collect(Collectors.toList()))
                 .tags(playlist.getTagNames()) // ✅ 태그 가져오기
