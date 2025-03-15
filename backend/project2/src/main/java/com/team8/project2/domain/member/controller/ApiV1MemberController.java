@@ -1,8 +1,13 @@
 package com.team8.project2.domain.member.controller;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.dto.CuratorInfoDto;
@@ -10,8 +15,10 @@ import com.team8.project2.domain.member.dto.FollowResDto;
 import com.team8.project2.domain.member.dto.FollowingResDto;
 import com.team8.project2.domain.member.dto.MemberReqDTO;
 import com.team8.project2.domain.member.dto.MemberResDTO;
+import com.team8.project2.domain.member.dto.MemberUpdateReqDTO;
 import com.team8.project2.domain.member.dto.UnfollowResDto;
 import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.entity.RoleEnum;
 import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
@@ -20,6 +27,7 @@ import com.team8.project2.global.exception.ServiceException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
@@ -50,6 +58,7 @@ public class ApiV1MemberController {
 
         String accessToken = memberService.genAccessToken(member);
         rq.addCookie("accessToken", accessToken);
+        rq.addCookie("role", member.getRole().name());
 
         return new RsData<>(
                 "201-1",
@@ -74,6 +83,7 @@ public class ApiV1MemberController {
         log.info("[accessToken]:" + accessToken);
 
         rq.addCookie("accessToken", accessToken);
+        rq.addCookie("role", member.getRole().name());
         return new RsData<>(
                 "200-1",
                 "%s님 환영합니다.".formatted(member.getUsername()),
@@ -110,6 +120,7 @@ public class ApiV1MemberController {
     @PostMapping("/logout")
     public RsData<Void> logout() {
         rq.removeCookie("accessToken"); // JWT 삭제
+        rq.removeCookie("role");
 
         return new RsData<>("200-3", "로그아웃 되었습니다.");
     }
@@ -124,9 +135,15 @@ public class ApiV1MemberController {
     @PreAuthorize("isAuthenticated()")
     public RsData<MemberResDTO> updateMember(
             @PathVariable String memberId,
-            @RequestBody @Valid MemberReqDTO updateDTO) {
+            @RequestBody @Valid MemberUpdateReqDTO updateReqDTO) {
 
         Member actor = rq.getActor();
+
+        RoleEnum role = actor.getRole();
+        String password = actor.getPassword();
+
+        MemberReqDTO updateDTO = updateReqDTO.toMemberReqDTO(password,role);
+
         if (actor == null || !actor.getMemberId().equals(memberId)) {
             throw new ServiceException("403-1", "권한이 없습니다.");
         }

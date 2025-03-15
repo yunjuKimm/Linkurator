@@ -1,151 +1,200 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
-import { AlertCircle } from "lucide-react"
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     memberId: "",
+    username: "",
     password: "",
+    confirmPassword: "",
+    email: "",
+    profileImage: "",
+    introduce: "",
+    role: "MEMBER",
   })
 
-  // ✅ 페이지 로드 시 /me 요청하여 로그인 상태 확인
-  useEffect(() => {
-    const checkLoginStatus = async () => {
-      try {
-        const res = await fetch("http://localhost:8080/api/v1/members/me", {
-          method: "GET",
-          credentials: "include",
-        })
-        if (res.ok) {
-          // ✅ 이미 로그인된 상태면 홈으로 이동
-          router.push("/home")
-        }
-      } catch (error) {
-        console.error("로그인 상태 확인 오류:", error)
-      }
-    }
-    checkLoginStatus()
-  }, [router])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
-    setError(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "비밀번호가 일치하지 않습니다",
+        description: "비밀번호를 다시 확인해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
-    setError(null)
 
     try {
-      const response = await fetch("http://localhost:8080/api/v1/members/login", {
+      const response = await fetch("http://localhost:8080/api/v1/members/join", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          username: formData.memberId,
+          memberId: formData.memberId,
+          username: formData.username,
           password: formData.password,
+          role: formData.role,
+          profileImage: formData.profileImage || "https://example.com/default-profile.jpg",
+          email: formData.email,
+          introduce: formData.introduce,
         }),
         credentials: "include",
       })
 
       if (response.ok) {
-        // ✅ /me API 호출하여 로그인 상태 확인
-        const meResponse = await fetch("http://localhost:8080/api/v1/members/me", {
-          credentials: "include",
+        toast({
+          title: "회원가입 완료",
+          description: "회원가입이 성공적으로 완료되었습니다!",
         })
-
-        if (meResponse.ok) {
-          console.log("✅ /me 요청 성공, 로그인 유지됨")
-          window.dispatchEvent(new Event("login")) // ✅ 헤더 업데이트 이벤트 실행
-          sessionStorage.setItem("isLoggedIn", "true")
-          router.push("/home")
-        } else {
-          console.warn("⚠️ /me 요청 실패 (401 가능성 있음)", meResponse.status)
-        }
+        router.push("/auth/login")
       } else {
         const errorData = await response.json()
-        setError(errorData.message || "아이디 또는 비밀번호가 올바르지 않습니다.")
+        toast({
+          title: "회원가입 실패",
+          description: errorData.message || "오류가 발생했습니다. 다시 시도해주세요.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
-      console.error("🚨 서버 연결 오류:", error)
+      toast({
+        title: "오류",
+        description: "서버 연결 중 오류가 발생했습니다. 나중에 다시 시도해주세요.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-      <div className="container flex items-center justify-center min-h-[80vh]">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">로그인</CardTitle>
-            <CardDescription className="text-center">계정에 로그인하고 큐레이션을 시작하세요</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="memberId">아이디</Label>
-                <Input
-                    id="memberId"
-                    name="memberId"
-                    placeholder="아이디를 입력하세요"
-                    required
-                    value={formData.memberId}
-                    onChange={handleChange}
-                    className={error ? "border-red-500" : ""}
-                />
-              </div>
+      <div className="container mx-auto py-10">
+        <div className="mx-auto max-w-md space-y-6 bg-card p-8 rounded-lg shadow-sm">
+          <div className="space-y-2 text-center">
+            <h1 className="text-3xl font-bold">회원가입</h1>
+            <p className="text-muted-foreground">큐레이션 플랫폼에 가입하고 다양한 콘텐츠를 만나보세요</p>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">비밀번호</Label>
-                <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="비밀번호를 입력하세요"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={error ? "border-red-500" : ""}
-                />
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="memberId">아이디</Label>
+              <Input
+                  id="memberId"
+                  name="memberId"
+                  placeholder="사용할 아이디를 입력하세요"
+                  required
+                  value={formData.memberId}
+                  onChange={handleChange}
+              />
+            </div>
 
-              {/* 에러 메시지 표시 */}
-              {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md flex items-start">
-                    <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-                    <p>{error}</p>
-                  </div>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="username">이름</Label>
+              <Input
+                  id="username"
+                  name="username"
+                  placeholder="이름을 입력하세요"
+                  required
+                  value={formData.username}
+                  onChange={handleChange}
+              />
+            </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "로그인 중..." : "로그인"}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter>
-            <div className="text-center w-full text-sm">
-              아직 계정이 없으신가요?{" "}
-              <Link href="/auth/signup" className="text-primary underline font-medium">
-                회원가입
+            <div className="space-y-2">
+              <Label htmlFor="email">이메일</Label>
+              <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="이메일을 입력하세요"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">비밀번호</Label>
+              <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="비밀번호를 입력하세요"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">비밀번호 확인</Label>
+              <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="비밀번호를 다시 입력하세요"
+                  required
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="profileImage">프로필 이미지 URL (선택사항)</Label>
+              <Input
+                  id="profileImage"
+                  name="profileImage"
+                  placeholder="프로필 이미지 URL을 입력하세요"
+                  value={formData.profileImage}
+                  onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="introduce">자기소개 (선택사항)</Label>
+              <Textarea
+                  id="introduce"
+                  name="introduce"
+                  placeholder="자신을 소개해주세요"
+                  value={formData.introduce}
+                  onChange={handleChange}
+                  className="min-h-[100px] resize-none"
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "처리 중..." : "가입하기"}
+            </Button>
+
+            <div className="text-center text-sm">
+              이미 계정이 있으신가요?{" "}
+              <Link href="/auth/login" className="text-primary underline font-medium">
+                로그인
               </Link>
             </div>
-          </CardFooter>
-        </Card>
+          </form>
+        </div>
       </div>
   )
 }

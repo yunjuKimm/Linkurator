@@ -118,6 +118,7 @@ export default function LoginPage() {
                 "/placeholder.svg?height=32&width=32"
             );
             sessionStorage.setItem("userId", userData.data.id || "");
+            sessionStorage.setItem("userRole", userData.data.role || "Member");
           }
 
           // 로그인 이벤트 발생
