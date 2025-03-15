@@ -1,33 +1,50 @@
 package com.team8.project2.domain.curation.curation.service;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
 import com.team8.project2.domain.curation.curation.entity.CurationTag;
 import com.team8.project2.domain.curation.curation.entity.SearchOrder;
+import com.team8.project2.domain.curation.curation.event.CurationDeleteEvent;
+import com.team8.project2.domain.curation.curation.event.CurationUpdateEvent;
 import com.team8.project2.domain.curation.curation.repository.CurationLinkRepository;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.repository.CurationTagRepository;
 import com.team8.project2.domain.curation.like.entity.Like;
 import com.team8.project2.domain.curation.like.repository.LikeRepository;
+import com.team8.project2.domain.curation.report.entity.Report;
+import com.team8.project2.domain.curation.report.entity.ReportType;
+import com.team8.project2.domain.curation.report.repository.ReportRepository;
 import com.team8.project2.domain.curation.tag.service.TagService;
+import com.team8.project2.domain.image.entity.CurationImage;
+import com.team8.project2.domain.image.repository.CurationImageRepository;
 import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.FollowRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
+import com.team8.project2.domain.member.service.MemberService;
+import com.team8.project2.global.Rq;
 import com.team8.project2.global.exception.ServiceException;
+
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.time.Duration;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * 큐레이션 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
@@ -40,18 +57,21 @@ public class CurationService {
 	private final CurationRepository curationRepository;
 	private final CurationLinkRepository curationLinkRepository;
 	private final CurationTagRepository curationTagRepository;
+	private final CurationImageRepository curationImageRepository;
 	private final LinkService linkService;
 	private final TagService tagService;
 	private final MemberRepository memberRepository;
-    private final LikeRepository likeRepository;
+	private final LikeRepository likeRepository;
+	private final ApplicationEventPublisher eventPublisher;
 	private final CurationViewService curationViewService;
+	private final Rq rq;
 
-	private final RedisTemplate<String, Object> redisTemplate;
+	private final RedisTemplate<String, String> redisTemplate;
 	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
 	private static final String LIKE_COUNT_KEY = "curation:like_count"; // 좋아요 수 저장
-
 	private final FollowRepository followRepository;
-
+	private final MemberService memberService;
+	private final ReportRepository reportRepository;
 
 	/**
 	 * ✅ 특정 큐레이터의 큐레이션 개수를 반환하는 메서드 추가
@@ -73,7 +93,6 @@ public class CurationService {
 	 */
 	@Transactional
 	public Curation createCuration(String title, String content, List<String> urls, List<String> tags, Member member) {
-
 		Curation curation = Curation.builder()
 			.member(member)
 			.title(title)
@@ -98,6 +117,22 @@ public class CurationService {
 			}).collect(Collectors.toList());
 		curationTagRepository.saveAll(curationTags);
 		curation.setTags(curationTags);
+
+		// 작성한 큐레이션에 이미지가 첨부되어 있다면, 이미지에 큐레이션 번호를 연결 (연결이 이미 있는 이미지는 무시)
+		List<String> imageNames = curation.getImageNames();
+
+		for (int i = 0; i < imageNames.size(); i++) {
+			System.out.println(i + ": " + imageNames.get(i));
+		}
+
+		for (String imageName : imageNames) {
+			Optional<CurationImage> opImage = curationImageRepository.findByImageName(imageName);
+			if (opImage.isPresent()) {
+				CurationImage curationImage = opImage.get();
+				curationImage.setCurationIdIfNull(curation.getId());
+				curationImageRepository.save(curationImage);
+			}
+		}
 
 		return curation;
 	}
@@ -124,8 +159,7 @@ public class CurationService {
 		curation.setTitle(title);
 		curation.setContent(content);
 
-//		 큐레이션 - 링크 연결 업데이트
-
+		// 큐레이션 - 링크 연결 업데이트
 		List<CurationLink> curationLinks = urls.stream()
 			.map(url -> {
 				CurationLink curationLink = new CurationLink();
@@ -134,8 +168,8 @@ public class CurationService {
 		curationLinkRepository.saveAll(curationLinks);
 		curation.getCurationLinks().clear();
 		curation.getCurationLinks().addAll(curationLinks);
-//		 큐레이션 - 태그 연결 업데이트
 
+		// 큐레이션 - 태그 연결 업데이트
 		List<CurationTag> curationTags = tags.stream()
 			.map(tag -> {
 				CurationTag curationTag = new CurationTag();
@@ -145,7 +179,15 @@ public class CurationService {
 		curation.getTags().clear();
 		curation.getTags().addAll(curationTags);
 
-		return curationRepository.save(curation);
+		Curation result = curationRepository.save(curation);
+
+		// 큐레이션 수정 이벤트
+		eventPublisher.publishEvent(CurationUpdateEvent.builder()
+			.curationId(curation.getId())
+			.imageUrls(curation.getImageNames())
+			.build());
+
+		return result;
 	}
 
 	/**
@@ -156,7 +198,7 @@ public class CurationService {
 	public void deleteCuration(Long curationId, Member member) {
 		// 큐레이션이 존재하는지 확인
 		Curation curation = curationRepository.findById(curationId)
-				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+			.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
 
 		// 삭제 권한이 있는지 확인 (작성자와 요청자가 같은지 확인)
 		System.out.println("어드민이야?" + member.isAdmin());
@@ -166,6 +208,9 @@ public class CurationService {
 		curationLinkRepository.deleteByCurationId(curationId);
 		curationTagRepository.deleteByCurationId(curationId);
 		curationRepository.deleteById(curationId);
+
+		// 큐레이션 삭제 이벤트
+		eventPublisher.publishEvent(new CurationDeleteEvent(curationId));
 	}
 
 	/**
@@ -174,7 +219,7 @@ public class CurationService {
 	 * @return 조회된 큐레이션 객체
 	 */
 	@Transactional
-	public Curation getCuration(Long curationId, HttpServletRequest request) {
+	public CurationDetailResDto getCuration(Long curationId, HttpServletRequest request) {
 		String ip = request.getHeader("X-Forwarded-For");
 
 		if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
@@ -202,15 +247,14 @@ public class CurationService {
 			ip = request.getRemoteAddr();
 		}
 
-		if(ip.equals("0:0:0:0:0:0:0:1") || ip.equals("127.0.0.1"))
-		{
-            InetAddress address = null;
-            try {
-                address = InetAddress.getLocalHost();
-            } catch (UnknownHostException e) {
-                throw new RuntimeException(e);
-            }
-            ip = address.getHostName() + "/" + address.getHostAddress();
+		if (ip.equals("0:0:0:0:0:0:0:1") || ip.equals("127.0.0.1")) {
+			InetAddress address = null;
+			try {
+				address = InetAddress.getLocalHost();
+			} catch (UnknownHostException e) {
+				throw new RuntimeException(e);
+			}
+			ip = address.getHostName() + "/" + address.getHostAddress();
 		}
 		String key = VIEW_COUNT_KEY + curationId + ":" + ip;
 		System.out.println("Redis Key: " + key);
@@ -218,7 +262,22 @@ public class CurationService {
 		System.out.println("Redis Key Set? " + isNewView + " | Key: " + key);
 
 		Curation curation = curationRepository.findById(curationId)
-				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+			.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+
+		// Redis의 좋아요 값(실제 값) 으로 수정
+		String redisKey = "curation_like:" + curationId;
+		Long likeCount = redisTemplate.opsForSet().size(redisKey);
+		curation.setLikeCount(likeCount);
+
+		boolean isLogin = false;
+		boolean isLiked = false;
+		boolean isFollowed = false;
+		if (rq.isLogin()) {
+			isLogin = true;
+			Member actor = rq.getActor();
+			isLiked = isLikedByMember(curationId, actor.getId());
+			isFollowed = memberService.isFollowed(curation.getMemberId(), actor.getId());
+		}
 
 		if (isNewView) {
 			curationViewService.increaseViewCount(curation);
@@ -226,57 +285,100 @@ public class CurationService {
 			System.out.println("조회수 증가 안 함 (이미 조회된 IP)");
 		}
 
-		return curation;
+		return CurationDetailResDto.fromEntity(curation, isLiked, isFollowed, isLogin);
 	}
 
-
 	/**
-     * 큐레이션을 검색합니다.
-     * @param tags 태그 목록 (선택적)
-     * @param title 제목 검색어 (선택적)
-     * @param content 내용 검색어 (선택적)
-     * @param order 정렬 기준
-     * @return 검색된 큐레이션 목록
-     */
-    public List<Curation> searchCurations(List<String> tags, String title, String content, String author, SearchOrder order) {
-        if (tags == null || tags.isEmpty()) {
-            // 태그가 없을 경우 필터 없이 검색
-            return curationRepository.searchByFiltersWithoutTags(tags, title, content, author, order.name());
-        } else {
-            // 태그가 있을 경우 태그 필터 적용
-            return curationRepository.searchByFilters(tags, tags.size(), title, content, author, order.name());
-        }
-    }
+	 * 큐레이션을 검색합니다.
+	 * @param tags 태그 목록 (선택적)
+	 * @param title 제목 검색어 (선택적)
+	 * @param content 내용 검색어 (선택적)
+	 * @param order 정렬 기준
+	 * @return 검색된 큐레이션 목록
+	 */
+	public List<Curation> searchCurations(List<String> tags, String title, String content, String author,
+		SearchOrder order) {
+		if (tags == null || tags.isEmpty()) {
+			// 태그가 없을 경우 필터 없이 검색
+			return curationRepository.searchByFiltersWithoutTags(tags, title, content, author, order.name()).stream()
+				.map(curation -> {
+					String redisKey = "curation_like:" + curation.getId();
+					curation.setLikeCount(redisTemplate.opsForSet().size(redisKey));
+					return curation;
+				}).collect(Collectors.toList());
+		} else {
+			// 태그가 있을 경우 태그 필터 적용
+			return curationRepository.searchByFilters(tags, tags.size(), title, content, author, order.name()).stream()
+				.map(curation -> {
+					String redisKey = "curation_like:" + curation.getId();
+					curation.setLikeCount(redisTemplate.opsForSet().size(redisKey));
+					return curation;
+				}).collect(Collectors.toList());
+		}
+	}
 
 	@Transactional
 	public void likeCuration(Long curationId, Long memberId) {
+		// 큐레이션과 멤버를 찾음
 		Curation curation = curationRepository.findById(curationId)
-				.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
+			.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
 
 		Member member = memberRepository.findById(memberId)
-				.orElseThrow(() -> new ServiceException("404-1", "해당 멤버를 찾을 수 없습니다."));
+			.orElseThrow(() -> new ServiceException("404-1", "해당 멤버를 찾을 수 없습니다."));
 
-		Optional<Like> existingLike = likeRepository.findByCurationAndMember(curation, member);
+		// Redis Key 설정
+		String redisKey = "curation_like:" + curationId;
+		String value = String.valueOf(memberId);
 
-		if (existingLike.isPresent()) {
-			// 좋아요 삭제
-			likeRepository.delete(existingLike.get());
+		// LUA 스크립트: 좋아요가 있으면 삭제, 없으면 추가
+		String luaScript =
+				"if redis.call('SISMEMBER', KEYS[1], ARGV[1]) == 1 then " +
+						"   redis.call('SREM', KEYS[1], ARGV[1]); " +
+						"   return 0; " +  // 0이면 좋아요 삭제됨
+						"else " +
+						"   redis.call('SADD', KEYS[1], ARGV[1]); " +
+						"   return 1; " +  // 1이면 좋아요 추가됨
+						"end";
 
-			// ✅ Redis에서 좋아요 개수를 먼저 감소
-			Double updatedLikes = redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, curationId.toString(), -1);
-			curation.setLikeCount(updatedLikes != null && updatedLikes > 0 ? updatedLikes.longValue() : 0);
-		} else {
-			// 좋아요 추가
-			Like newLike = new Like().setLike(curation, member);
-			likeRepository.save(newLike);
+		// LUA 스크립트 실행
+		Long result = redisTemplate.execute(
+				new DefaultRedisScript<>(luaScript, Long.class),
+				Collections.singletonList(redisKey),
+				value
+		);
+	}
 
-			// ✅ Redis에서 좋아요 개수를 먼저 증가
-			Double updatedLikes = redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, curationId.toString(), 1);
-			curation.setLikeCount(updatedLikes.longValue());
+	@Scheduled(fixedRate = 600000) // 10분마다 실행
+	public void syncLikesToDatabase() {
+		// Redis에서 모든 큐레이션의 좋아요 개수를 가져와서 DB에 업데이트
+		Set<String> keys = redisTemplate.keys("curation_like:*");
+
+		for (String key : keys) {
+			String[] parts = key.split(":");
+			Long curationId = Long.parseLong(parts[1]);
+
+			// Like Repo에 좋아요 정보 추가
+			Set<String> memberIds = redisTemplate.opsForSet().members(key);
+			for (String memberId : memberIds) {
+				Curation curation = curationRepository.findById(curationId).get();
+				Member member = memberRepository.findByMemberId(memberId).get();
+				likeRepository.save(Like.of(curation, member));
+			}
+
+			// Redis에서 좋아요 개수 구하기
+			String redisKey = "curation_like:" + curationId;
+			Long likesCount = redisTemplate.opsForSet().size(redisKey);
+
+			if (likesCount != null) {
+				// 큐레이션을 DB에 반영
+				Optional<Curation> curationOpt = curationRepository.findById(curationId);
+				if (curationOpt.isPresent()) {
+					Curation curation = curationOpt.get();
+					curation.setLikeCount(likesCount);
+					curationRepository.save(curation);
+				}
+			}
 		}
-
-		// ✅ 변경된 좋아요 개수를 DB에 저장
-		curationRepository.save(curation);
 	}
 
 	/**
@@ -286,11 +388,9 @@ public class CurationService {
 	 * @return 좋아요 여부 (true: 좋아요 누름, false: 좋아요 안 누름)
 	 */
 	public boolean isLikedByMember(Long curationId, Long memberId) {
-		return likeRepository.existsByCurationIdAndMemberId(curationId, memberId);
+		String redisKey = "curation_like:" + curationId;
+		return redisTemplate.opsForSet().isMember(redisKey, String.valueOf(memberId));
 	}
-
-
-
 
 	/**
 	 * ✅ 특정 멤버가 팔로우하는 큐레이션 목록을 조회하는 메서드 추가
@@ -300,8 +400,27 @@ public class CurationService {
 	public List<CurationResDto> getFollowingCurations(Member member) {
 		List<Curation> followingCurations = curationRepository.findFollowingCurations(member.getId());
 		return followingCurations.stream()
-				.map(CurationResDto::new)
-				.collect(Collectors.toList());
+			.map(CurationResDto::new)
+			.collect(Collectors.toList());
 	}
 
+	@Transactional
+	public void reportCuration(Long curationId, ReportType reportType) {
+		Member actor = rq.getActor();
+		Curation curation = curationRepository.findById(curationId)
+			.orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 큐레이션입니다."));
+
+		// 같은 사유로 이미 신고한 큐레이션 거부
+		if (reportRepository.existsByCurationIdAndReporterIdAndReportType(curationId, actor.getId(), reportType)) {
+			throw new ServiceException("400-1", "이미 같은 사유로 신고한 큐레이션입니다.");
+		}
+
+		Report report = Report.builder()
+			.reportType(reportType)
+			.curation(curation)
+			.reporter(actor)
+			.build();
+
+		reportRepository.save(report);
+	}
 }

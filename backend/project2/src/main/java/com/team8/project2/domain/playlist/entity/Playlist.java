@@ -1,10 +1,14 @@
 package com.team8.project2.domain.playlist.entity;
 
-import com.team8.project2.domain.curation.curation.entity.CurationTag;
 import com.team8.project2.domain.curation.tag.entity.Tag;
+import com.team8.project2.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -16,6 +20,7 @@ import java.util.stream.Collectors;
  * 사용자가 생성한 플레이리스트 정보를 저장합니다.
  */
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -76,10 +81,10 @@ public class Playlist {
         if (isPublic != null) this.isPublic = isPublic;
     }
 
-
     /**
      * 플레이리스트 연관 추천 태그
      */
+    @Builder.Default
     @ManyToMany
     @JoinTable(
             name = "PlaylistTag",
@@ -91,6 +96,7 @@ public class Playlist {
     /**
      * ✅ 태그 목록을 문자열 Set으로 변환하여 반환
      */
+
     public Set<String> getTagNames() {
         return this.tags.stream()
                 .map(Tag::getName)
@@ -111,5 +117,19 @@ public class Playlist {
         this.likeCount += 1;
     }
 
+
+
+    @CreatedDate
+    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    @Column
+    private LocalDateTime modifiedAt;
+
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = false)
+    private Member member;
 
 }

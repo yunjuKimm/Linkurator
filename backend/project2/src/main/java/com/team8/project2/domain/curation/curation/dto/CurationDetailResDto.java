@@ -55,6 +55,15 @@ public class CurationDetailResDto {
 	/** 조회수 */
 	private Long viewCount;
 
+	/** 좋아요 여부*/
+	private boolean isLiked;
+
+	/** 작성자 팔로우 여부*/
+	private boolean isFollowed;
+
+	/** 로그인 여부*/
+	private boolean isLogin;
+
 	/**
 	 * 링크 정보를 포함하는 내부 DTO 클래스
 	 */
@@ -97,16 +106,19 @@ public class CurationDetailResDto {
 			this.content = comment.getContent();
 			this.createdAt = comment.getCreatedAt();
 			this.modifiedAt = comment.getModifiedAt();
-
 		}
 	}
 
 	/**
 	 * 엔티티(Curation) 객체를 DTO(CurationDetailResDto)로 변환합니다.
-	 * @param curation 변환할 큐레이션 엔티티
+	 *
+	 * @param curation   변환할 큐레이션 엔티티
+	 * @param isFollowed
+	 * @param isLogin
 	 * @return 변환된 상세 큐레이션 DTO
 	 */
-	public static CurationDetailResDto fromEntity(Curation curation) {
+	public static CurationDetailResDto fromEntity(Curation curation, boolean isLiked, boolean isFollowed,
+		boolean isLogin) {
 		return CurationDetailResDto.builder()
 			.id(curation.getId())
 			.title(curation.getTitle())
@@ -128,6 +140,9 @@ public class CurationDetailResDto {
 			.modifiedAt(curation.getModifiedAt())
 			.likeCount(curation.getLikeCount())
 			.viewCount(curation.getViewCount())
+			.isLiked(isLiked)
+			.isFollowed(isFollowed)
+			.isLogin(isLogin)
 			.build();
 	}
 }

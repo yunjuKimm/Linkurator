@@ -29,4 +29,5 @@ public interface LikeRepository extends JpaRepository<Like, LikeId> {
      */
     boolean existsByCurationIdAndMemberId(Long curationId, Long memberId);
 
+    void deleteByCurationIdAndMemberId(Long curationId, Long memberId);
 }

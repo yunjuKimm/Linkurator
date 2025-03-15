@@ -11,6 +11,8 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { ClipLoader } from "react-spinners";
+import { stripHtml } from "@/lib/htmlutils";
+// Add the import for the stripHtml function
 
 // Curator 데이터 인터페이스 정의
 interface Curator {
@@ -18,6 +20,8 @@ interface Curator {
   profileImage: string;
   introduce: string;
   curationCount: number;
+  followed: boolean; // 팔로우 상태 추가
+  login: boolean; // 로그인 상태 추가
 }
 
 // Curation 데이터 인터페이스 정의
@@ -60,7 +64,9 @@ export default function CuratorProfile({
   // 큐레이터 정보 가져오기
   const fetchCuratorInfo = async (username: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/members/${username}`);
+      const response = await fetch(`${API_URL}/api/v1/members/${username}`, {
+        credentials: "include",
+      });
       if (!response.ok) {
         throw new Error("큐레이터 정보를 불러오는 데 실패했습니다.");
       }
@@ -128,6 +134,47 @@ export default function CuratorProfile({
       });
     } catch (error) {
       console.error("Error fetching link metadata:", error);
+    }
+  };
+
+  // Add follow/unfollow functions
+  const handleFollow = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/members/${params.username}/follow`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("팔로우 처리 실패");
+      }
+
+      setCurator((prev) => (prev ? { ...prev, followed: true } : prev));
+    } catch (error) {
+      console.error("팔로우 처리 중 오류:", error);
+    }
+  };
+
+  const handleUnfollow = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/members/${params.username}/unfollow`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("언팔로우 처리 실패");
+      }
+
+      setCurator((prev) => (prev ? { ...prev, followed: false } : prev));
+    } catch (error) {
+      console.error("언팔로우 처리 중 오류:", error);
     }
   };
 
@@ -217,9 +264,24 @@ export default function CuratorProfile({
                 </div>
               </div>
               <div className="flex-shrink-0">
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                  팔로우
-                </button>
+                {curator.login ? (
+                  <button
+                    onClick={curator.followed ? handleUnfollow : handleFollow}
+                    className={`px-4 py-2 rounded-md transition-colors ${
+                      curator.followed
+                        ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    {curator.followed ? "팔로우중" : "팔로우"}
+                  </button>
+                ) : (
+                  <Link href="/auth/login">
+                    <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                      로그인하고 팔로우
+                    </button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -250,10 +312,9 @@ export default function CuratorProfile({
                         {curation.title}
                       </h2>
                     </Link>
+                    {/* Replace the content rendering in the curations.map section with: */}
                     <p className="mt-2 text-gray-600">
-                      {curation.content.length > 100
-                        ? `${curation.content.substring(0, 100)}...`
-                        : curation.content}
+                      {curation.content ? stripHtml(curation.content, 100) : ""}
                     </p>
                     <Link
                       href={`/curation/${curation.id}`}

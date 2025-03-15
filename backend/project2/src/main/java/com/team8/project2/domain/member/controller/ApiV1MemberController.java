@@ -1,15 +1,24 @@
 package com.team8.project2.domain.member.controller;
 
-import java.util.Map;
-
-import com.team8.project2.domain.member.dto.*;
-import com.team8.project2.domain.member.entity.RoleEnum;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.member.dto.CuratorInfoDto;
+import com.team8.project2.domain.member.dto.FollowResDto;
+import com.team8.project2.domain.member.dto.FollowingResDto;
+import com.team8.project2.domain.member.dto.MemberReqDTO;
+import com.team8.project2.domain.member.dto.MemberResDTO;
+import com.team8.project2.domain.member.dto.MemberUpdateReqDTO;
+import com.team8.project2.domain.member.dto.UnfollowResDto;
 import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.entity.RoleEnum;
 import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
@@ -18,6 +27,7 @@ import com.team8.project2.global.exception.ServiceException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
@@ -116,21 +126,9 @@ public class ApiV1MemberController {
     }
 
     @GetMapping("/{username}")
-    public RsData<Map<String, Object>> getCuratorInfo(@PathVariable String username) {
-        Member member = memberService.findByUsername(username).orElseThrow(
-                () -> new ServiceException("404-1", "해당 큐레이터를 찾을 수 없습니다.")
-        );
-
-        long curationCount = curationService.countByMember(member); // ✅ 코드 수정됨
-
-        Map<String, Object> responseData = Map.of(
-                "username", member.getUsername(),
-                "profileImage", member.getProfileImage(),
-                "introduce", member.getIntroduce(),
-                "curationCount", curationCount
-        );
-
-        return new RsData<>("200-4", "큐레이터 정보 조회 성공", responseData);
+    public RsData<CuratorInfoDto> getCuratorInfo(@PathVariable String username) {
+        CuratorInfoDto curatorInfoDto = memberService.getCuratorInfo(username);
+        return new RsData<>("200-4", "큐레이터 정보 조회 성공", curatorInfoDto);
     }
 
     @PutMapping("/{memberId}")
@@ -155,20 +153,20 @@ public class ApiV1MemberController {
     }
 
 
-    @PostMapping("/{memberId}/follow")
+    @PostMapping("/{username}/follow")
     @PreAuthorize("isAuthenticated()")
-    public RsData<FollowResDto> follow(@PathVariable String memberId) {
+    public RsData<FollowResDto> follow(@PathVariable String username) {
         Member actor = rq.getActor();
-        FollowResDto followResDto = memberService.followUser(actor, memberId);
-        return new RsData<>("200-1", "%s님을 팔로우했습니다.".formatted(followResDto.getFollowee()), followResDto);
+        FollowResDto followResDto = memberService.followUser(actor, username);
+        return new RsData<>("200-1", "%s님을 팔로우했습니다.".formatted(username), followResDto);
     }
 
-    @PostMapping("/{memberId}/unfollow")
+    @PostMapping("/{username}/unfollow")
     @PreAuthorize("isAuthenticated()")
-    public RsData<UnfollowResDto> unfollow(@PathVariable String memberId) {
+    public RsData<UnfollowResDto> unfollow(@PathVariable String username) {
         Member actor = rq.getActor();
-        UnfollowResDto unfollowResDto = memberService.unfollowUser(actor, memberId);
-        return new RsData<>("200-1", "%s님을 팔로우 취소했습니다.".formatted(unfollowResDto.getFollowee()), unfollowResDto);
+        UnfollowResDto unfollowResDto = memberService.unfollowUser(actor, username);
+        return new RsData<>("200-1", "%s님을 팔로우 취소했습니다.".formatted(username), unfollowResDto);
     }
 
     @GetMapping("/following")

@@ -17,4 +17,13 @@ public class LinkReqDTO {
      */
     @NotNull
     private String url;
+
+
+    /**
+     * 링크 TITLE (필수값)
+     */
+    private String title;
+
+    private String description;
+
 }

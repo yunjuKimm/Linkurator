@@ -28,7 +28,7 @@ public class ApiV1LinkController {
      */
     @PostMapping
     public RsData<Link> addLink(@RequestBody @Valid LinkReqDTO linkDTO) {
-        Link link = linkService.addLink(linkDTO.getUrl());
+        Link link = linkService.addLink(linkDTO);
         return new RsData<>("201-1", "링크가 성공적으로 추가되었습니다.", link);
     }
 

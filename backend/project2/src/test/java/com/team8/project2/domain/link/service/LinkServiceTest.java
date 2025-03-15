@@ -1,5 +1,6 @@
 package com.team8.project2.domain.link.service;
 
+import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.repository.LinkRepository;
 import com.team8.project2.global.exception.ServiceException;
@@ -51,10 +52,15 @@ class LinkServiceTest {
     void AddLink() {
         // given
         String url = "https://example.com";
+        LinkReqDTO linkReqDTO = new LinkReqDTO();
+        linkReqDTO.setUrl(url);
+        linkReqDTO.setTitle("테스트 제목");
+        linkReqDTO.setDescription("테스트 설명");
+
         when(linkRepository.save(any(Link.class))).thenReturn(link);
 
         // when
-        Link createdLink = linkService.addLink(url);
+        Link createdLink = linkService.addLink(linkReqDTO);
 
         // then
         assertNotNull(createdLink);

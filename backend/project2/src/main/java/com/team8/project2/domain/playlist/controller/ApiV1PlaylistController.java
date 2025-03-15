@@ -1,14 +1,26 @@
 package com.team8.project2.domain.playlist.controller;
 
+import com.team8.project2.domain.link.dto.LinkReqDTO;
+import com.team8.project2.domain.link.entity.Link;
+import com.team8.project2.domain.link.service.LinkService;
+import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
+import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
+import com.team8.project2.domain.playlist.repository.PlaylistLikeRepository;
+import com.team8.project2.domain.playlist.repository.PlaylistRepository;
 import com.team8.project2.domain.playlist.service.PlaylistService;
+import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -24,6 +36,10 @@ import java.util.Map;
 public class ApiV1PlaylistController {
 
     private final PlaylistService playlistService;
+    private final PlaylistRepository playlistRepository;
+    private final PlaylistLikeRepository playlistLikeRepository;
+    private final Rq rq;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 플레이리스트를 생성합니다.
@@ -44,13 +60,13 @@ public class ApiV1PlaylistController {
      * @return 조회된 플레이리스트 정보
      */
     @GetMapping("/{id}")
-    public RsData<PlaylistDto> getPlaylist(@PathVariable Long id) {
+    public RsData<PlaylistDto> getPlaylist(@PathVariable Long id, HttpServletRequest request) {
         PlaylistDto playlist = playlistService.getPlaylist(id);
         return RsData.success("플레이리스트 조회 성공", playlist);
     }
 
     /**
-     * 모든 플레이리스트를 조회합니다.
+     * 사용자의 모든 플레이리스트를 조회합니다.
      *
      * @return 플레이리스트 목록
      */
@@ -92,17 +108,17 @@ public class ApiV1PlaylistController {
      * 플레이리스트에 링크를 추가합니다.
      *
      * @param id      플레이리스트의 ID
-     * @param request 링크 ID를 담은 요청
+     * @param linkReqDTO 링크 추가 요청 DTO
      * @return 업데이트된 플레이리스트 정보
      */
     @PostMapping("/{id}/items/link")
     public RsData<PlaylistDto> addLinkToPlaylist(
             @PathVariable("id") Long id,
-            @RequestBody Map<String, String> request
+            @RequestBody @Valid LinkReqDTO linkReqDTO
     ) {
-        Long linkId = Long.parseLong(request.get("linkId"));
+        Link link = linkService.addLink(linkReqDTO);
         PlaylistDto updatedPlaylist =
-                playlistService.addPlaylistItem(id, linkId, PlaylistItem.PlaylistItemType.LINK);
+                playlistService.addPlaylistItem(id, link.getId(), PlaylistItem.PlaylistItemType.LINK);
         return RsData.success("플레이리스트에 링크가 추가되었습니다.", updatedPlaylist);
     }
 
@@ -157,19 +173,52 @@ public class ApiV1PlaylistController {
         return RsData.success("플레이리스트 아이템 순서가 변경되었습니다.", updatedPlaylist);
     }
 
-    /** ✅ 조회수 증가 API */
-    @PostMapping("/{id}/view")
-    public RsData<Void> recordPlaylistView(@PathVariable Long id) {
-        playlistService.recordPlaylistView(id);
-        return RsData.success("조회수가 증가되었습니다.", null);
-    }
-
     /** ✅ 좋아요 증가 API */
     @PostMapping("/{id}/like")
-    public RsData<Void> likePlaylist(@PathVariable Long id) {
-        playlistService.likePlaylist(id);
-        return RsData.success("좋아요가 증가되었습니다.", null);
+    public RsData<Void> likePlaylist(@PathVariable Long id, HttpServletRequest request) {
+        Long memberId = rq.getActor().getId();
+//        Long memberId = 1L; // 테스트용
+        playlistService.likePlaylist(id, memberId);
+        return RsData.success("좋아요가 변경되었습니다.", null);
     }
+
+    /** ✅ 좋아요 상태 조회 API */
+     @GetMapping("/{id}/like/status")
+    public RsData<Boolean> likeStatus(@PathVariable Long id, HttpServletRequest request) {
+         try {
+             Member member = rq.getActor();
+             boolean liked = playlistLikeRepository.existsByIdPlaylistIdAndIdMemberId(id, member.getId());
+//             Long memberId = 1L; // 테스트용
+//             boolean liked = playlistLikeRepository.existsByIdPlaylistIdAndIdMemberId(id, memberId);
+             return RsData.success("좋아요 상태를 조회하였습니다.", liked);
+         } catch (Exception e) {
+             return RsData.success("비로그인 상태입니다.", false);
+         }
+    }
+
+    /** ✅ 좋아요 취소 API */
+    @DeleteMapping("/{id}/like")
+    public RsData<Void> unlikePlaylist(@PathVariable Long id) {
+        Long memberId = rq.getActor().getId();
+//        Long memberId = 1L; // 테스트용
+        playlistService.unlikePlaylist(id, memberId);
+        return RsData.success("좋아요가 취소되었습니다.", null);
+    }
+
+    /** ✅ 좋아요 개수 조회 API */
+    @GetMapping("/{id}/like/count")
+    public RsData<Long> getLikeCount(@PathVariable Long id) {
+        Double count = redisTemplate.opsForZSet().score("playlist_likes", id.toString());
+
+        if (count == null) {
+            Playlist playlist = playlistRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 플레이리스트를 찾을 수 없습니다."));
+            count = (double) playlist.getLikeCount();
+        }
+        return RsData.success("좋아요 개수를 조회하였습니다.", count.longValue());
+    }
+
+
 
     /** ✅ 추천 API (정렬 기능 추가) */
     @GetMapping("/{id}/recommendation")
@@ -180,4 +229,28 @@ public class ApiV1PlaylistController {
         List<PlaylistDto> recommended = playlistService.recommendPlaylist(id, sortType);
         return RsData.success("추천 플레이리스트 목록을 조회하였습니다.", recommended);
     }
+
+    private final LinkService linkService;
+
+    @GetMapping("/explore")
+    public RsData<List<PlaylistDto>> getAllPublicPlaylists(){
+        List<PlaylistDto> playlists = playlistService.getAllPublicPlaylists();
+        return RsData.success("공개 플레이리스트 전체 조회를 하였습니다.", playlists);
+    }
+
+    @PostMapping("/{id}")
+    public RsData<PlaylistDto> addPublicPlaylist(@PathVariable(name = "id") Long playlistId) {
+        PlaylistDto playlistDto = playlistService.addPublicPlaylist(playlistId);
+        return RsData.success("플레이리스트가 복제되었습니다.", playlistDto);
+    }
+
+    /** 좋아요한 플레이리스트 조회 API */
+    @GetMapping("/liked")
+    public RsData<List<PlaylistDto>> getLikedPlaylists() {
+        Long memberId = rq.getActor().getId();
+        List<PlaylistDto> likedPlaylists = playlistService.getLikedPlaylists(memberId);
+        return RsData.success("좋아요한 플레이리스트 조회 성공", likedPlaylists);
+    }
+
+
 }
