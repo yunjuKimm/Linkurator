@@ -3,6 +3,7 @@ package com.team8.project2.domain.curation.curation.service;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -10,6 +11,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,7 +66,7 @@ public class CurationService {
 	private final CurationViewService curationViewService;
 	private final Rq rq;
 
-	private final RedisTemplate<String, Object> redisTemplate;
+	private final RedisTemplate<String, String> redisTemplate;
 	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
 	private static final String LIKE_COUNT_KEY = "curation:like_count"; // 좋아요 수 저장
 	private final FollowRepository followRepository;
@@ -263,8 +265,9 @@ public class CurationService {
 			.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
 
 		// Redis의 좋아요 값(실제 값) 으로 수정
-		Double likesCount = redisTemplate.opsForZSet().score(LIKE_COUNT_KEY, curationId.toString());
-		curation.setLikeCount(likesCount.longValue());
+		String redisKey = "curation_like:" + curationId;
+		Long likeCount = redisTemplate.opsForSet().size(redisKey);
+		curation.setLikeCount(likeCount);
 
 		boolean isLogin = false;
 		boolean isLiked = false;
@@ -299,16 +302,16 @@ public class CurationService {
 			// 태그가 없을 경우 필터 없이 검색
 			return curationRepository.searchByFiltersWithoutTags(tags, title, content, author, order.name()).stream()
 				.map(curation -> {
-					Double likesCount = redisTemplate.opsForZSet().score(LIKE_COUNT_KEY, curation.getId().toString());
-					curation.setLikeCount(likesCount.longValue());
+					String redisKey = "curation_like:" + curation.getId();
+					curation.setLikeCount(redisTemplate.opsForSet().size(redisKey));
 					return curation;
 				}).collect(Collectors.toList());
 		} else {
 			// 태그가 있을 경우 태그 필터 적용
 			return curationRepository.searchByFilters(tags, tags.size(), title, content, author, order.name()).stream()
 				.map(curation -> {
-					Double likesCount = redisTemplate.opsForZSet().score(LIKE_COUNT_KEY, curation.getId().toString());
-					curation.setLikeCount(likesCount.longValue());
+					String redisKey = "curation_like:" + curation.getId();
+					curation.setLikeCount(redisTemplate.opsForSet().size(redisKey));
 					return curation;
 				}).collect(Collectors.toList());
 		}
@@ -323,29 +326,26 @@ public class CurationService {
 		Member member = memberRepository.findById(memberId)
 			.orElseThrow(() -> new ServiceException("404-1", "해당 멤버를 찾을 수 없습니다."));
 
-		// Redis에 좋아요 상태 저장
-		String redisKey = "curation_like:" + curationId + ":" + memberId;
-		// boolean isLiked = redisTemplate.hasKey(redisKey);
-		boolean isLiked = likeRepository.existsByCurationIdAndMemberId(curationId, memberId);
+		// Redis Key 설정
+		String redisKey = "curation_like:" + curationId;
+		String value = String.valueOf(memberId);
 
-		if (isLiked) {
-			// 좋아요 삭제
-			likeRepository.deleteByCurationIdAndMemberId(curationId, memberId);
-			redisTemplate.delete(redisKey);
+		// LUA 스크립트: 좋아요가 있으면 삭제, 없으면 추가
+		String luaScript =
+				"if redis.call('SISMEMBER', KEYS[1], ARGV[1]) == 1 then " +
+						"   redis.call('SREM', KEYS[1], ARGV[1]); " +
+						"   return 0; " +  // 0이면 좋아요 삭제됨
+						"else " +
+						"   redis.call('SADD', KEYS[1], ARGV[1]); " +
+						"   return 1; " +  // 1이면 좋아요 추가됨
+						"end";
 
-			// Redis에서 좋아요 개수를 먼저 감소
-			redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, curationId.toString(), -1);
-		} else {
-			// 좋아요 추가
-			likeRepository.save(Like.of(curation, member));
-			redisTemplate.opsForValue().set(redisKey, "liked");
-
-			// Redis에서 좋아요 개수를 먼저 증가
-			redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, curationId.toString(), 1);
-		}
-
-		// Redis에서 좋아요 개수만 관리, DB에는 반영하지 않음
-		// 큐레이션 정보는 바로 업데이트하지 않음
+		// LUA 스크립트 실행
+		Long result = redisTemplate.execute(
+				new DefaultRedisScript<>(luaScript, Long.class),
+				Collections.singletonList(redisKey),
+				value
+		);
 	}
 
 	@Scheduled(fixedRate = 600000) // 10분마다 실행
@@ -357,15 +357,24 @@ public class CurationService {
 			String[] parts = key.split(":");
 			Long curationId = Long.parseLong(parts[1]);
 
+			// Like Repo에 좋아요 정보 추가
+			Set<String> memberIds = redisTemplate.opsForSet().members(key);
+			for (String memberId : memberIds) {
+				Curation curation = curationRepository.findById(curationId).get();
+				Member member = memberRepository.findByMemberId(memberId).get();
+				likeRepository.save(Like.of(curation, member));
+			}
+
 			// Redis에서 좋아요 개수 구하기
-			Double likesCount = redisTemplate.opsForZSet().score(LIKE_COUNT_KEY, curationId.toString());
+			String redisKey = "curation_like:" + curationId;
+			Long likesCount = redisTemplate.opsForSet().size(redisKey);
 
 			if (likesCount != null) {
 				// 큐레이션을 DB에 반영
 				Optional<Curation> curationOpt = curationRepository.findById(curationId);
 				if (curationOpt.isPresent()) {
 					Curation curation = curationOpt.get();
-					curation.setLikeCount(likesCount.longValue());
+					curation.setLikeCount(likesCount);
 					curationRepository.save(curation);
 				}
 			}
@@ -379,7 +388,8 @@ public class CurationService {
 	 * @return 좋아요 여부 (true: 좋아요 누름, false: 좋아요 안 누름)
 	 */
 	public boolean isLikedByMember(Long curationId, Long memberId) {
-		return likeRepository.existsByCurationIdAndMemberId(curationId, memberId);
+		String redisKey = "curation_like:" + curationId;
+		return redisTemplate.opsForSet().isMember(redisKey, String.valueOf(memberId));
 	}
 
 	/**
