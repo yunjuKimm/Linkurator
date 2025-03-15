@@ -215,6 +215,12 @@ export default function Header() {
             >
               플레이리스트 탐색
             </Link>
+            <Link
+              href="/playlists"
+              className="transition-colors hover:text-gray-600"
+            >
+              내 플레이리스트
+            </Link>
             {isLoggedIn && (
               <Link
                 href="/following"

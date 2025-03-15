@@ -27,14 +27,18 @@ import {
 } from "@/lib/playlist-service";
 import AddLinkButton from "./add-link-button";
 
+// 인터페이스에 isOwner 속성 추가
 interface PlaylistItemsProps {
   playlistId: number;
   items: PlaylistItem[];
+  isOwner?: boolean;
 }
 
+// 함수 매개변수에 isOwner 추가 (기본값 false)
 export default function PlaylistItems({
   playlistId,
   items: initialItems,
+  isOwner = false,
 }: PlaylistItemsProps) {
   const router = useRouter();
   const [items, setItems] = useState<PlaylistItem[]>(initialItems || []);
@@ -84,11 +88,17 @@ export default function PlaylistItems({
     return <LinkIcon className="h-4 w-4" />;
   };
 
+  // 상단 부분 수정 - 링크 추가 버튼을 소유자만 볼 수 있게
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">링크 목록</h2>
-        <AddLinkButton playlistId={playlistId} onLinkAdded={handleLinkAdded} />
+        {isOwner && (
+          <AddLinkButton
+            playlistId={playlistId}
+            onLinkAdded={handleLinkAdded}
+          />
+        )}
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -171,6 +181,7 @@ export default function PlaylistItems({
                           </a>
                         </Button>
 
+                        {/* 삭제 버튼 부분 수정 - 소유자만 볼 수 있게 */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -192,13 +203,15 @@ export default function PlaylistItems({
                                 새 탭에서 열기
                               </a>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => handleDelete(item.id)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              삭제하기
-                            </DropdownMenuItem>
+                            {isOwner && (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => handleDelete(item.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                삭제하기
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

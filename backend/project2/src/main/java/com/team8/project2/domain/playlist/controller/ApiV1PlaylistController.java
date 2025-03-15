@@ -232,4 +232,25 @@ public class ApiV1PlaylistController {
 
     private final LinkService linkService;
 
+    @GetMapping("/explore")
+    public RsData<List<PlaylistDto>> getAllPublicPlaylists(){
+        List<PlaylistDto> playlists = playlistService.getAllPublicPlaylists();
+        return RsData.success("공개 플레이리스트 전체 조회를 하였습니다.", playlists);
+    }
+
+    @PostMapping("/{id}")
+    public RsData<PlaylistDto> addPublicPlaylist(@PathVariable(name = "id") Long playlistId) {
+        PlaylistDto playlistDto = playlistService.addPublicPlaylist(playlistId);
+        return RsData.success("플레이리스트가 복제되었습니다.", playlistDto);
+    }
+
+    /** 좋아요한 플레이리스트 조회 API */
+    @GetMapping("/liked")
+    public RsData<List<PlaylistDto>> getLikedPlaylists() {
+        Long memberId = rq.getActor().getId();
+        List<PlaylistDto> likedPlaylists = playlistService.getLikedPlaylists(memberId);
+        return RsData.success("좋아요한 플레이리스트 조회 성공", likedPlaylists);
+    }
+
+
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, Bookmark, User } from "lucide-react";
+import { Home, Compass, Bookmark, User, Heart } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -35,9 +35,23 @@ export default function Navbar() {
         </Link>
 
         <Link
+          href="/playlists?tab=liked"
+          className={`flex flex-col items-center justify-center w-full h-full ${
+            isActive("/playlists") && pathname.includes("tab=liked")
+              ? "text-primary"
+              : "text-muted-foreground"
+          }`}
+        >
+          <Heart className="h-5 w-5" />
+          <span className="text-xs mt-1">좋아요</span>
+        </Link>
+
+        <Link
           href="/playlists"
           className={`flex flex-col items-center justify-center w-full h-full ${
-            isActive("/playlists") ? "text-primary" : "text-muted-foreground"
+            isActive("/playlists") && !pathname.includes("tab=")
+              ? "text-primary"
+              : "text-muted-foreground"
           }`}
         >
           <Bookmark className="h-5 w-5" />

@@ -373,8 +373,6 @@ public class PlaylistService {
     }
 
 
-
-
     /**
      * 사용자의 모든 플레이리스트를 조회합니다.
      *
@@ -388,6 +386,46 @@ public class PlaylistService {
         return playlists.stream()
                 .map(PlaylistDto::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    /*
+        * 공개 플레이리스트 전체 조회
+     */
+    public List<PlaylistDto> getAllPublicPlaylists() {
+        List<Playlist> playlists = playlistRepository.findAllByIsPublicTrue();
+
+        return playlists.stream()
+                .map(PlaylistDto::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 공개 플레이리스트를 내 플레이리스트로 추가
+     */
+    public PlaylistDto addPublicPlaylist(Long playlistId) {
+        Playlist publicPlaylist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        Member currentMember = rq.getActor();
+
+        Playlist copiedPlaylist = new Playlist();
+        copiedPlaylist.setTitle(publicPlaylist.getTitle());
+        copiedPlaylist.setDescription(publicPlaylist.getDescription());
+        copiedPlaylist.setPublic(false);
+        copiedPlaylist.setMember(currentMember);
+
+        Playlist savedPlaylist = playlistRepository.save(copiedPlaylist);
+
+        for (PlaylistItem item : publicPlaylist.getItems()) {
+            PlaylistItem copiedItem = new PlaylistItem();
+            copiedItem.setItemId(item.getItemId());
+            copiedItem.setItemType(item.getItemType());
+            copiedItem.setDisplayOrder(item.getDisplayOrder());
+            copiedItem.setPlaylist(savedPlaylist);
+            savedPlaylist.getItems().add(copiedItem);
+        }
+
+        return PlaylistDto.fromEntity(playlistRepository.save(savedPlaylist));
     }
 
     /**
@@ -490,6 +528,20 @@ public class PlaylistService {
 
         playlistRepository.save(playlist);
         return PlaylistDto.fromEntity(playlist);
+    }
+
+    /**
+     * 사용자가 좋아요한 플레이리스트 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public List<PlaylistDto> getLikedPlaylists(Long memberId) {
+        List<PlaylistLike> likedEntities = playlistLikeRepository.findByIdMemberId(memberId);
+
+        List<Playlist> likedPlaylists = likedEntities.stream()
+                .map(PlaylistLike::getPlaylist)
+                .collect(Collectors.toList());
+
+        return likedPlaylists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
     }
 
 
