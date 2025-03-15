@@ -201,7 +201,7 @@ public class MemberService {
 		Member actor = rq.getActor();
 		String imageFileName = s3Uploader.uploadFile(imageFile);
 		String oldProfileImageUrl = actor.getProfileImage();
-		actor.setProfileImage(imageFileName);
+		actor.setProfileImage(s3Uploader.getBaseUrl() + imageFileName);
 
 		memberRepository.save(actor);
 		eventPublisher.publishEvent(new ProfileImageUpdateEvent(oldProfileImageUrl));
