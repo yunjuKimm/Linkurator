@@ -1,5 +1,6 @@
 package com.team8.project2.domain.curation.service;
 
+import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
 import com.team8.project2.domain.curation.curation.entity.CurationTag;
@@ -237,7 +238,7 @@ class CurationServiceTest {
 		// Mocking repository to return a Curation
 		when(curationRepository.findById(anyLong())).thenReturn(Optional.of(curation));
 
-		Curation retrievedCuration = curationService.getCuration(1L, request);
+		CurationDetailResDto retrievedCuration = curationService.getCuration(1L, request);
 
 		// Verify the result
 		assert retrievedCuration != null;
