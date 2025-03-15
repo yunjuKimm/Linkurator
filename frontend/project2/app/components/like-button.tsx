@@ -108,7 +108,6 @@ export default function LikeButton({
 
         toast({
           title: "좋아요가 취소되었습니다",
-          duration: 2000,
         });
       } else {
         // 좋아요 추가
@@ -117,7 +116,6 @@ export default function LikeButton({
 
         toast({
           title: "좋아요가 추가되었습니다",
-          duration: 2000,
         });
       }
 

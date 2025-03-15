@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getLikedPlaylists, checkLoginStatus } from "@/lib/playlist-service";
 import type { Playlist } from "@/types/playlist";
@@ -27,10 +26,6 @@ export default function PlaylistsPage() {
       try {
         const loggedIn = await checkLoginStatus();
         setIsLoggedIn(loggedIn);
-
-        if (!loggedIn && activeTab === "my") {
-          setError("로그인이 필요한 서비스입니다.");
-        }
       } catch (error) {
         console.error("로그인 상태 확인 오류:", error);
         setIsLoggedIn(false);
@@ -57,11 +52,9 @@ export default function PlaylistsPage() {
 
       try {
         setIsLoading(true);
-        setError(null);
 
         // 로그인 상태 확인
         if (!isLoggedIn) {
-          setError("좋아요한 플레이리스트를 보려면 로그인이 필요합니다.");
           setIsLoading(false);
           return;
         }
@@ -71,7 +64,6 @@ export default function PlaylistsPage() {
         setLikedPlaylists(playlists);
       } catch (error) {
         console.error("좋아요한 플레이리스트 로딩 실패", error);
-        setError((error as Error).message);
       } finally {
         setIsLoading(false);
       }
@@ -83,7 +75,6 @@ export default function PlaylistsPage() {
   // 탭 변경 핸들러
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    setError(null);
     router.push(`/playlists${value === "liked" ? "?tab=liked" : ""}`);
   };
 
@@ -121,16 +112,12 @@ export default function PlaylistsPage() {
     <div className="container mx-auto px-4 py-8">
       <header className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">플레이리스트</h1>
-        {isLoggedIn ? (
+        {isLoggedIn && (
           <Link href="/playlists/new">
             <button className="px-4 py-2 border rounded hover:bg-gray-100">
               새 플레이리스트 생성
             </button>
           </Link>
-        ) : (
-          <Button onClick={handleLoginRedirect}>
-            로그인하여 플레이리스트 만들기
-          </Button>
         )}
       </header>
 
@@ -139,25 +126,6 @@ export default function PlaylistsPage() {
           <TabsTrigger value="my">내 플레이리스트</TabsTrigger>
           <TabsTrigger value="liked">좋아요한 플레이리스트</TabsTrigger>
         </TabsList>
-
-        {error && (
-          <div className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md flex items-start">
-            <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p>{error}</p>
-              {!isLoggedIn && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={handleLoginRedirect}
-                >
-                  로그인하기
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
 
         <TabsContent value="my">
           {isLoggedIn ? (
