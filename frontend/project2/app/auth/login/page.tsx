@@ -95,6 +95,7 @@ export default function LoginPage() {
             sessionStorage.setItem("userName", userData.data.username || "사용자")
             sessionStorage.setItem("userImage", userData.data.profileImage || "/placeholder.svg?height=32&width=32")
             sessionStorage.setItem("userId", userData.data.id || "")
+            sessionStorage.setItem("userRole", userData.data.role || "Member")
           }
 
           // 로그인 이벤트 발생
