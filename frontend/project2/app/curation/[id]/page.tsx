@@ -19,6 +19,7 @@ import {
 import RightSidebar from "@/app/components/right-sidebar";
 import CommentSection from "@/app/components/comment-section";
 import ReportModal from "@/app/components/report-modal";
+import AddToPlaylistModal from "@/app/components/add-to-playlist-modal";
 
 // API URL을 하드코딩된 값에서 환경 변수로 변경합니다.
 // 파일 상단에 다음 상수를 추가합니다:
@@ -64,6 +65,7 @@ export default function PostDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
   // API 데이터 호출
@@ -399,6 +401,16 @@ export default function PostDetail() {
                     큐레이션 수정
                   </Link>
                   <button
+                    onClick={() => {
+                      setShowAddToPlaylistModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    플레이리스트에 추가
+                  </button>
+                  <button
                     onClick={handleDeleteCuration}
                     className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                   >
@@ -647,6 +659,12 @@ export default function PostDetail() {
       <ReportModal
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
+        curationId={Number(id)}
+      />
+      {/* 플레이리스트 추가 모달 */}
+      <AddToPlaylistModal
+        isOpen={showAddToPlaylistModal}
+        onClose={() => setShowAddToPlaylistModal(false)}
         curationId={Number(id)}
       />
     </main>
