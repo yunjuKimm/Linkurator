@@ -227,7 +227,11 @@ export default function PlaylistDetailPage() {
           <Separator className="my-6" />
 
           {playlist.items && playlist.items.length > 0 ? (
-            <PlaylistItems playlistId={playlist.id} items={playlist.items} />
+            <PlaylistItems
+              playlistId={playlist.id}
+              items={playlist.items}
+              isOwner={true}
+            />
           ) : (
             <div className="text-center py-12">
               <LinkIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

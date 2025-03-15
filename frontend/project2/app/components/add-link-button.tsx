@@ -1,5 +1,7 @@
 "use client";
 
+import { DialogTrigger } from "@/components/ui/dialog";
+
 import type React from "react";
 
 import { useState } from "react";
@@ -13,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,6 +66,7 @@ export default function AddLinkButton({
 
       setFormData({ title: "", url: "", description: "" });
       setOpen(false);
+      // router.refresh()는 유지하되, 클라이언트 상태도 업데이트하기 위해 콜백을 활용
       router.refresh();
     } catch (error) {
       console.error("Failed to add link:", error);
