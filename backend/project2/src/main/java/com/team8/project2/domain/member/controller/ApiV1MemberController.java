@@ -2,16 +2,13 @@ package com.team8.project2.domain.member.controller;
 
 import java.util.Map;
 
+import com.team8.project2.domain.member.dto.*;
+import com.team8.project2.domain.member.entity.RoleEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
-import com.team8.project2.domain.member.dto.FollowResDto;
-import com.team8.project2.domain.member.dto.FollowingResDto;
-import com.team8.project2.domain.member.dto.MemberReqDTO;
-import com.team8.project2.domain.member.dto.MemberResDTO;
-import com.team8.project2.domain.member.dto.UnfollowResDto;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
@@ -140,9 +137,15 @@ public class ApiV1MemberController {
     @PreAuthorize("isAuthenticated()")
     public RsData<MemberResDTO> updateMember(
             @PathVariable String memberId,
-            @RequestBody @Valid MemberReqDTO updateDTO) {
+            @RequestBody @Valid MemberUpdateReqDTO updateReqDTO) {
 
         Member actor = rq.getActor();
+
+        RoleEnum role = actor.getRole();
+        String password = actor.getPassword();
+
+        MemberReqDTO updateDTO = updateReqDTO.toMemberReqDTO(password,role);
+
         if (actor == null || !actor.getMemberId().equals(memberId)) {
             throw new ServiceException("403-1", "권한이 없습니다.");
         }

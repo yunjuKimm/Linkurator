@@ -132,21 +132,33 @@ export default function ProfilePage() {
         setFormData((prev) => ({ ...prev, [name]: value }))
     }
 
+    // 프로필 업데이트 함수 수정
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
         setError(null)
 
         try {
-            // 여기서는 API가 명확하지 않아 가상의 엔드포인트를 사용합니다.
-            // 실제 구현 시 백엔드 API에 맞게 수정해야 합니다.
-            const response = await fetch(`http://localhost:8080/api/v1/members/update`, {
+            // profile이 null이면 업데이트할 수 없음
+            if (!profile || !profile.memberId) {
+                throw new Error("프로필 정보를 찾을 수 없습니다.")
+            }
+
+            // memberId를 URL에 포함하여 API 호출
+            const response = await fetch(`http://localhost:8080/api/v1/members/${profile.memberId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 credentials: "include",
-                body: JSON.stringify(formData),
+                body: JSON.stringify({
+                    memberId: profile.memberId,
+                    username: formData.username,
+                    password: formData.password || undefined, // 비밀번호가 빈 문자열이면 undefined로 설정
+                    email: formData.email,
+                    profileImage: formData.profileImage || undefined,
+                    introduce: formData.introduce,
+                }),
             })
 
             if (!response.ok) {
@@ -160,7 +172,9 @@ export default function ProfilePage() {
 
             // 세션 스토리지 업데이트
             sessionStorage.setItem("userName", formData.username)
+            sessionStorage.setItem("userEmail", formData.email)
             sessionStorage.setItem("userImage", formData.profileImage)
+            sessionStorage.setItem("userIntroduce", formData.introduce)
 
             // 헤더 업데이트를 위한 이벤트 발생
             window.dispatchEvent(new Event("login"))
