@@ -1,6 +1,5 @@
 package com.team8.project2.domain.member.service;
 
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -18,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ProfileImageEventListener {
 
+	private static final String DEAFULT_PROFILE_IMAGE_NAME = "default-profile.svg";
 	private final S3Uploader s3Uploader;
 
 	@Async
@@ -25,7 +25,14 @@ public class ProfileImageEventListener {
 	@TransactionalEventListener
 	public void deleteOldProfileImage(ProfileImageUpdateEvent event) {
 		String oldProfileImageName = extractFileNameFromUrl(event.getOldProfileImageUrl());
+		if (isDefaultProfile(oldProfileImageName)) {
+			return;
+		}
 		s3Uploader.deleteFile(oldProfileImageName);
+	}
+
+	private boolean isDefaultProfile(String oldProfileImageName) {
+		return (oldProfileImageName.equals(DEAFULT_PROFILE_IMAGE_NAME));
 	}
 
 	private String extractFileNameFromUrl(String fileUrl) {

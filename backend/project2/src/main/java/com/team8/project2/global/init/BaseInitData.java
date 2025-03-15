@@ -5,6 +5,7 @@ import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.image.service.S3Uploader;
 import com.team8.project2.domain.member.entity.Follow;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.entity.RoleEnum;
@@ -28,7 +29,8 @@ public class BaseInitData {
 
 	@Transactional
 	@Bean
-	public ApplicationRunner init(CommentService commentService, FollowRepository followRepository) {
+	public ApplicationRunner init(CommentService commentService, FollowRepository followRepository,
+		S3Uploader s3Uploader) {
 		return args -> {
 			if (memberRepository.count() == 0 && curationRepository.count() == 0) {
 				Member member = Member.builder()
@@ -37,7 +39,7 @@ public class BaseInitData {
 					.memberId("memberId")
 					.username("username")
 					.password("password")
-					.profileImage("http://localhost:8080/images/team8-logo.png")
+					.profileImage(s3Uploader.getBaseUrl() + "default-profile.svg")
 					.introduce("test")
 					.build();
 				memberRepository.save(member);
@@ -48,7 +50,7 @@ public class BaseInitData {
 					.memberId("othermember")
 					.username("other")
 					.password("password")
-					.profileImage("http://localhost:8080/images/team9-logo.png")
+					.profileImage(s3Uploader.getBaseUrl() + "default-profile.svg")
 					.introduce("test2")
 					.build();
 				memberRepository.save(member2);
@@ -59,7 +61,7 @@ public class BaseInitData {
 					.memberId("othermember2")
 					.username("other2")
 					.password("password")
-					.profileImage("http://localhost:8080/images/team10-logo.png")
+					.profileImage(s3Uploader.getBaseUrl() + "default-profile.svg")
 					.introduce("test3")
 					.build();
 				memberRepository.save(member3);
@@ -70,7 +72,7 @@ public class BaseInitData {
 						.memberId("admin")
 						.username("admin")
 						.password("password")
-						.profileImage("http://localhost:8080/images/team10-logo.png")
+						.profileImage(s3Uploader.getBaseUrl() + "default-profile.svg")
 						.introduce("admin")
 						.build();
 				memberRepository.save(member4);
