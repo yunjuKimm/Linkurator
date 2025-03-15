@@ -53,9 +53,9 @@ export default function LikedPlaylistGrid({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        {[...Array(8)].map((_, i) => (
+          <Card key={i} className="h-[220px]">
             <CardContent className="p-4">
               <Skeleton className="h-6 w-full mb-2" />
               <Skeleton className="h-4 w-1/2" />
@@ -86,24 +86,38 @@ export default function LikedPlaylistGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
       {likedPlaylists.map((playlist) => (
         <Card
           key={playlist.id}
-          className="hover:shadow-md transition-shadow relative overflow-hidden"
+          className="relative hover:shadow-md transition-all duration-200 overflow-hidden group border-l-4 border-l-rose-500"
         >
-          {/* 붉은색 상단 라인 추가 */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500"></div>
+          <Link href={`/playlists/${playlist.id}`} className="block">
+            <CardContent className="p-4 pb-2">
+              <h3 className="font-bold text-lg truncate">{playlist.title}</h3>
 
-          <Link href={`/playlists/${playlist.id}`}>
-            <CardContent className="p-4">
-              <h3 className="text-lg font-bold truncate">{playlist.title}</h3>
+              {playlist.description && (
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  {playlist.description}
+                </p>
+              )}
 
-              <div className="flex items-center gap-3 mt-3 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Eye className="h-4 w-4" />
+              <div className="flex items-center flex-wrap gap-2 mt-3 text-xs text-muted-foreground">
+                <Badge
+                  variant="secondary"
+                  className="flex items-center gap-1 font-normal"
+                >
+                  <Eye className="w-3 h-3" />
                   <span>{playlist.viewCount || 0}</span>
-                </div>
+                </Badge>
+
+                <Badge
+                  variant="secondary"
+                  className="flex items-center gap-1 font-normal"
+                >
+                  <LinkIcon className="w-3 h-3" />
+                  <span>{playlist.items?.length || 0} 링크</span>
+                </Badge>
 
                 {/* 좋아요 버튼 -> 취소하면 목록에서 제거 */}
                 <LikeButton
@@ -112,17 +126,18 @@ export default function LikedPlaylistGrid({
                   onUnlike={() => handleUnlike(playlist.id)}
                   size="sm"
                 />
-
-                <Badge variant="outline">
-                  <LinkIcon className="w-4 h-4" />
-                  <span>{playlist.items?.length || 0}</span>
-                </Badge>
               </div>
             </CardContent>
-            <CardFooter className="px-4 py-2 bg-muted/10 border-t text-xs text-muted-foreground">
-              {playlist.createdAt
-                ? formatDate(playlist.createdAt)
-                : "날짜 정보 없음"}
+
+            <CardFooter className="px-4 py-2 bg-muted/10 border-t text-xs text-muted-foreground flex justify-between items-center">
+              <span className="text-xs opacity-70">
+                {playlist.createdAt
+                  ? formatDate(playlist.createdAt)
+                  : "날짜 정보 없음"}
+              </span>
+              <span className="text-xs font-medium text-primary/70 hover:text-primary transition-colors">
+                자세히 보기
+              </span>
             </CardFooter>
           </Link>
         </Card>
