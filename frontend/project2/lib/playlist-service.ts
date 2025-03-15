@@ -1,4 +1,4 @@
-import type { Playlist, LinkData } from "@/types/playlist";
+import type { Playlist } from "@/types/playlist";
 
 // 플레이리스트 생성
 export async function createPlaylist(data: {

@@ -3,7 +3,7 @@
 import type React from "react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Eye,
   Heart,
@@ -16,7 +16,6 @@ import {
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -31,7 +30,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -48,15 +46,12 @@ type SortOption = "latest" | "popular" | "mostLiked";
 
 export default function ExplorePlaylists() {
   const router = useRouter();
+  const pathname = usePathname(); // 현재 경로 가져오기
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("latest");
-  const [userPlaylists, setUserPlaylists] = useState<Playlist[]>([]);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(
-    null
-  );
   const [isAddingToPlaylist, setIsAddingToPlaylist] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [filterOptions, setFilterOptions] = useState({
@@ -65,17 +60,27 @@ export default function ExplorePlaylists() {
     minLikes: 0,
   });
 
+  // 현재 경로를 세션 스토리지에 저장
+  useEffect(() => {
+    sessionStorage.setItem("previousPath", pathname);
+    // 플레이리스트 상세 페이지에서 돌아올 때 사용할 경로 저장
+    sessionStorage.setItem("playlistReturnPath", pathname);
+  }, [pathname]);
+
   // 모든 플레이리스트 가져오기
   useEffect(() => {
-    async function fetchPlaylists() {
+    async function fetchAllPlaylists() {
       try {
         setIsLoading(true);
-        const res = await fetch("http://localhost:8080/api/v1/playlists", {
-          cache: "no-store",
-        });
+        const res = await fetch(
+          "http://localhost:8080/api/v1/playlists/explore",
+          {
+            cache: "no-store",
+          }
+        );
 
         if (!res.ok) {
-          throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");
+          throw new Error("전체 플레이리스트 데이터를 불러오지 못했습니다.");
         }
 
         const result = await res.json();
@@ -88,59 +93,39 @@ export default function ExplorePlaylists() {
       }
     }
 
-    fetchPlaylists();
-  }, []);
-
-  // 사용자의 플레이리스트 가져오기 (다른 플레이리스트에 추가하기 위해)
-  useEffect(() => {
-    async function fetchUserPlaylists() {
-      try {
-        // 여기서는 모든 플레이리스트를 가져오지만, 실제로는 사용자의 플레이리스트만 가져와야 함
-        // 백엔드에 사용자의 플레이리스트만 가져오는 API가 있다면 그것을 사용
-        const res = await fetch("http://localhost:8080/api/v1/playlists", {
-          cache: "no-store",
-        });
-
-        if (!res.ok) {
-          throw new Error("사용자 플레이리스트를 불러오지 못했습니다.");
-        }
-
-        const result = await res.json();
-        setUserPlaylists(result.data);
-      } catch (error) {
-        console.error("사용자 플레이리스트 로딩 오류", error);
-      }
-    }
-
-    fetchUserPlaylists();
+    fetchAllPlaylists();
   }, []);
 
   // 플레이리스트를 사용자의 플레이리스트에 추가
-  const addToMyPlaylist = async (targetPlaylistId: number) => {
-    if (!selectedPlaylistId) return;
+  const clonePlaylist = async (playlistId: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!playlistId) return;
 
     try {
       setIsAddingToPlaylist(true);
 
-      // 여기서는 큐레이션 추가 API를 사용하지만, 실제로는 플레이리스트 추가 API가 필요할 수 있음
+      // 플레이리스트 복제 API 호출
       const response = await fetch(
-        `http://localhost:8080/api/v1/playlists/${targetPlaylistId}/items/curation`,
+        `http://localhost:8080/api/v1/playlists/${playlistId}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ curationId: selectedPlaylistId }),
           credentials: "include",
         }
       );
 
       if (!response.ok) {
-        throw new Error("플레이리스트 추가에 실패했습니다.");
+        throw new Error("플레이리스트 복제에 실패했습니다.");
       }
 
-      toast.success("플레이리스트가 성공적으로 추가되었습니다.");
-      setSelectedPlaylistId(null);
+      // 성공 메시지 표시
+      toast.success("플레이리스트가 성공적으로 복제되었습니다.");
+
+      // 내 플레이리스트 페이지로 이동
+      router.push("/playlists");
     } catch (error) {
-      console.error("플레이리스트 추가 오류:", error);
+      console.error("플레이리스트 복제 오류:", error);
       toast.error((error as Error).message);
     } finally {
       setIsAddingToPlaylist(false);
@@ -342,77 +327,15 @@ export default function ExplorePlaylists() {
                       : "날짜 정보 없음"}
                   </span>
 
-                  <Dialog>
-                    <DialogTrigger
-                      asChild
-                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setSelectedPlaylistId(playlist.id);
-                      }}
-                    >
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-xs"
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" />내 플레이리스트에
-                        추가
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>내 플레이리스트에 추가</DialogTitle>
-                        <DialogDescription>
-                          이 플레이리스트를 추가할 내 플레이리스트를 선택하세요.
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      {userPlaylists.length === 0 ? (
-                        <div className="py-6 text-center">
-                          <p className="text-muted-foreground mb-4">
-                            아직 플레이리스트가 없습니다.
-                          </p>
-                          <Button onClick={() => router.push("/playlists/new")}>
-                            새 플레이리스트 만들기
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="grid gap-4 py-4 max-h-[300px] overflow-y-auto">
-                          {userPlaylists.map((userPlaylist) => (
-                            <div
-                              key={userPlaylist.id}
-                              className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer"
-                              onClick={() => addToMyPlaylist(userPlaylist.id)}
-                            >
-                              <div>
-                                <h4 className="font-medium">
-                                  {userPlaylist.title}
-                                </h4>
-                                {userPlaylist.description && (
-                                  <p className="text-sm text-muted-foreground line-clamp-1">
-                                    {userPlaylist.description}
-                                  </p>
-                                )}
-                              </div>
-                              <Badge variant="outline">
-                                {userPlaylist.items?.length || 0} 링크
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => setSelectedPlaylistId(null)}
-                        >
-                          취소
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={(e) => clonePlaylist(playlist.id, e)}
+                    disabled={isAddingToPlaylist}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />내 플레이리스트에 추가
+                  </Button>
                 </CardFooter>
               </Link>
             </Card>

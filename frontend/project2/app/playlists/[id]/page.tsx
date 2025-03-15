@@ -23,6 +23,51 @@ export default function PlaylistDetailPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [previousPath, setPreviousPath] = useState<string>("/playlists"); // 기본값 설정
+
+  // 이전 경로 확인 로직 개선
+  useEffect(() => {
+    // document.referrer를 우선 확인 (직전에 방문한 페이지)
+    const referrer = document.referrer;
+    const referrerUrl = referrer ? new URL(referrer) : null;
+    const referrerPath = referrerUrl?.pathname || "";
+
+    // referrer가 있고 로컬 사이트인 경우 이를 우선 사용
+    if (referrerPath && referrerUrl?.host === window.location.host) {
+      if (referrerPath.includes("/explore/playlists")) {
+        setPreviousPath("/explore/playlists");
+        sessionStorage.setItem("playlistReturnPath", "/explore/playlists");
+      } else if (
+        referrerPath.includes("/playlists") &&
+        !referrerPath.includes(`/playlists/${params.id}`)
+      ) {
+        setPreviousPath("/playlists");
+        sessionStorage.setItem("playlistReturnPath", "/playlists");
+      }
+    }
+    // referrer가 없는 경우 세션 스토리지 사용
+    else {
+      const storedReturnPath = sessionStorage.getItem("playlistReturnPath");
+      if (storedReturnPath) {
+        setPreviousPath(storedReturnPath);
+      } else {
+        // 저장된 이전 경로가 없으면 일반 이전 경로 확인
+        const storedPreviousPath = sessionStorage.getItem("previousPath");
+        if (storedPreviousPath) {
+          if (storedPreviousPath.includes("/explore/playlists")) {
+            setPreviousPath("/explore/playlists");
+            sessionStorage.setItem("playlistReturnPath", "/explore/playlists");
+          } else if (
+            storedPreviousPath.includes("/playlists") &&
+            !storedPreviousPath.includes(`/playlists/${params.id}`)
+          ) {
+            setPreviousPath("/playlists");
+            sessionStorage.setItem("playlistReturnPath", "/playlists");
+          }
+        }
+      }
+    }
+  }, [params.id]);
 
   async function fetchData() {
     setIsLoading(true);
@@ -102,11 +147,13 @@ export default function PlaylistDetailPage() {
       {/* 상단 뒤로가기 링크 */}
       <div className="mb-4">
         <Link
-          href="/playlists"
+          href={previousPath}
           className="inline-flex items-center text-sm text-muted-foreground hover:underline"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          플레이리스트 목록으로 돌아가기
+          {previousPath.includes("explore")
+            ? "플레이리스트 탐색으로 돌아가기"
+            : "플레이리스트 목록으로 돌아가기"}
         </Link>
       </div>
 
