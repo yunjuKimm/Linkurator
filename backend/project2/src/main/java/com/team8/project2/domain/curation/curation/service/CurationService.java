@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
+import com.team8.project2.domain.curation.curation.dto.TrendingCurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
 import com.team8.project2.domain.curation.curation.entity.CurationTag;
@@ -70,6 +71,7 @@ public class CurationService {
 
 	private final RedisTemplate<String, String> redisTemplate;
 	private static final String VIEW_COUNT_KEY = "view_count:"; // Redis 키 접두사
+	private static final String DAY_VIEW_COUNT_KEY = "day_view_count:"; // Redis 키 접두사
 	private static final String LIKE_COUNT_KEY = "curation:like_count"; // 좋아요 수 저장
 	private final FollowRepository followRepository;
 	private final MemberService memberService;
@@ -260,8 +262,14 @@ public class CurationService {
 		}
 		String key = VIEW_COUNT_KEY + curationId + ":" + ip;
 		System.out.println("Redis Key: " + key);
-		boolean isNewView = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(true), Duration.ofMinutes(10));
+		boolean isNewView = redisTemplate.opsForValue().setIfAbsent(key, String.valueOf(true), Duration.ofDays(1));
 		System.out.println("Redis Key Set? " + isNewView + " | Key: " + key);
+
+		// 조회수 증가
+		if (isNewView) {
+			redisTemplate.opsForZSet().incrementScore(DAY_VIEW_COUNT_KEY, String.valueOf(curationId), 1); // curationId에 대한 조회수 증가
+			redisTemplate.expire(DAY_VIEW_COUNT_KEY, Duration.ofDays(1)); // 1일 동안 유효하게 설정 (TTL)
+		}
 
 		Curation curation = curationRepository.findById(curationId)
 			.orElseThrow(() -> new ServiceException("404-1", "해당 큐레이션을 찾을 수 없습니다."));
@@ -433,5 +441,17 @@ public class CurationService {
 			.build();
 
 		reportRepository.save(report);
+	}
+
+	@Transactional(readOnly = true)
+	public TrendingCurationResDto getTrendingCuration() {// 조회수가 가장 높은 3개의 큐레이션을 가져옴
+		List<Curation> topCurations = redisTemplate.opsForZSet().reverseRange(DAY_VIEW_COUNT_KEY, 0, 2).stream()
+			.map(curationId -> curationRepository.findById(Long.parseLong(curationId))
+				.orElseThrow(() -> new ServiceException("500-1", "일간 조회수순 큐레이션을 불러오는데 실패했습니다.")))
+			.toList();
+		if (topCurations.isEmpty()) {
+			topCurations = curationRepository.findTop3ByOrderByViewCountDesc();
+		}
+		return TrendingCurationResDto.of(topCurations);
 	}
 }
