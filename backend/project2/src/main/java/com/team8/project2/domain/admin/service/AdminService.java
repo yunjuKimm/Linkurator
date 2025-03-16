@@ -1,12 +1,21 @@
 package com.team8.project2.domain.admin.service;
 
 import com.team8.project2.domain.admin.dto.StatsResDto;
+import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.comment.repository.CommentRepository;
+import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
+import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.member.entity.Follow;
 import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.repository.FollowRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
+import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
 import com.team8.project2.global.exception.NotFoundException;
+import com.team8.project2.global.exception.ServiceException;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +29,30 @@ public class AdminService {
     private final CurationRepository curationRepository;
     private final MemberRepository memberRepository;
     private final PlaylistRepository playlistRepository;
+    private final MemberService memberService;
+    private final CurationService curationService;
+    private final EntityManager entityManager;
+    private final CommentService commentService;
+    private final FollowRepository followRepository;
+    private final CommentRepository commentRepository;
+
+    @Transactional(noRollbackFor = ServiceException.class)
+    public void deleteMember(Member member, List<Curation> curations, List<Comment> comments) {
+        commentRepository.deleteByAuthor(member);
+        curationRepository.deleteByMember(member);
+        followRepository.deleteByFollowerOrFollowee(member,member);
+
+        memberService.deleteMember(member.getMemberId());
+    }
+
+    public void deleteMemberById(Long Id){
+        if (!memberRepository.existsById(Id)) {
+            throw new NotFoundException("멤버를 찾을 수 없습니다.");
+        }
+
+
+        memberRepository.deleteById(Id);
+    };
 
     // ✅ 관리자용 큐레이션 삭제
     @Transactional
@@ -28,15 +61,6 @@ public class AdminService {
             throw new NotFoundException("큐레이션을 찾을 수 없습니다.");
         }
         curationRepository.deleteById(curationId);
-    }
-
-    // ✅ 관리자용 멤버 삭제
-    @Transactional
-    public void deleteMember(Long memberId) {
-        if (!memberRepository.existsById(memberId)) {
-            throw new NotFoundException("멤버를 찾을 수 없습니다.");
-        }
-        memberRepository.deleteById(memberId);
     }
 
     /**

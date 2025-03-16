@@ -144,10 +144,6 @@ export default function AdminDashboardPage() {
             const response = await fetch(`${API_URL}/members/members`, {
                 method: "GET",
                 credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Cache-Control": "no-cache",
-                },
             })
 
             if (!response.ok) {
@@ -165,7 +161,7 @@ export default function AdminDashboardPage() {
 
             const data = await response.json()
 
-            if (data.code === "200-OK" && data.data) {
+            if ((data.code === "200-OK" || data.code === "200-1") && data.data) {
                 // API에서 받은 데이터로 멤버 목록 설정
                 const formattedMembers = data.data.map((member: any) => {
                     // 프로필 이미지 URL 유효성 검사
@@ -260,10 +256,6 @@ export default function AdminDashboardPage() {
             const response = await fetch(`${API_URL}/admin/members/${id}`, {
                 method: "DELETE",
                 credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Cache-Control": "no-cache",
-                },
             })
 
             if (!response.ok) {

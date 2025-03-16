@@ -202,7 +202,9 @@ public class CurationService {
 
 		// 삭제 권한이 있는지 확인 (작성자와 요청자가 같은지 확인)
 		System.out.println("어드민이야?" + member.isAdmin());
-		if (!curation.getMember().getId().equals(member.getMemberId()) && !member.isAdmin()) {
+		System.out.println("어드민이야?" + curation.getMember().getId());
+		System.out.println("어드민이야?" + member.getMemberId());
+		if (!curation.getMember().getId().equals(member.getId()) && !member.isAdmin()) {
 			throw new ServiceException("403-1", "권한이 없습니다."); // 권한 없음
 		}
 		curationLinkRepository.deleteByCurationId(curationId);
@@ -422,5 +424,9 @@ public class CurationService {
 			.build();
 
 		reportRepository.save(report);
+	}
+
+	public List<Curation> findAllByMember(Member member) {
+		return curationRepository.findAllByMember(member);
 	}
 }

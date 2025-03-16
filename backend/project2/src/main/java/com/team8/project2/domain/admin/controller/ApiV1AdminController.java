@@ -2,10 +2,15 @@ package com.team8.project2.domain.admin.controller;
 
 import com.team8.project2.domain.admin.dto.StatsResDto;
 import com.team8.project2.domain.admin.service.AdminService;
+import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.comment.service.CommentService;
+import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
+import com.team8.project2.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +25,8 @@ public class ApiV1AdminController {
     private final CurationService curationService;
     private final AdminService adminService;
     private final Rq rq;
+    private final MemberService memberService;
+    private final CommentService commentService;
 
 
     // ✅ 큐레이션 삭제
@@ -34,7 +41,12 @@ public class ApiV1AdminController {
     // ✅ 멤버 삭제
     @DeleteMapping("/members/{memberId}")
     public RsData<String> deleteMember(@PathVariable Long memberId) {
-        adminService.deleteMember(memberId);
+        Member member = memberService.findById(memberId)
+                .orElseThrow(() -> new ServiceException("404-1", "해당 회원을 찾을 수 없습니다."));
+        List<Curation> curations = curationService.findAllByMember(member);
+        List<Comment> comments = commentService.findAllByAuthor(member);
+
+        adminService.deleteMember(member,curations,comments);
         return RsData.success("멤버가 삭제되었습니다.");
     }
 
