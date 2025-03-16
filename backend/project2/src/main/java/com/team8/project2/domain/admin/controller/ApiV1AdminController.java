@@ -1,5 +1,6 @@
 package com.team8.project2.domain.admin.controller;
 
+import com.team8.project2.domain.admin.dto.ReportedCurationsDetailResDto;
 import com.team8.project2.domain.admin.dto.StatsResDto;
 import com.team8.project2.domain.admin.service.AdminService;
 import com.team8.project2.domain.comment.entity.Comment;
@@ -51,6 +52,14 @@ public class ApiV1AdminController {
     @GetMapping("/reported-curations")
     public RsData<List<Long>> getReportedCurations(@RequestParam(defaultValue = "5") int minReports) {
         return RsData.success("신고된 큐레이션 목록 조회 성공", adminService.getReportedCurations(minReports));
+    }
+
+    // ✅ 일정 개수 이상 신고된 큐레이션 상세 조회
+    @PostMapping("/reported-curations-detail")
+    public RsData<List<ReportedCurationsDetailResDto>> getReportedCurationsDetail(@RequestParam(defaultValue = "5") int minReports) {
+        List<Long> reportedcurations = adminService.getReportedCurations(minReports);
+        adminService.getReportedCurationsDetailResDtos(reportedcurations);
+        return RsData.success("신고된 큐레이션 목록 조회 성공", adminService.getReportedCurationsDetailResDtosminReports));
     }
 
     // ✅ 큐레이션 & 플레이리스트 통계 조회
