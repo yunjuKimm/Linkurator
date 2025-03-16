@@ -1,43 +1,51 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
-import { createPlaylist, updatePlaylist } from "@/lib/playlist-service"
-import type { Playlist } from "@/types/playlist"
+import { createPlaylist, updatePlaylist } from "@/lib/playlist-service";
+import type { Playlist } from "@/types/playlist";
 
+// PlaylistFormProps 인터페이스에 onPlaylistCreated 콜백 추가
 interface PlaylistFormProps {
-  playlist?: Playlist
+  playlist?: Playlist;
+  onPlaylistCreated?: (playlistId: number) => void;
 }
 
-export default function PlaylistForm({ playlist }: PlaylistFormProps) {
-  const router = useRouter()
-  const [isSubmitting, setIsSubmitting] = useState(false)
+export default function PlaylistForm({
+  playlist,
+  onPlaylistCreated,
+}: PlaylistFormProps) {
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: playlist?.title || "",
     description: playlist?.description || "",
     isPublic: true,
-  })
+  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, isPublic: e.target.checked }))
-  }
+    setFormData((prev) => ({ ...prev, isPublic: e.target.checked }));
+  };
 
+  // handleSubmit 함수 수정
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+    e.preventDefault();
+    setIsSubmitting(true);
     try {
       if (playlist) {
         const updatedPlaylist = await updatePlaylist(playlist.id, {
@@ -47,15 +55,21 @@ export default function PlaylistForm({ playlist }: PlaylistFormProps) {
         });
         router.push(`/playlists/${updatedPlaylist.id}`);
       } else {
-        const newPlaylist = await createPlaylist(formData)
-        router.push(`/playlists/${newPlaylist.id}`)
+        const newPlaylist = await createPlaylist(formData);
+
+        // 콜백이 있으면 호출
+        if (onPlaylistCreated) {
+          onPlaylistCreated(newPlaylist.id);
+        } else {
+          router.push(`/playlists/${newPlaylist.id}`);
+        }
       }
     } catch (error) {
-      console.error("플레이리스트 저장 실패:", error)
+      console.error("플레이리스트 저장 실패:", error);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <Card>
@@ -108,6 +122,5 @@ export default function PlaylistForm({ playlist }: PlaylistFormProps) {
         </CardFooter>
       </form>
     </Card>
-  )
+  );
 }
-

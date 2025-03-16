@@ -22,6 +22,7 @@ export async function createPlaylist(data: {
   return result.data;
 }
 
+// 플레이리스트 가져오기 함수 수정
 export async function getPlaylistById(id: number): Promise<Playlist> {
   const response = await fetch(`http://localhost:8080/api/v1/playlists/${id}`, {
     cache: "no-store",
@@ -29,7 +30,7 @@ export async function getPlaylistById(id: number): Promise<Playlist> {
   });
 
   if (!response.ok) {
-    throw new Error("플레이리스트 생성에 실패했습니다.");
+    throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");
   }
 
   const result = await response.json();
@@ -111,27 +112,63 @@ export async function deletePlaylistItem(
   }
 }
 
-// 플레이리스트 아이템 순서 변경
+// 플레이리스트 아이템 순서 변경 함수 수정
 export async function updatePlaylistItemOrder(
   playlistId: number,
-  orderedItemIds: number[]
+  orderUpdates: { id: number; children?: number[] }[]
 ): Promise<Playlist> {
-  const response = await fetch(
-    `http://localhost:8080/api/v1/playlists/${playlistId}/items/order`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(orderedItemIds),
+  console.log("서버에 전송할 순서 업데이트:", orderUpdates);
+
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/v1/playlists/${playlistId}/items/order`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+        credentials: "include",
+        body: JSON.stringify(orderUpdates),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("플레이리스트 아이템 순서 변경에 실패했습니다.");
     }
-  );
 
-  if (!response.ok) {
-    throw new Error("플레이리스트 아이템 순서 변경에 실패했습니다.");
+    const result = await response.json();
+    console.log("서버 응답 (순서 변경):", result);
+
+    // 응답에서 아이템 목록의 displayOrder 값 확인
+    if (result.data && result.data.items) {
+      // 서버에서 받은 아이템을 displayOrder로 정렬하여 로깅
+      const sortedItems = [...result.data.items].sort(
+        (a: any, b: any) => a.displayOrder - b.displayOrder
+      );
+      console.log(
+        "서버 응답에서 받은 아이템 displayOrder 정렬 순서:",
+        sortedItems.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          displayOrder: item.displayOrder,
+        }))
+      );
+
+      // 정렬된 아이템으로 결과 반환
+      return {
+        ...result.data,
+        items: sortedItems,
+      };
+    }
+
+    return result.data;
+  } catch (error) {
+    console.error("순서 변경 API 호출 오류:", error);
+    throw error;
   }
-
-  const result = await response.json();
-  return result.data;
 }
 
 // 추천 플레이리스트 가져오기

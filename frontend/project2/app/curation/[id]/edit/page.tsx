@@ -170,6 +170,7 @@ export default function EditPostPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(requestData),
+          credentials: "include",
         }
       );
 

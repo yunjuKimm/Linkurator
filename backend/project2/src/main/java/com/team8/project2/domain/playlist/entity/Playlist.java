@@ -66,6 +66,7 @@ public class Playlist {
      * 플레이리스트에 포함된 항목 목록 (1:N 관계)
      */
     @OneToMany(mappedBy = "playlist", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
     @Builder.Default
     private List<PlaylistItem> items = new ArrayList<>();
 

@@ -8,7 +8,6 @@ import {
   Heart,
   MessageSquare,
   Bookmark,
-  Share2,
   ArrowLeft,
   Edit,
   Trash2,
@@ -20,6 +19,8 @@ import {
 import RightSidebar from "@/app/components/right-sidebar";
 import CommentSection from "@/app/components/comment-section";
 import ReportModal from "@/app/components/report-modal";
+import ShareButton from "@/app/components/share-button";
+import AddToPlaylistModal from "@/app/components/add-to-playlist-modal";
 
 // API URL을 하드코딩된 값에서 환경 변수로 변경합니다.
 // 파일 상단에 다음 상수를 추가합니다:
@@ -67,6 +68,7 @@ export default function PostDetail() {
   const [metaDataLoading, setMetaDataLoading] = useState(false); // 메타데이터 로딩 상태
   const [error, setError] = useState<string | null>(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
 
@@ -288,7 +290,7 @@ export default function PostDetail() {
     return (
       <div className="text-gray-500 p-4 border border-gray-200 rounded-md bg-gray-50 flex items-center justify-center min-h-[40vh]">
         <div>
-          <h2 className="text-xl font-bold mb-2">데이터를 찾을 수 없습니다</h2>
+          <h2 className="text-xl font-bold mb-2">데이터를 ���을 수 없습니다</h2>
           <p>요청하신 큐레이션 정보가 존재하지 않습니다.</p>
         </div>
       </div>
@@ -424,6 +426,16 @@ export default function PostDetail() {
                     <Edit className="mr-2 h-4 w-4" />
                     큐레이션 수정
                   </Link>
+                  <button
+                    onClick={() => {
+                      setShowAddToPlaylistModal(true);
+                      setShowActionMenu(false);
+                    }}
+                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    플레이리스트에 추가
+                  </button>
                   <button
                     onClick={handleDeleteCuration}
                     className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
@@ -620,9 +632,10 @@ export default function PostDetail() {
               <button className="rounded-md border p-2 hover:bg-gray-50">
                 <Bookmark className="h-5 w-5 text-gray-500" />
               </button>
-              <button className="rounded-md border p-2 hover:bg-gray-50">
-                <Share2 className="h-5 w-5 text-gray-500" />
-              </button>
+              <ShareButton
+                id={Number(id)}
+                className="rounded-md border p-2 hover:bg-gray-50"
+              />
               <button
                 className="rounded-md border p-2 hover:bg-gray-50 hover:text-red-500"
                 onClick={() => setShowReportModal(true)}
@@ -683,6 +696,12 @@ export default function PostDetail() {
       <ReportModal
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
+        curationId={Number(id)}
+      />
+      {/* 플레이리스트 추가 모달 */}
+      <AddToPlaylistModal
+        isOpen={showAddToPlaylistModal}
+        onClose={() => setShowAddToPlaylistModal(false)}
         curationId={Number(id)}
       />
     </main>
