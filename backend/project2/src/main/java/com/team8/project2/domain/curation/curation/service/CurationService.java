@@ -3,7 +3,6 @@ package com.team8.project2.domain.curation.curation.service;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -214,6 +213,15 @@ public class CurationService {
 		curationLinkRepository.deleteByCurationId(curationId);
 		curationTagRepository.deleteByCurationId(curationId);
 		curationRepository.deleteById(curationId);
+
+		// 조회 IP 정보 삭제
+		Set<String> keys = redisTemplate.keys(VIEW_COUNT_KEY + curationId + "*");
+		if (keys != null && !keys.isEmpty()) {
+			redisTemplate.delete(keys);
+		}
+
+		// 일일 조회수 삭제
+		redisTemplate.opsForZSet().remove(DAY_VIEW_COUNT_KEY, String.valueOf(curationId));
 
 		// 큐레이션 삭제 이벤트
 		eventPublisher.publishEvent(new CurationDeleteEvent(curationId));
@@ -453,10 +461,15 @@ public class CurationService {
 	public TrendingCurationResDto getTrendingCuration() {// 조회수가 가장 높은 3개의 큐레이션을 가져옴
 		List<Curation> topCurations = redisTemplate.opsForZSet().reverseRange(DAY_VIEW_COUNT_KEY, 0, 2).stream()
 			.map(curationId -> curationRepository.findById(Long.parseLong(curationId))
-				.orElseThrow(() -> new ServiceException("500-1", "일간 조회수순 큐레이션을 불러오는데 실패했습니다.")))
+				.orElseGet(() -> {
+					redisTemplate.opsForZSet().remove(DAY_VIEW_COUNT_KEY, curationId);
+					return null;
+				}))
+			.filter(curation -> curation != null)
 			.toList();
+
 		if (topCurations.isEmpty()) {
-			topCurations = curationRepository.findTop3ByOrderByViewCountDesc();
+			return TrendingCurationResDto.of(curationRepository.findTop3ByOrderByViewCountDesc());
 		}
 		return TrendingCurationResDto.of(topCurations);
 	}
