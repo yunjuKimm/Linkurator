@@ -28,6 +28,13 @@ public class CurationResDto {
     /** 조회수 */
     private Long viewCount;
 
+    /** 작성자 */
+    private String authorName;
+
+    /** 이미지 url */
+    private String memberImgUrl;
+
+
     /** 큐레이션에 포함된 링크 목록 */
     private List<LinkResDto> urls;
 
@@ -79,6 +86,8 @@ public class CurationResDto {
                 .collect(Collectors.toList());
         this.createdAt = curation.getCreatedAt();
         this.modifiedAt = curation.getModifiedAt();
+        this.authorName = curation.getMemberName();
+        this.memberImgUrl = curation.getMemberImgUrl();
         this.likeCount = curation.getLikeCount();
         this.viewCount = curation.getViewCount();
     }

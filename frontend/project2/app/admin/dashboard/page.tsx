@@ -47,14 +47,24 @@ interface Curation {
   id: number;
   title: string;
   content: string;
-  createdBy?: string;
   createdAt: string;
   modifiedAt: string;
   likeCount: number;
+  authorName: string;
   urls: { url: string }[];
   tags: { name: string }[];
   viewCount?: number;
 }
+
+// 큐레이션 요청 파라미터 타입 정의
+interface CurationRequestParams {
+  tags?: string[];
+  title?: string;
+  content?: string;
+  order?: SortOrder;
+}
+
+type SortOrder = "LATEST" | "LIKECOUNT";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -68,6 +78,7 @@ export default function AdminDashboardPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState("members");
   const [error, setError] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState("LATEST"); // 정렬 순서 상태 추가
 
   useEffect(() => {
     // 관리자 권한 확인
@@ -134,7 +145,6 @@ export default function AdminDashboardPage() {
 
         // 캐시된 데이터가 없으면 API에서 가져오기
         await fetchMembers(true);
-        await fetchCurations(true);
       } catch (error) {
         console.error("권한 확인 오류:", error);
         toast({
@@ -158,7 +168,6 @@ export default function AdminDashboardPage() {
     setError(null);
 
     try {
-      // 직접 백엔드 API 호출
       const response = await fetch(`${API_URL}/members/members`, {
         method: "GET",
         credentials: "include",
@@ -237,24 +246,69 @@ export default function AdminDashboardPage() {
   };
 
   // 큐레이션 데이터 가져오기 함수
-  const fetchCurations = async (showLoading = true) => {
+  const fetchCurations = async (params: CurationRequestParams) => {
+    setIsLoading(true);
+    setError(null);
+
+    console.log("큐레이션 데이터 조회 시작:", new Date().toISOString());
+    console.log("조회 파라미터:", params);
+
     try {
-      const response = await fetch(`${API_URL}/curation`);
+      // 세션 스토리지에 캐시된 큐레이션 데이터가 있는지 확인
+      const cachedCurations = sessionStorage.getItem("adminCurationsData");
+
+      const queryParams = new URLSearchParams({
+        order: sortOrder,
+        ...(params.tags && params.tags.length > 0
+          ? { tags: params.tags.join(",") }
+          : {}),
+        ...(params.title ? { title: params.title } : {}),
+        ...(params.content ? { content: params.content } : {}),
+        ...(params.order ? { order: params.order } : {}),
+      }).toString();
+
+      console.log(
+        "큐레이션 API 요청 URL:",
+        `${API_URL}/curation?${queryParams}`
+      );
+
+      const response = await fetch(`${API_URL}/curation?${queryParams}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      console.log("큐레이션 API 응답 상태:", response.status);
+
       if (!response.ok) {
-        throw new Error("큐레이션 목록을 불러오는 데 실패했습니다.");
+        throw new Error(
+          `큐레이션 데이터 로드 실패: ${response.status} ${response.statusText}`
+        );
       }
+
       const data = await response.json();
+      console.log("큐레이션 API 응답 데이터:", data);
+
       if (data && data.data) {
+        console.log("큐레이션 데이터 개수:", data.data.length);
         setCurations(data.data);
+
+        // 세션 스토리지에 큐레이션 데이터 저장
+        /* sessionStorage.setItem("adminCurationsData", JSON.stringify(data.data))*/
       } else {
-        console.error("No curation data found in the response");
+        console.error("큐레이션 데이터가 없습니다:", data);
         setCurations([]);
       }
     } catch (error) {
-      console.error("Error fetching curator curations:", error);
+      console.error("큐레이션 데이터 로드 오류:", error);
       setError((error as Error).message);
+
+      // 에러 발생 시 캐시된 데이터가 없으면 빈 배열 설정
+      if (curations.length === 0) {
+        setCurations([]);
+      }
     } finally {
-      setLoading(false);
+      console.log("큐레이션 데이터 조회 완료:", new Date().toISOString());
+      setIsLoading(false);
     }
   };
 
@@ -268,14 +322,9 @@ export default function AdminDashboardPage() {
     setError(null);
 
     try {
-      // 직접 백엔드 API 호출
       const response = await fetch(`${API_URL}/admin/members/${id}`, {
         method: "DELETE",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
-        },
       });
 
       if (!response.ok) {
@@ -338,14 +387,9 @@ export default function AdminDashboardPage() {
     setError(null);
 
     try {
-      // 직접 백엔드 API 호출
       const response = await fetch(`${API_URL}/admin/curations/${id}`, {
         method: "DELETE",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
-        },
       });
 
       if (!response.ok) {
@@ -392,10 +436,23 @@ export default function AdminDashboardPage() {
   // 새로고침 함수
   const handleRefresh = async () => {
     await fetchMembers(true);
-    await fetchCurations(true);
+    await fetchCurations({});
     toast({
       title: "데이터 새로고침",
       description: "최신 데이터를 불러왔습니다.",
+    });
+  };
+
+  // 정렬 순서 변경 함수
+  const handleSortOrderChange = (order: string) => {
+    setSortOrder(order);
+    fetchCurations({});
+  };
+
+  // 큐레이션 검색 함수
+  const handleCurationSearch = () => {
+    fetchCurations({
+      title: curationSearchTerm,
     });
   };
 
@@ -407,13 +464,14 @@ export default function AdminDashboardPage() {
       member.email.toLowerCase().includes(memberSearchTerm.toLowerCase())
   );
 
-  // 큐레이션 검색 필터링
+  // 큐레이션 검색 필터링 (클라이언트 측 필터링)
   const filteredCurations = curations.filter(
     (curation) =>
       curation.title.toLowerCase().includes(curationSearchTerm.toLowerCase()) ||
-      curation.authorName
-        .toLowerCase()
-        .includes(curationSearchTerm.toLowerCase()) ||
+      (curation.authorName &&
+        curation.authorName
+          .toLowerCase()
+          .includes(curationSearchTerm.toLowerCase())) ||
       curation.id.toString().includes(curationSearchTerm)
   );
 
@@ -571,12 +629,35 @@ export default function AdminDashboardPage() {
               <CardTitle>큐레이션 검색</CardTitle>
             </CardHeader>
             <CardContent>
-              <Input
-                placeholder="제목, 작성자 또는 ID로 검색"
-                value={curationSearchTerm}
-                onChange={(e) => setCurationSearchTerm(e.target.value)}
-                className="max-w-md"
-              />
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="제목, 작성자 또는 ID로 검색"
+                    value={curationSearchTerm}
+                    onChange={(e) => setCurationSearchTerm(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handleCurationSearch()
+                    }
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSortOrderChange("LATEST")}
+                  >
+                    최신순
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSortOrderChange("OLDEST")}
+                  >
+                    오래된순
+                  </Button>
+                  <Button onClick={handleCurationSearch}>검색</Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -601,7 +682,9 @@ export default function AdminDashboardPage() {
                       <TableCell className="font-medium">
                         {curation.title}
                       </TableCell>
-                      <TableCell>{curation.authorName}</TableCell>
+                      <TableCell>
+                        {curation.authorName || "알 수 없음"}
+                      </TableCell>
                       <TableCell>
                         {formatCurationDate(curation.createdAt)}
                       </TableCell>
