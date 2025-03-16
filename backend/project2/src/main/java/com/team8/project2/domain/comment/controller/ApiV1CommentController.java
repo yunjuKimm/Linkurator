@@ -1,6 +1,9 @@
 package com.team8.project2.domain.comment.controller;
 
 import com.team8.project2.domain.comment.dto.CommentDto;
+import com.team8.project2.domain.comment.dto.ReplyCommentDto;
+import com.team8.project2.domain.comment.entity.ReplyComment;
+import com.team8.project2.domain.comment.repository.ReplyCommentRepository;
 import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.global.Rq;
@@ -27,6 +30,7 @@ public class ApiV1CommentController {
 	private final CommentService commentService;
 
 	private final Rq rq;
+	private final ReplyCommentRepository replyCommentRepository;
 
 	/**
 	 * 새로운 댓글을 생성합니다.
@@ -34,10 +38,19 @@ public class ApiV1CommentController {
 	 * @return 생성된 댓글 정보를 포함한 응답
 	 */
 	@PostMapping
+	@PreAuthorize("isAuthenticated()")
 	public RsData<CommentDto> createComment(@PathVariable Long curationId, @RequestBody CommentDto commentDto) {
 		Member actor = rq.getActor();
 		CommentDto createdComment = commentService.createComment(actor, curationId, commentDto);
 		return new RsData("200-2", "댓글이 작성되었습니다.", createdComment);
+	}
+
+	@PostMapping("/{id}/reply")
+	@PreAuthorize("isAuthenticated()")
+	public RsData<ReplyCommentDto> createReplyComment(@PathVariable Long curationId, @PathVariable(name = "id") Long commentId,
+		@RequestBody CommentDto replyDto) {
+		ReplyCommentDto replyCommentDto = commentService.createReplyComment(curationId, commentId,  replyDto.getContent());
+		return new RsData<>("200-2", "댓글의 답글이 작성되었습니다.", replyCommentDto);
 	}
 
 	/**
@@ -58,14 +71,34 @@ public class ApiV1CommentController {
 	 * @return 수정된 댓글
 	 */
 	@PutMapping("/{id}")
-	@PreAuthorize("@commentService.canEdit(#commentId, #userDetails)")
+	@PreAuthorize("@commentService.canEditComment(#commentId, #userDetails)")
 	public RsData<CommentDto> updateComment(
 		@PathVariable(name = "id") Long commentId,
 		@RequestBody CommentDto commentDto,
 		@AuthenticationPrincipal UserDetails userDetails
 	) {
-		CommentDto updatedComment = commentService.updateComment(commentId, commentDto, userDetails.getUsername());
+		CommentDto updatedComment = commentService.updateComment(commentId, commentDto);
 		return new RsData("200-2", "댓글이 수정되었습니다.", updatedComment);
+	}
+
+	/**
+	 * 특정 답글을 수정합니다.
+	 * @param commentId 댓글 ID
+	 * @param replyId 답글 ID
+	 * @param replyDto 변경할 답글 내용 DTO
+	 * @param userDetails 인증 정보
+	 * @return
+	 */
+	@PutMapping("/{commentId}/reply/{id}")
+	@PreAuthorize("@commentService.canEditReply(#replyId, #userDetails)")
+	public RsData<ReplyCommentDto> updateReply(
+		@PathVariable Long commentId,
+		@PathVariable(name = "id") Long replyId,
+		@RequestBody CommentDto replyDto,
+		@AuthenticationPrincipal UserDetails userDetails
+	) {
+		ReplyCommentDto updatedReplyDto = commentService.updateReply(replyId, replyDto);
+		return new RsData("200-2", "답글이 수정되었습니다.", updatedReplyDto);
 	}
 
 	/**
@@ -74,13 +107,24 @@ public class ApiV1CommentController {
 	 * @return 빈 응답 객체를 포함한 응답
 	 */
 	@DeleteMapping("/{id}")
-	@PreAuthorize("@commentService.canDelete(#commentId, #userDetails)")
+	@PreAuthorize("@commentService.canDeleteComment(#commentId, #userDetails)")
 	public RsData<Void> deleteComment(
 		@PathVariable(name = "id") Long commentId,
 		@AuthenticationPrincipal UserDetails userDetails
 	) {
-		commentService.deleteComment(commentId, userDetails.getUsername());
+		commentService.deleteComment(commentId);
 		return new RsData<>("200-1", "댓글이 삭제되었습니다.");
+	}
+
+	@DeleteMapping("/{commentId}/reply/{id}")
+	@PreAuthorize("@commentService.canDeleteReply(#replyId, #userDetails)")
+	public RsData<Void> deleteReply(
+		@PathVariable Long commentId,
+		@PathVariable(name = "id") Long replyId,
+		@AuthenticationPrincipal UserDetails userDetails
+	) {
+		commentService.deleteReply(replyId);
+		return new RsData<>("200-1", "답글이 삭제되었습니다.");
 	}
 }
 

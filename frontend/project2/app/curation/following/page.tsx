@@ -212,7 +212,7 @@ export default function FollowingCurations() {
                   </button>
                 </div>
 
-                {/* 태그 표시 */}
+                {/* 태그 표��� */}
                 <div className="flex space-x-2 mt-2">
                   {curation.tags.map((tag, index) => (
                     <span

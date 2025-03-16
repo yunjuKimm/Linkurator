@@ -19,6 +19,17 @@ type Comment = {
   createdAt: string;
   modifiedAt: string;
   isLiked?: boolean;
+  replies?: Reply[]; // 답글 배열 추가
+};
+
+// 답글 타입 정의 추가
+type Reply = {
+  id: number;
+  authorName: string;
+  authorProfileImageUrl?: string;
+  content: string;
+  createdAt: string;
+  modifiedAt: string;
 };
 
 // API에서 받은 데이터 타입
@@ -37,6 +48,15 @@ export default function CommentSection({ postId }: { postId: string }) {
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null); // 수정 중인 댓글 ID
   const [editContent, setEditContent] = useState(""); // 수정 중인 댓글 내용
   const [loading, setLoading] = useState(true); // 로딩 상태 추가
+  const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(
+    null
+  ); // 답글 작성 중인 댓글 ID
+  const [newReply, setNewReply] = useState(""); // 새 답글 내용
+  const [editingReplyInfo, setEditingReplyInfo] = useState<{
+    commentId: number;
+    replyId: number;
+  } | null>(null); // 수정 중인 답글 정보
+  const [editReplyContent, setEditReplyContent] = useState(""); // 수정 중인 답글 내용
 
   // API에서 커레이션 데이터를 불러오는 함수 수정
   const fetchCurationData = async (id: string) => {
@@ -302,6 +322,206 @@ export default function CommentSection({ postId }: { postId: string }) {
     }
   };
 
+  // 답글 작성 취소 함수 추가
+  const handleCancelReply = () => {
+    setReplyingToCommentId(null);
+    setNewReply("");
+  };
+
+  // 답글 작성 함수 추가
+  const handleAddReply = async (commentId: number) => {
+    if (!newReply.trim() || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      // API 호출로 답글 생성
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curations/${postId}/comments/${commentId}/reply`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content: newReply,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("답글 작성에 실패했습니다.");
+      }
+
+      const result = await response.json();
+
+      if (result.code === "200-2") {
+        // API 응답으로 받은 새 답글 데이터
+        const newReplyData: Reply = {
+          id: result.data.id,
+          authorName: result.data.authorName,
+          authorProfileImageUrl: result.data.authorProfileImageUrl,
+          content: result.data.content,
+          createdAt: result.data.createdAt,
+          modifiedAt: result.data.modifiedAt,
+        };
+
+        // 댓글 목록 업데이트 - 해당 댓글에 답글 추가
+        setComments(
+          comments.map((comment) => {
+            if (comment.commentId === commentId || comment.id === commentId) {
+              return {
+                ...comment,
+                replies: [...(comment.replies || []), newReplyData],
+              };
+            }
+            return comment;
+          })
+        );
+
+        // 입력 필드 초기화 및 답글 작성 모드 종료
+        setNewReply("");
+        setReplyingToCommentId(null);
+      } else {
+        throw new Error(result.msg || "답글 작성에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("답글 작성 중 오류 발생:", error);
+      setError((error as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 답글 수정 시작 함수 추가
+  const handleEditReplyStart = (commentId: number, reply: Reply) => {
+    setEditingReplyInfo({ commentId, replyId: reply.id });
+    setEditReplyContent(reply.content);
+  };
+
+  // 답글 수정 취소 함수 추가
+  const handleEditReplyCancel = () => {
+    setEditingReplyInfo(null);
+    setEditReplyContent("");
+  };
+
+  // 답글 수정 저장 함수 추가
+  const handleEditReplySave = async (commentId: number, replyId: number) => {
+    if (!editReplyContent.trim() || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      // API 호출로 답글 수정
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curations/${postId}/comments/${commentId}/reply/${replyId}`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            content: editReplyContent,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("답글 수정에 실패했습니다.");
+      }
+
+      const result = await response.json();
+
+      if (result.code === "200-2") {
+        // 댓글 목록 업데이트 - 해당 댓글의 답글 수정
+        setComments(
+          comments.map((comment) => {
+            if (comment.commentId === commentId || comment.id === commentId) {
+              return {
+                ...comment,
+                replies: (comment.replies || []).map((reply) => {
+                  if (reply.id === replyId) {
+                    return {
+                      ...reply,
+                      content: editReplyContent,
+                      modifiedAt: result.data.modifiedAt,
+                    };
+                  }
+                  return reply;
+                }),
+              };
+            }
+            return comment;
+          })
+        );
+
+        // 수정 모드 종료
+        setEditingReplyInfo(null);
+        setEditReplyContent("");
+      } else {
+        throw new Error(result.msg || "답글 수정에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("답글 수정 중 오류 발생:", error);
+      setError((error as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 답글 삭제 함수 추가
+  const handleDeleteReply = async (commentId: number, replyId: number) => {
+    if (!confirm("정말로 이 답글을 삭제하시겠습니까?")) return;
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      // API 호출로 답글 삭제
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curations/${postId}/comments/${commentId}/reply/${replyId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("답글 삭제에 실패했습니다.");
+      }
+
+      const result = await response.json();
+
+      if (result.code === "200-1") {
+        // 댓글 목록 업데이트 - 해당 댓글에서 답글 제거
+        setComments(
+          comments.map((comment) => {
+            if (comment.commentId === commentId || comment.id === commentId) {
+              return {
+                ...comment,
+                replies: (comment.replies || []).filter(
+                  (reply) => reply.id !== replyId
+                ),
+              };
+            }
+            return comment;
+          })
+        );
+      } else {
+        throw new Error(result.msg || "답글 삭제에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("답글 삭제 중 오류 발생:", error);
+      setError((error as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // 로딩 중일 때 스켈레톤 UI 표시
   if (loading) {
     return <CommentSkeleton />;
@@ -350,7 +570,8 @@ export default function CommentSection({ postId }: { postId: string }) {
                   <Image
                     src={
                       comment.authorImgUrl ||
-                      "/placeholder.svg?height=36&width=36"
+                      "/placeholder.svg?height=36&width=36" ||
+                      "/placeholder.svg"
                     }
                     alt={comment.authorName}
                     width={36}
@@ -443,10 +664,171 @@ export default function CommentSection({ postId }: { postId: string }) {
                   />
                   <span>{comment.isLiked ? 1 : 0}</span>
                 </button>
-                <button className="text-xs text-gray-500 hover:text-gray-700">
+                <button
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                  onClick={() => {
+                    setReplyingToCommentId(
+                      comment.commentId || comment.id || 0
+                    );
+                    setNewReply("");
+                  }}
+                >
                   답글
                 </button>
               </div>
+
+              {/* 답글 목록 */}
+              {comment.replies && comment.replies.length > 0 && (
+                <div className="mt-4 space-y-3 pl-6 border-l-2 border-gray-100">
+                  {comment.replies.map((reply) => (
+                    <div key={reply.id} className="relative">
+                      <div className="flex justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Image
+                            src={
+                              reply.authorProfileImageUrl ||
+                              "/placeholder.svg?height=28&width=28" ||
+                              "/placeholder.svg"
+                            }
+                            alt={reply.authorName}
+                            width={28}
+                            height={28}
+                            className="rounded-full"
+                          />
+                          <div>
+                            <p className="font-medium text-sm">
+                              {reply.authorName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {reply.createdAt &&
+                              reply.modifiedAt &&
+                              Math.floor(
+                                new Date(reply.modifiedAt).getTime() / 1000
+                              ) !==
+                                Math.floor(
+                                  new Date(reply.createdAt).getTime() / 1000
+                                )
+                                ? `수정된 날짜: ${formatDate(reply.modifiedAt)}`
+                                : `작성된 날짜: ${formatDate(reply.createdAt)}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* 답글 액션 버튼 */}
+                        <div className="flex space-x-1">
+                          {!editingReplyInfo ||
+                          editingReplyInfo.commentId !==
+                            (comment.commentId || comment.id || 0) ||
+                          editingReplyInfo.replyId !== reply.id ? (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handleEditReplyStart(
+                                    comment.commentId || comment.id || 0,
+                                    reply
+                                  )
+                                }
+                                className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleDeleteReply(
+                                    comment.commentId || comment.id || 0,
+                                    reply.id
+                                  )
+                                }
+                                className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handleEditReplySave(
+                                    comment.commentId || comment.id || 0,
+                                    reply.id
+                                  )
+                                }
+                                className="p-1 text-green-500 hover:text-green-600 rounded-full hover:bg-gray-100"
+                                disabled={isSubmitting}
+                              >
+                                <Check className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={handleEditReplyCancel}
+                                className="p-1 text-red-500 hover:text-red-600 rounded-full hover:bg-gray-100"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {!editingReplyInfo ||
+                      editingReplyInfo.commentId !==
+                        (comment.commentId || comment.id || 0) ||
+                      editingReplyInfo.replyId !== reply.id ? (
+                        <p className="mt-1 text-sm">{reply.content}</p>
+                      ) : (
+                        <div className="mt-1">
+                          <textarea
+                            value={editReplyContent}
+                            onChange={(e) =>
+                              setEditReplyContent(e.target.value)
+                            }
+                            className="w-full rounded-md border p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            rows={2}
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 답글 작성 폼 */}
+              {replyingToCommentId === (comment.commentId || comment.id) && (
+                <div className="mt-3 pl-6 border-l-2 border-gray-100">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleAddReply(comment.commentId || comment.id || 0);
+                    }}
+                    className="space-y-2"
+                  >
+                    <textarea
+                      value={newReply}
+                      onChange={(e) => setNewReply(e.target.value)}
+                      placeholder="답글을 작성해주세요..."
+                      className="w-full rounded-md border p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      rows={2}
+                      disabled={isSubmitting}
+                    />
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        type="button"
+                        onClick={handleCancelReply}
+                        className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 border rounded-md"
+                      >
+                        취소
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                        disabled={!newReply.trim() || isSubmitting}
+                      >
+                        {isSubmitting ? "작성 중..." : "답글 작성"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           ))
         ) : (

@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -50,6 +52,9 @@ public class Comment {
     @JoinColumn(name = "curation_id", nullable = false)
     private Curation curation;
 
+    @OneToMany(mappedBy = "comment")
+    private List<ReplyComment> replyComments = new ArrayList<>();
+
     /**
      * 댓글 내용 (텍스트 형태, 필수값)
      */
@@ -71,6 +76,10 @@ public class Comment {
     @Column(nullable = false)
     @Setter(AccessLevel.PRIVATE)
     private LocalDateTime modifiedAt;
+
+    public void addReplyComment(ReplyComment replyComment) {
+        this.replyComments.add(replyComment);
+    }
 
     public String getAuthorName() {
         return author.getUsername();

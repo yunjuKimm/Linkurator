@@ -1,24 +1,25 @@
 package com.team8.project2.domain.comment.service;
 
-import com.team8.project2.domain.comment.dto.CommentDto;
-import com.team8.project2.domain.comment.entity.Comment;
-import com.team8.project2.domain.comment.repository.CommentRepository;
-import com.team8.project2.domain.curation.curation.entity.Curation;
-import com.team8.project2.domain.curation.curation.repository.CurationRepository;
-import com.team8.project2.domain.member.entity.Member;
-import com.team8.project2.domain.member.entity.RoleEnum;
-import com.team8.project2.domain.member.repository.MemberRepository;
-import com.team8.project2.global.exception.ServiceException;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import lombok.RequiredArgsConstructor;
-
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.team8.project2.domain.comment.dto.CommentDto;
+import com.team8.project2.domain.comment.dto.ReplyCommentDto;
+import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.comment.entity.ReplyComment;
+import com.team8.project2.domain.comment.repository.CommentRepository;
+import com.team8.project2.domain.comment.repository.ReplyCommentRepository;
+import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.repository.CurationRepository;
+import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.global.Rq;
+import com.team8.project2.global.exception.ServiceException;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * 댓글(Comment) 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
@@ -32,6 +33,8 @@ public class CommentService {
 
 	private final CommentRepository commentRepository;
 	private final CurationRepository curationRepository;
+	private final ReplyCommentRepository replyCommentRepository;
+	private final Rq rq;
 
 	/**
 	 * 새로운 댓글을 생성합니다.
@@ -69,15 +72,14 @@ public class CommentService {
 	 * @throws ServiceException 해당 댓글이 존재하지 않을 경우 예외 발생
 	 */
 	@Transactional
-	public void deleteComment(Long commentId, String username) {
+	public void deleteComment(Long commentId) {
 		Comment comment = commentRepository.findById(commentId)
 			.orElseThrow(() -> new ServiceException("404-2", "해당 댓글을 찾을 수 없습니다."));
 		commentRepository.delete(comment);
 	}
 
 	@Transactional
-	public CommentDto updateComment(Long commentId, CommentDto commentDto, String username) {
-
+	public CommentDto updateComment(Long commentId, CommentDto commentDto) {
 		Comment comment = commentRepository.findById(commentId)
 			.orElseThrow(() -> new ServiceException("404-2", "해당 댓글을 찾을 수 없습니다."));
 		comment.updateContent(commentDto.getContent());
@@ -85,7 +87,7 @@ public class CommentService {
 	}
 
 	// 댓글 수정 권한 체크 메서드
-	public boolean canEdit(Long commentId, UserDetails userDetails) {
+	public boolean canEditComment(Long commentId, UserDetails userDetails) {
 		if (userDetails == null) {
 			throw new ServiceException("401-1", "사용자 정보가 없습니다.");
 		}
@@ -101,7 +103,7 @@ public class CommentService {
 	}
 
 	// 댓글 삭제 권한 체크 메서드
-	public boolean canDelete(Long commentId, UserDetails userDetails) {
+	public boolean canDeleteComment(Long commentId, UserDetails userDetails) {
 		if (userDetails == null) {
 			throw new ServiceException("401-1", "사용자 정보가 없습니다.");
 		}
@@ -118,6 +120,74 @@ public class CommentService {
 
 	public List<Comment> findAllByAuthor(Member author) {
 		return commentRepository.findAllByAuthor(author);
+	}
+
+	/**
+	 * 댓글에 대한 답글 작성
+	 * @param curationId 큐레이션 ID
+	 * @param commentId 답글을 작성할 댓글 ID
+	 * @param content 답글의 내용
+	 * @return
+	 */
+	@Transactional
+	public ReplyCommentDto createReplyComment(Long curationId, Long commentId, String content) {
+		Curation curation = curationRepository.findById(curationId)
+			.orElseThrow(() -> new ServiceException("404-1", "큐레이션이 존재하지 않습니다."));
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new ServiceException("404-2", "댓글이 존재하지 않습니다."));
+		ReplyComment reply = ReplyComment.builder()
+			.curation(curation)
+			.comment(comment)
+			.author(rq.getActor())
+			.content(content)
+			.build();
+		ReplyComment savedReply = replyCommentRepository.save(reply);
+		return ReplyCommentDto.fromEntity(savedReply);
+	}
+
+	public boolean canEditReply(Long replyId, UserDetails userDetails) {
+		if (userDetails == null) {
+			throw new ServiceException("401-1", "사용자 정보가 없습니다.");
+		}
+
+		ReplyComment reply = replyCommentRepository.findById(replyId)
+			.orElseThrow(() -> new ServiceException("404-2", "해당 답글을 찾을 수 없습니다."));
+
+		if (!reply.getAuthor().getMemberId().equals(userDetails.getUsername())) {
+			throw new ServiceException("403-2", "답글을 수정할 권한이 없습니다.");
+		}
+
+		return true;
+	}
+
+	public boolean canDeleteReply(Long replyId, UserDetails userDetails) {
+		if (userDetails == null) {
+			throw new ServiceException("401-1", "사용자 정보가 없습니다.");
+		}
+
+		ReplyComment reply = replyCommentRepository.findById(replyId)
+			.orElseThrow(() -> new ServiceException("404-2", "해당 답글을 찾을 수 없습니다."));
+
+		if (!reply.getAuthor().getMemberId().equals(userDetails.getUsername())) {
+			throw new ServiceException("403-2", "답글을 삭제할 권한이 없습니다.");
+		}
+
+		return true;
+	}
+
+	@Transactional
+	public ReplyCommentDto updateReply(Long replyId, CommentDto replyDto) {
+		ReplyComment reply = replyCommentRepository.findById(replyId)
+			.orElseThrow(() -> new ServiceException("404-2", "해당 댓글을 찾을 수 없습니다."));
+		reply.updateContent(replyDto.getContent());
+		return ReplyCommentDto.fromEntity(reply);
+	}
+
+	@Transactional
+	public void deleteReply(Long replyId) {
+		ReplyComment replyComment = replyCommentRepository.findById(replyId)
+			.orElseThrow(() -> new ServiceException("404-2", "해당 답글을 찾을 수 없습니다."));
+		replyCommentRepository.delete(replyComment);
 	}
 }
 
