@@ -111,7 +111,7 @@ public class CurationDetailResDto {
 			this.modifiedAt = comment.getModifiedAt();
 			this.replies = comment.getReplyComments().stream()
 				.map(ReplyCommentDto::fromEntity)
-				.sorted(Comparator.comparing(ReplyCommentDto::getCreatedAt).reversed())
+				.sorted(Comparator.comparing(ReplyCommentDto::getCreatedAt))
 				.toList();
 		}
 	}
