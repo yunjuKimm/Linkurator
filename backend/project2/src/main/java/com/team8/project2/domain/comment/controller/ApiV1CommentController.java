@@ -1,6 +1,7 @@
 package com.team8.project2.domain.comment.controller;
 
 import com.team8.project2.domain.comment.dto.CommentDto;
+import com.team8.project2.domain.comment.dto.ReplyCommentDto;
 import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.global.Rq;
@@ -34,10 +35,19 @@ public class ApiV1CommentController {
 	 * @return 생성된 댓글 정보를 포함한 응답
 	 */
 	@PostMapping
+	@PreAuthorize("isAuthenticated()")
 	public RsData<CommentDto> createComment(@PathVariable Long curationId, @RequestBody CommentDto commentDto) {
 		Member actor = rq.getActor();
 		CommentDto createdComment = commentService.createComment(actor, curationId, commentDto);
 		return new RsData("200-2", "댓글이 작성되었습니다.", createdComment);
+	}
+
+	@PostMapping("/{id}/reply")
+	@PreAuthorize("isAuthenticated()")
+	public RsData<ReplyCommentDto> createReplyComment(@PathVariable Long curationId, @PathVariable(name = "id") Long commentId,
+		@RequestBody CommentDto replyDto) {
+		ReplyCommentDto replyCommentDto = commentService.createReplyComment(curationId, commentId,  replyDto.getContent());
+		return new RsData<>("200-2", "댓글의 답글이 작성되었습니다.", replyCommentDto);
 	}
 
 	/**
