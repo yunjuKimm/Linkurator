@@ -6,6 +6,7 @@ import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
+import com.team8.project2.domain.playlist.dto.PlaylistItemOrderUpdateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
@@ -160,16 +161,16 @@ public class ApiV1PlaylistController {
      * 플레이리스트 아이템 순서를 변경합니다.
      *
      * @param id             플레이리스트의 ID
-     * @param orderedItemIds 변경된 순서대로 정렬된 아이템 ID 목록
+     * @param orderUpdates 변경된 순서대로 정렬된 아이템 ID 계층구조
      * @return 순서가 변경된 플레이리스트 정보
      */
     @PatchMapping("/{id}/items/order")
     public RsData<PlaylistDto> updatePlaylistItemOrder(
             @PathVariable("id") Long id,
-            @RequestBody List<Long> orderedItemIds
+            @RequestBody List<PlaylistItemOrderUpdateDto> orderUpdates
     ) {
         PlaylistDto updatedPlaylist =
-                playlistService.updatePlaylistItemOrder(id, orderedItemIds);
+                playlistService.updatePlaylistItemOrder(id, orderUpdates);
         return RsData.success("플레이리스트 아이템 순서가 변경되었습니다.", updatedPlaylist);
     }
 

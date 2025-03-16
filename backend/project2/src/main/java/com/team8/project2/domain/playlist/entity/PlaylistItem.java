@@ -31,6 +31,13 @@ public class PlaylistItem {
     private Long itemId;
 
     /**
+     * 부모 아이템 ID (null일 경우 최상위 플레이리스트)
+     */
+    @Column(name = "parent_item_id", nullable = true)
+    private Long parentItemId;
+
+
+    /**
      * 항목의 유형 (예: 음악, 영상 등)
      */
     @Column(nullable = false) // NULL 허용 안 함
@@ -65,7 +72,6 @@ public class PlaylistItem {
         LINK,
         CURATION
     }
-
 
 
 }

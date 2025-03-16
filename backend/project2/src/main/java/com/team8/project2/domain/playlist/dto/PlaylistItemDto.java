@@ -32,6 +32,7 @@ public class PlaylistItemDto {
     private String url;
 
     private Long curationId;
+    private Long parentItemId;
 
     /**
      * 플레이리스트 항목 엔티티를 DTO로 변환합니다.
@@ -47,6 +48,7 @@ public class PlaylistItemDto {
                 .description(playlistItem.getLink() != null ? playlistItem.getLink().getDescription() : "")
                 .url(playlistItem.getLink() != null ? playlistItem.getLink().getUrl() : "")
                 .curationId(playlistItem.getCuration() != null ? playlistItem.getCuration().getId() : null)
+                .parentItemId(playlistItem.getParentItemId())
                 .build();
     }
 }

@@ -29,6 +29,7 @@ import {
   updatePlaylistItemOrder,
 } from "@/lib/playlist-service";
 import AddLinkButton from "./add-link-button";
+import { useToast } from "@/components/ui/use-toast";
 
 // 인터페이스에 isOwner 속성 추가
 interface PlaylistItemsProps {
@@ -43,6 +44,7 @@ interface DraggableItem {
   type: "group" | "single"; // 그룹인지 개별 링크인지 구분
   groupKey?: string; // 그룹인 경우 그룹 키
   item: PlaylistItem; // 실제 아이템 데이터
+  displayOrder?: number; // 정렬을 위한 표시 순서 (추가)
 }
 
 // 큐레이션 그룹 인터페이스 정의
@@ -57,6 +59,7 @@ export default function PlaylistItems({
   isOwner = false,
 }: PlaylistItemsProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [items, setItems] = useState<PlaylistItem[]>(initialItems || []);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {}
@@ -84,31 +87,39 @@ export default function PlaylistItems({
     }
   };
 
-  // 전체 평탄한 배열(flat order)을 생성하는 헬퍼 함수
-  const getFlatOrder = (
+  // getHierarchicalOrder 함수를 수정하여 계층 구조를 더 명확하게 처리합니다
+  const getHierarchicalOrder = (
     draggables: DraggableItem[],
     groups: Record<string, CurationGroup>
-  ) => {
-    const orderedItemIds: number[] = [];
+  ): { id: number; children?: number[] }[] => {
+    const order: { id: number; children?: number[] }[] = [];
+
+    // 드래그 가능한 아이템의 현재 순서대로 계층 구조 생성
     draggables.forEach((draggable) => {
       if (draggable.type === "group") {
-        // 그룹 헤더
-        orderedItemIds.push(draggable.item.id);
         const groupKey = draggable.groupKey!;
-        // 그룹에 속한 모든 자식 링크 추가 (이미 displayOrder 기준 정렬됨)
-        if (groups[groupKey] && groups[groupKey].links) {
-          groups[groupKey].links.forEach((link) =>
-            orderedItemIds.push(link.id)
-          );
+        const group = groups[groupKey];
+
+        // 그룹 헤더와 해당 그룹의 자식 링크 ID 목록
+        if (group && group.links && group.links.length > 0) {
+          order.push({
+            id: draggable.item.id,
+            children: group.links.map((link) => link.id),
+          });
+        } else {
+          // 자식이 없는 경우에도 그룹 헤더는 추가
+          order.push({ id: draggable.item.id });
         }
       } else {
-        orderedItemIds.push(draggable.item.id);
+        // 단일 아이템
+        order.push({ id: draggable.item.id });
       }
     });
-    return orderedItemIds;
+
+    return order;
   };
 
-  // 메인 및 그룹 드래그 앤 드롭 핸들러
+  // handleDragEnd 함수 수정 - 드래그 앤 드롭 후 처리 개선
   const handleDragEnd = async (result: any) => {
     const { source, destination, type } = result;
 
@@ -126,13 +137,54 @@ export default function PlaylistItems({
       const newDraggableItems = Array.from(draggableItems);
       const [removed] = newDraggableItems.splice(source.index, 1);
       newDraggableItems.splice(destination.index, 0, removed);
+
+      // 먼저 UI 업데이트
       setDraggableItems(newDraggableItems);
 
-      const flatOrder = getFlatOrder(newDraggableItems, curationGroups);
+      const hierarchicalOrder = getHierarchicalOrder(
+        newDraggableItems,
+        curationGroups
+      );
+
       try {
-        await updatePlaylistItemOrder(playlistId, flatOrder);
+        console.log("서버에 전송할 계층 구조:", hierarchicalOrder);
+        const updatedPlaylist = await updatePlaylistItemOrder(
+          playlistId,
+          hierarchicalOrder
+        );
+        console.log("서버 응답:", updatedPlaylist);
+
+        // 서버 응답을 기반으로 로컬 상태 업데이트
+        if (updatedPlaylist && updatedPlaylist.items) {
+          // 아이템 목록 업데이트 - 서버에서 받은 순서 그대로 사용
+          const sortedItems = [...updatedPlaylist.items].sort(
+            (a, b) => a.displayOrder - b.displayOrder
+          );
+          setItems(sortedItems);
+
+          // 성공 메시지 표시
+          toast({
+            title: "순서가 변경되었습니다",
+            description:
+              "플레이리스트 아이템 순서가 성공적으로 변경되었습니다.",
+          });
+
+          // 약간의 지연 후 데이터 다시 가져오기 (캐시 문제 방지)
+          setTimeout(() => {
+            fetchData();
+          }, 500); // 지연 시간 원래대로 복원
+        }
       } catch (error) {
-        console.error("Failed to reorder items:", error);
+        console.error("아이템 순서 변경 오류:", error);
+        // 오류 발생 시 원래 상태로 복원
+        fetchData();
+
+        // 오류 메시지 표시
+        toast({
+          title: "순서 변경 실패",
+          description: "플레이리스트 아이템 순서 변경에 실패했습니다.",
+          variant: "destructive",
+        });
       }
     }
     // 그룹 내부 링크 목록에서의 드래그 앤 드롭
@@ -149,13 +201,88 @@ export default function PlaylistItems({
       };
       setCurationGroups(newCurationGroups);
 
-      // 메인 리스트는 그대로이므로, 업데이트된 그룹 정보를 반영해 전체 평탄한 배열 생성
-      const flatOrder = getFlatOrder(draggableItems, newCurationGroups);
+      // 메인 리스트는 그대로이므로, 업데이트된 그룹 정보를 반영해 전체 계층순서 생성
+      const hierarchicalOrder = getHierarchicalOrder(
+        draggableItems,
+        newCurationGroups
+      );
+
       try {
-        await updatePlaylistItemOrder(playlistId, flatOrder);
+        console.log(
+          "그룹 내 순서 변경 - 서버에 전송할 계층 구조:",
+          hierarchicalOrder
+        );
+        const updatedPlaylist = await updatePlaylistItemOrder(
+          playlistId,
+          hierarchicalOrder
+        );
+        console.log("서버 응답:", updatedPlaylist);
+
+        // 서버 응답을 기반으로 로컬 상태 업데이트
+        if (updatedPlaylist && updatedPlaylist.items) {
+          // 아이템 목록 업데이트 - 서버에서 받은 순서 그대로 사용
+          const sortedItems = [...updatedPlaylist.items].sort(
+            (a, b) => a.displayOrder - b.displayOrder
+          );
+          setItems(sortedItems);
+
+          // 약간의 지연 후 데이터 다시 가져오기 (캐시 문제 방지)
+          setTimeout(() => {
+            fetchData();
+          }, 500); // 지연 시간 원래대로 복원
+        }
       } catch (error) {
-        console.error("Failed to reorder group links:", error);
+        console.error("그룹 내 링크 순서 변경 오류:", error);
+        // 오류 발생 시 원래 상태로 복원
+        fetchData();
       }
+    }
+  };
+
+  // fetchData 함수 수정 - 오류 발생 시 데이터 다시 불러오기
+  const fetchData = async () => {
+    try {
+      // 캐시 헤더를 제거하고 기본 요청으로 단순화
+      const response = await fetch(
+        `http://localhost:8080/api/v1/playlists/${playlistId}`,
+        {
+          credentials: "include",
+          cache: "no-store",
+          headers: {
+            // 캐시 무시 헤더 추가
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");
+      }
+
+      const result = await response.json();
+      if (result.data && result.data.items) {
+        console.log("서버에서 받은 아이템 목록:", result.data.items);
+
+        // 아이템 목록의 displayOrder 값 확인 및 정렬 상태 로깅
+        const sortedItems = [...result.data.items].sort(
+          (a, b) => a.displayOrder - b.displayOrder
+        );
+        console.log(
+          "서버에서 받은 아이템 displayOrder 정렬 순서:",
+          sortedItems.map((item: PlaylistItem) => ({
+            id: item.id,
+            title: item.title,
+            displayOrder: item.displayOrder,
+          }))
+        );
+
+        // 정렬된 아이템으로 상태 업데이트
+        setItems(sortedItems);
+      }
+    } catch (error) {
+      console.error("플레이리스트 데이터 로딩 오류:", error);
     }
   };
 
@@ -178,20 +305,27 @@ export default function PlaylistItems({
     }));
   };
 
-  // 아이템 분류 및 초기화
+  // 아이템 분류 및 초기화 – 그룹화 로직 개선
   useEffect(() => {
+    // 콘솔에 원본 아이템 출력 (디버깅용)
+    console.log("원본 아이템 목록:", items);
+
+    // 먼저 모든 아이템을 displayOrder로 정렬
+    const sortedItems = [...items].sort(
+      (a, b) => a.displayOrder - b.displayOrder
+    );
+
     const groups: Record<string, CurationGroup> = {};
     const singles: PlaylistItem[] = [];
 
-    // 1. 먼저 큐레이션 헤더를 식별하고 그룹으로 분류
-    items.forEach((item) => {
+    // 1. 큐레이션 헤더를 그룹으로 분류 (정렬된 아이템 사용)
+    sortedItems.forEach((item) => {
       if (
         item.title?.startsWith("[큐레이션]") &&
         item.url?.includes("/curation/")
       ) {
         const curationId = item.url.split("/").pop() || "unknown";
         const groupKey = `curation-${curationId}`;
-
         if (!groups[groupKey]) {
           groups[groupKey] = {
             header: item,
@@ -201,16 +335,15 @@ export default function PlaylistItems({
       }
     });
 
-    // 2. 모든 아이템을 순회하며 큐레이션에 속하는 링크 식별
-    items.forEach((item) => {
-      // 이미 헤더로 식별된 아이템은 건너뜀
+    // 2. 나머지 아이템들 중 해당 그룹에 속하는지 판별하여 배정 (정렬된 아이템 사용)
+    sortedItems.forEach((item) => {
+      // 이미 큐레이션 헤더인 경우 건너뜀
       if (
         item.title?.startsWith("[큐레이션]") &&
         item.url?.includes("/curation/")
       ) {
         return;
       }
-
       let foundGroup = false;
       for (const [groupKey, group] of Object.entries(groups)) {
         const curationId = group.header.url.split("/").pop() || "";
@@ -231,42 +364,68 @@ export default function PlaylistItems({
       }
     });
 
-    // 3. 각 그룹 내의 링크를 displayOrder 기준으로 정렬
+    // 3. 각 그룹 내의 자식 아이템을 displayOrder 기준으로 정렬
     Object.keys(groups).forEach((key) => {
       groups[key].links.sort((a, b) => a.displayOrder - b.displayOrder);
     });
 
     setCurationGroups(groups);
-    setSingleItems(singles);
 
-    // 4. 기본적으로 모든 그룹을 확장된 상태로 설정
+    // 4. 기본적으로 모든 그룹을 확장 상태로 설정
     const initialExpandedState: Record<string, boolean> = {};
     Object.keys(groups).forEach((groupKey) => {
       initialExpandedState[groupKey] = true;
     });
     setExpandedGroups(initialExpandedState);
 
-    // 5. 드래그 가능한 아이템 목록 생성 (그룹 헤더와 단일 링크 포함)
+    // 5. 드래그 가능한 아이템 목록 생성
     const newDraggableItems: DraggableItem[] = [];
 
-    Object.entries(groups).forEach(([groupKey, group]) => {
-      newDraggableItems.push({
-        id: `group-${group.header.id}`,
-        type: "group",
-        groupKey,
-        item: group.header,
-      });
+    // 원래 정렬된 아이템 순서를 유지하면서 draggableItems 생성
+    sortedItems.forEach((item) => {
+      // 큐레이션 헤더인 경우
+      if (
+        item.title?.startsWith("[큐레이션]") &&
+        item.url?.includes("/curation/")
+      ) {
+        const curationId = item.url.split("/").pop() || "unknown";
+        const groupKey = `curation-${curationId}`;
+
+        newDraggableItems.push({
+          id: `group-${item.id}`,
+          type: "group",
+          groupKey,
+          item,
+          displayOrder: item.displayOrder,
+        });
+      }
+      // 그룹에 속하지 않은 단일 아이템인 경우
+      else if (
+        !Object.values(groups).some((group) =>
+          group.links.some((link) => link.id === item.id)
+        )
+      ) {
+        newDraggableItems.push({
+          id: `single-${item.id}`,
+          type: "single",
+          item,
+          displayOrder: item.displayOrder,
+        });
+      }
+      // 그룹에 속한 아이템은 이미 그룹 내에서 처리되므로 여기서는 건너뜀
     });
 
-    singles.forEach((item) => {
-      newDraggableItems.push({
-        id: `single-${item.id}`,
-        type: "single",
-        item,
-      });
-    });
+    // 정렬된 결과 로깅 (디버깅용)
+    console.log(
+      "정렬된 draggableItems:",
+      newDraggableItems.map((item) => ({
+        id: item.id,
+        type: item.type,
+        title: item.item.title,
+        displayOrder: item.item.displayOrder,
+      }))
+    );
 
-    newDraggableItems.sort((a, b) => a.item.displayOrder - b.item.displayOrder);
     setDraggableItems(newDraggableItems);
   }, [items]);
 
