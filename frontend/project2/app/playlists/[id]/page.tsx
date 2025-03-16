@@ -73,17 +73,15 @@ export default function PlaylistDetailPage() {
   async function fetchData() {
     setIsLoading(true);
     try {
-      // 플레이리스트 데이터 가져오기 - 캐시 무시 설정 추가
+      // 플레이리스트 데이터 가져오기 - 로그인 여부와 관계없이 조회 가능하도록 수정
       const response = await fetch(
         `http://localhost:8080/api/v1/playlists/${params.id}`,
         {
-          credentials: "include",
+          // 로그인한 경우에만 credentials 포함
+          ...(sessionStorage.getItem("isLoggedIn") === "true"
+            ? { credentials: "include" }
+            : {}),
           cache: "no-store",
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-            Expires: "0",
-          },
         }
       );
 
@@ -92,13 +90,21 @@ export default function PlaylistDetailPage() {
       }
 
       const result = await response.json();
+
+      // 디버깅 로그 추가
+      console.log("플레이리스트 데이터:", result.data);
+      console.log("플레이리스트 소유자 여부:", result.data.owner);
+
       setPlaylist(result.data);
 
       // 추천 플레이리스트 가져오기
       const recResponse = await fetch(
         `http://localhost:8080/api/v1/playlists/${params.id}/recommendation`,
         {
-          credentials: "include",
+          // 로그인한 경우에만 credentials 포함
+          ...(sessionStorage.getItem("isLoggedIn") === "true"
+            ? { credentials: "include" }
+            : {}),
           cache: "no-store",
         }
       );
@@ -114,6 +120,17 @@ export default function PlaylistDetailPage() {
       setIsLoading(false);
     }
   }
+
+  // 소유자 확인 로직을 개선하는 함수 수정
+  const isPlaylistOwner = () => {
+    // 로그인하지 않은 경우 항상 false 반환
+    if (sessionStorage.getItem("isLoggedIn") !== "true") {
+      return false;
+    }
+
+    // API에서 제공하는 owner 필드 사용
+    return playlist?.owner === true;
+  };
 
   useEffect(() => {
     if (params.id) {
@@ -195,13 +212,20 @@ export default function PlaylistDetailPage() {
                   playlistId={playlist.id}
                   initialLikes={playlist.likeCount}
                 />
-                <AddLinkButton playlistId={playlist.id} />
-                <Link href={`/playlists/${playlist.id}/edit`}>
-                  <Button variant="outline" size="icon">
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">편집</span>
-                  </Button>
-                </Link>
+
+                {/* 소유자 확인 로직 개선 - owner 필드 사용 */}
+                {isPlaylistOwner() && (
+                  <>
+                    <AddLinkButton playlistId={playlist.id} />
+                    <Link href={`/playlists/${playlist.id}/edit`}>
+                      <Button variant="outline" size="icon">
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">편집</span>
+                      </Button>
+                    </Link>
+                  </>
+                )}
+
                 <Button variant="outline" size="icon">
                   <Share2 className="h-4 w-4" />
                   <span className="sr-only">공유</span>
@@ -238,7 +262,7 @@ export default function PlaylistDetailPage() {
             <PlaylistItems
               playlistId={playlist.id}
               items={playlist.items}
-              isOwner={true}
+              isOwner={isPlaylistOwner()}
             />
           ) : (
             <div className="text-center py-12">
@@ -247,13 +271,17 @@ export default function PlaylistDetailPage() {
               <p className="text-muted-foreground mt-1 mb-4">
                 이 플레이리스트에 링크를 추가해보세요.
               </p>
-              <AddLinkButton
-                playlistId={playlist.id}
-                onLinkAdded={() => {
-                  // 새 링크가 추가되면 플레이리스트 데이터를 다시 가져옵니다
-                  fetchData();
-                }}
-              />
+
+              {/* 소유자인 경우에만 링크 추가 버튼 표시 */}
+              {isPlaylistOwner() && (
+                <AddLinkButton
+                  playlistId={playlist.id}
+                  onLinkAdded={() => {
+                    // 새 링크가 추가되면 플레이리스트 데이터를 다시 가져옵니다
+                    fetchData();
+                  }}
+                />
+              )}
             </div>
           )}
         </div>

@@ -24,9 +24,11 @@ export async function createPlaylist(data: {
 
 // 플레이리스트 가져오기 함수 수정
 export async function getPlaylistById(id: number): Promise<Playlist> {
+  const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+
   const response = await fetch(`http://localhost:8080/api/v1/playlists/${id}`, {
     cache: "no-store",
-    credentials: "include",
+    ...(isLoggedIn ? { credentials: "include" } : {}),
   });
 
   if (!response.ok) {
@@ -99,6 +101,11 @@ export async function deletePlaylistItem(
   playlistId: number,
   itemId: number
 ): Promise<void> {
+  const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+  if (!isLoggedIn) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
   const response = await fetch(
     `http://localhost:8080/api/v1/playlists/${playlistId}/items/${itemId}`,
     {
@@ -122,6 +129,11 @@ export async function updatePlaylistItem(
     description?: string;
   }
 ): Promise<Playlist> {
+  const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+  if (!isLoggedIn) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
   const response = await fetch(
     `http://localhost:8080/api/v1/playlists/${playlistId}/items/${itemId}`,
     {
