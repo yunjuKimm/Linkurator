@@ -3,6 +3,7 @@ package com.team8.project2.domain.curation.curation.service;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -100,6 +101,7 @@ public class CurationService {
 			.member(member)
 			.title(title)
 			.content(content)
+			.comments(List.of())
 			.build();
 		curationRepository.save(curation);
 
