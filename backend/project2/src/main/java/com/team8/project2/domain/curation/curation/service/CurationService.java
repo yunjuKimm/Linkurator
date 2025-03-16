@@ -3,7 +3,9 @@ package com.team8.project2.domain.curation.curation.service;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -298,9 +300,10 @@ public class CurationService {
 	 */
 	public List<Curation> searchCurations(List<String> tags, String title, String content, String author,
 		SearchOrder order) {
+		List<Curation> curations;
 		if (tags == null || tags.isEmpty()) {
 			// 태그가 없을 경우 필터 없이 검색
-			return curationRepository.searchByFiltersWithoutTags(tags, title, content, author, order.name()).stream()
+			curations = curationRepository.searchByFiltersWithoutTags(tags, title, content, author, order.name()).stream()
 				.map(curation -> {
 					String redisKey = "curation_like:" + curation.getId();
 					curation.setLikeCount(redisTemplate.opsForSet().size(redisKey));
@@ -308,13 +311,21 @@ public class CurationService {
 				}).collect(Collectors.toList());
 		} else {
 			// 태그가 있을 경우 태그 필터 적용
-			return curationRepository.searchByFilters(tags, tags.size(), title, content, author, order.name()).stream()
+			curations = curationRepository.searchByFilters(tags, tags.size(), title, content, author, order.name()).stream()
 				.map(curation -> {
 					String redisKey = "curation_like:" + curation.getId();
 					curation.setLikeCount(redisTemplate.opsForSet().size(redisKey));
 					return curation;
 				}).collect(Collectors.toList());
 		}
+		// 좋아요순 검색일 경우 검색 결과를 Redis의 실제 좋아요 순으로 정렬
+		if (order.equals(SearchOrder.LIKECOUNT)) {
+			curations.sort(Comparator.comparing(curation -> {
+				String redisKey = "curation_like:" + curation.getId();
+				return redisTemplate.opsForSet().size(redisKey);
+			}, Comparator.reverseOrder()));
+		}
+		return curations;
 	}
 
 	@Transactional
