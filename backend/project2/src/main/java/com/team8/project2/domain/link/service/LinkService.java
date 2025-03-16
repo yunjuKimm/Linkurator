@@ -208,4 +208,25 @@ public class LinkService {
         Element metaTag = doc.select("meta[property=" + property + "]").first();
         return metaTag != null ? metaTag.attr("content") : "";
     }
+
+
+    /**
+     * 링크의 제목, URL, 설명을 수정합니다.
+     *
+     * @param linkId      수정할 링크 ID
+     * @param title       새로운 링크 제목
+     * @param url         새로운 링크 URL
+     * @param description 새로운 링크 설명
+     * @return 수정된 링크 객체
+     */
+    @Transactional
+    public Link updateLinkDetails(Long linkId, String title, String url, String description) {
+        Link link = linkRepository.findById(linkId)
+                .orElseThrow(() -> new ServiceException("404", "해당 링크를 찾을 수 없습니다."));
+        link.setTitle(title);
+        link.setUrl(url);
+        link.setDescription(description);
+        return linkRepository.save(link);
+    }
+
 }

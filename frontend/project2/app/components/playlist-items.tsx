@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -13,6 +15,7 @@ import {
   ChevronDown,
   ChevronRight,
   BookOpen,
+  Edit,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -23,10 +26,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { PlaylistItem } from "@/types/playlist";
 import {
   deletePlaylistItem,
   updatePlaylistItemOrder,
+  updatePlaylistItem,
 } from "@/lib/playlist-service";
 import AddLinkButton from "./add-link-button";
 import { useToast } from "@/components/ui/use-toast";
@@ -70,6 +85,16 @@ export default function PlaylistItems({
   const [singleItems, setSingleItems] = useState<PlaylistItem[]>([]);
   const [draggableItems, setDraggableItems] = useState<DraggableItem[]>([]);
 
+  // 편집 관련 상태 추가
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<PlaylistItem | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    title: "",
+    url: "",
+    description: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // 새 링크가 추가되었을 때 호출되는 함수
   const handleLinkAdded = (newItem: PlaylistItem) => {
     setItems((prevItems) => [...prevItems, newItem]);
@@ -84,6 +109,75 @@ export default function PlaylistItems({
       } catch (error) {
         console.error("Failed to delete link:", error);
       }
+    }
+  };
+
+  // 편집 모달 열기 함수
+  const handleEditStart = (item: PlaylistItem) => {
+    setEditingItem(item);
+    setEditFormData({
+      title: item.title || "",
+      url: item.url || "",
+      description: item.description || "",
+    });
+    setEditModalOpen(true);
+  };
+
+  // 편집 폼 입력 변경 핸들러
+  const handleEditFormChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // 편집 저장 함수
+  const handleEditSave = async () => {
+    if (!editingItem) return;
+
+    setIsSubmitting(true);
+    try {
+      // 백엔드 API 호출
+      await updatePlaylistItem(playlistId, editingItem.id, {
+        title: editFormData.title,
+        url: editFormData.url,
+        description: editFormData.description,
+      });
+
+      // 로컬 상태 업데이트
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === editingItem.id
+            ? {
+                ...item,
+                title: editFormData.title,
+                url: editFormData.url,
+                description: editFormData.description,
+              }
+            : item
+        )
+      );
+
+      // 성공 메시지
+      toast({
+        title: "링크 수정 완료",
+        description: "링크 정보가 성공적으로 수정되었습니다.",
+      });
+
+      // 모달 닫기
+      setEditModalOpen(false);
+    } catch (error) {
+      console.error("링크 수정 오류:", error);
+      toast({
+        title: "링크 수정 실패",
+        description: "링크 정보 수정 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -561,15 +655,25 @@ export default function PlaylistItems({
                                     </a>
                                   </DropdownMenuItem>
                                   {isOwner && (
-                                    <DropdownMenuItem
-                                      className="text-destructive focus:text-destructive"
-                                      onClick={() =>
-                                        handleDelete(group.header.id)
-                                      }
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      삭제하기
-                                    </DropdownMenuItem>
+                                    <>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleEditStart(group.header)
+                                        }
+                                      >
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        편집하기
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        onClick={() =>
+                                          handleDelete(group.header.id)
+                                        }
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        삭제하기
+                                      </DropdownMenuItem>
+                                    </>
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -683,15 +787,25 @@ export default function PlaylistItems({
                                                   </a>
                                                 </DropdownMenuItem>
                                                 {isOwner && (
-                                                  <DropdownMenuItem
-                                                    className="text-destructive focus:text-destructive"
-                                                    onClick={() =>
-                                                      handleDelete(item.id)
-                                                    }
-                                                  >
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    삭제하기
-                                                  </DropdownMenuItem>
+                                                  <>
+                                                    <DropdownMenuItem
+                                                      onClick={() =>
+                                                        handleEditStart(item)
+                                                      }
+                                                    >
+                                                      <Edit className="mr-2 h-4 w-4" />
+                                                      편집하기
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                      className="text-destructive focus:text-destructive"
+                                                      onClick={() =>
+                                                        handleDelete(item.id)
+                                                      }
+                                                    >
+                                                      <Trash2 className="mr-2 h-4 w-4" />
+                                                      삭제하기
+                                                    </DropdownMenuItem>
+                                                  </>
                                                 )}
                                               </DropdownMenuContent>
                                             </DropdownMenu>
@@ -803,13 +917,21 @@ export default function PlaylistItems({
                                   </a>
                                 </DropdownMenuItem>
                                 {isOwner && (
-                                  <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onClick={() => handleDelete(item.id)}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    삭제하기
-                                  </DropdownMenuItem>
+                                  <>
+                                    <DropdownMenuItem
+                                      onClick={() => handleEditStart(item)}
+                                    >
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      편집하기
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => handleDelete(item.id)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      삭제하기
+                                    </DropdownMenuItem>
+                                  </>
                                 )}
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -825,6 +947,68 @@ export default function PlaylistItems({
           )}
         </Droppable>
       </DragDropContext>
+
+      {/* 링크 편집 모달 */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>링크 정보 편집</DialogTitle>
+            <DialogDescription>
+              플레이리스트 링크의 정보를 수정합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-title">제목</Label>
+              <Input
+                id="edit-title"
+                name="title"
+                value={editFormData.title}
+                onChange={handleEditFormChange}
+                placeholder="링크 제목"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-url">URL</Label>
+              <Input
+                id="edit-url"
+                name="url"
+                type="url"
+                value={editFormData.url}
+                onChange={handleEditFormChange}
+                placeholder="https://example.com"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">설명</Label>
+              <Textarea
+                id="edit-description"
+                name="description"
+                value={editFormData.description}
+                onChange={handleEditFormChange}
+                placeholder="링크에 대한 설명"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditModalOpen(false)}
+              disabled={isSubmitting}
+            >
+              취소
+            </Button>
+            <Button onClick={handleEditSave} disabled={isSubmitting}>
+              {isSubmitting ? "저장 중..." : "저장하기"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

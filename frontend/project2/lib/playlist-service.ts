@@ -112,6 +112,36 @@ export async function deletePlaylistItem(
   }
 }
 
+// 플레이리스트 아이템 편집 함수 추가
+export async function updatePlaylistItem(
+  playlistId: number,
+  itemId: number,
+  data: {
+    title?: string;
+    url?: string;
+    description?: string;
+  }
+): Promise<Playlist> {
+  const response = await fetch(
+    `http://localhost:8080/api/v1/playlists/${playlistId}/items/${itemId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("플레이리스트 아이템 수정에 실패했습니다.");
+  }
+
+  const result = await response.json();
+  return result.data;
+}
+
 // 플레이리스트 아이템 순서 변경 함수 수정
 export async function updatePlaylistItemOrder(
   playlistId: number,

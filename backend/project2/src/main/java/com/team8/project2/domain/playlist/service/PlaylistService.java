@@ -1,5 +1,7 @@
 package com.team8.project2.domain.playlist.service;
 
+import com.team8.project2.domain.link.entity.Link;
+import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.playlist.dto.*;
@@ -40,6 +42,7 @@ public class PlaylistService {
     private static final String LIKE_COUNT_KEY = "playlist:like_count:"; // 좋아요 수 저장
     private static final String RECOMMEND_KEY = "playlist:recommend:"; // 추천 캐싱
     private final Rq rq;
+    private final LinkService linkService;
 
     /**
      * ✅ 플레이리스트 추천 로직
@@ -577,6 +580,36 @@ public class PlaylistService {
         return playlists.stream()
                 .map(PlaylistDto::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+
+    /**
+     * 특정 플레이리스트의 아이템을 수정
+     * LinkService를 통해 제목, URL, 설명 업데이트
+     */
+    @Transactional
+    public PlaylistDto updatePlaylistItem(Long playlistId, Long playlistItemId, PlaylistItemUpdateDto updateDto) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        PlaylistItem itemToUpdate = playlist.getItems().stream()
+                .filter(item -> item.getId().equals(playlistItemId))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트 아이템을 찾을 수 없습니다."));
+
+        if (itemToUpdate.getItemType() == PlaylistItem.PlaylistItemType.LINK) {
+            Link updatedLink = linkService.updateLinkDetails(
+                    itemToUpdate.getLink().getId(),
+                    updateDto.getTitle(),
+                    updateDto.getUrl(),
+                    updateDto.getDescription()
+            );
+            itemToUpdate.setLink(updatedLink);
+        } else {
+            throw new BadRequestException("현재 아이템은 수정할 수 없습니다.");
+        }
+
+        return PlaylistDto.fromEntity(playlist);
     }
 
 }
