@@ -371,10 +371,10 @@ export default function PlaylistItems({
 
     setCurationGroups(groups);
 
-    // 4. 기본적으로 모든 그룹을 확장 상태로 설정
+    // 4. 기본적으로 모든 그룹을 닫힌 상태로 설정 (true에서 false로 변경)
     const initialExpandedState: Record<string, boolean> = {};
     Object.keys(groups).forEach((groupKey) => {
-      initialExpandedState[groupKey] = true;
+      initialExpandedState[groupKey] = false; // 기본값을 false로 변경
     });
     setExpandedGroups(initialExpandedState);
 
