@@ -166,4 +166,8 @@ public class Curation {
     private String extractFileNameFromUrl(String fileUrl) {
         return fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
     }
+
+    public int getCommentCount() {
+        return comments.size();
+    }
 }
