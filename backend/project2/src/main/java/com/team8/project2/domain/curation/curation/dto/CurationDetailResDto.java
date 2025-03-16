@@ -1,5 +1,6 @@
 package com.team8.project2.domain.curation.curation.dto;
 
+import com.team8.project2.domain.comment.dto.ReplyCommentDto;
 import com.team8.project2.domain.comment.entity.Comment;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.tag.entity.Tag;
@@ -10,6 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -97,6 +99,7 @@ public class CurationDetailResDto {
 		private String content;
 		private LocalDateTime createdAt;
 		private LocalDateTime modifiedAt;
+		private List<ReplyCommentDto> replies;
 
 		public CommentResDto(Comment comment) {
 			this.commentId = comment.getId();
@@ -106,6 +109,10 @@ public class CurationDetailResDto {
 			this.content = comment.getContent();
 			this.createdAt = comment.getCreatedAt();
 			this.modifiedAt = comment.getModifiedAt();
+			this.replies = comment.getReplyComments().stream()
+				.map(ReplyCommentDto::fromEntity)
+				.sorted(Comparator.comparing(ReplyCommentDto::getCreatedAt).reversed())
+				.toList();
 		}
 	}
 
