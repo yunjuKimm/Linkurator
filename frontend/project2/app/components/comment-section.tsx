@@ -14,6 +14,7 @@ type Comment = {
   authorId?: number;
   authorName: string;
   authorImgUrl?: string;
+  authorProfileImageUrl?: string; // 새로 추가된 필드
   content: string;
   createdAt: string;
   modifiedAt: string;
@@ -55,6 +56,11 @@ export default function CommentSection({ postId }: { postId: string }) {
           data.data.comments?.map((comment: any) => ({
             ...comment,
             id: comment.commentId, // id 필드를 추가하여 일관성 유지
+            // 프로필 이미지 URL 처리 - authorProfileImageUrl이 있으면 사용, 없으면 authorImgUrl 사용
+            authorImgUrl:
+              comment.authorProfileImageUrl ||
+              comment.authorImgUrl ||
+              "/placeholder.svg?height=36&width=36",
           })) || [];
         setComments(commentsWithId);
       } else {
@@ -131,7 +137,10 @@ export default function CommentSection({ postId }: { postId: string }) {
           createdAt: result.data.createdAt,
           modifiedAt: result.data.modifiedAt,
           isLiked: false,
-          authorImgUrl: "/placeholder.svg?height=36&width=36", // 기본 이미지 설정
+          // 새로운 API 응답에서 프로필 이미지 URL 사용
+          authorImgUrl:
+            result.data.authorProfileImageUrl ||
+            "/placeholder.svg?height=36&width=36",
         };
 
         // 댓글 목록 업데이트

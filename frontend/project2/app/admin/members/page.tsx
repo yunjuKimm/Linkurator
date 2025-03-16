@@ -92,7 +92,7 @@ export default function AdminMembersPage() {
 
     checkAdminAndFetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 의존성 배열을 비워서 컴포넌트 마운트 시 한 번만 실행되���록 함
+  }, []); // 의존성 배열을 비워서 컴포넌트 마운트 시 한 번만 실행되도록 함
 
   // 멤버 삭제 함수
   const handleDeleteMember = async (id: number, username: string) => {
