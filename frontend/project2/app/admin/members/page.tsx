@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Trash2, User } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import Image from "next/image"
 
 // 멤버 타입 정의
 interface Member {
@@ -31,63 +30,7 @@ export default function AdminMembersPage() {
     const [searchTerm, setSearchTerm] = useState("")
     const [isDeleting, setIsDeleting] = useState(false)
 
-    useEffect(() => {
-        // 관리자 권한 확인
-        const checkAdminAndFetchData = async () => {
-            const userRole = sessionStorage.getItem("userRole")
-            if (userRole !== "ADMIN") {
-                toast({
-                    title: "접근 권한 없음",
-                    description: "관리자만 접근할 수 있는 페이지입니다.",
-                    variant: "destructive",
-                })
-                router.push("/home")
-                return
-            }
-
-            setIsAdmin(true)
-
-            try {
-                // 가상 데이터
-                const mockMembers: Member[] = [
-                    {
-                        id: 1,
-                        memberId: "admin",
-                        username: "관리자",
-                        email: "admin@example.com",
-                        profileImage: "/placeholder.svg?height=40&width=40",
-                        role: "ADMIN",
-                        createdDate: new Date(2023, 0, 1).toISOString(),
-                    },
-                    ...Array.from({ length: 9 }, (_, i) => ({
-                        id: i + 2,
-                        memberId: `user${i + 1}`,
-                        username: `사용자 ${i + 1}`,
-                        email: `user${i + 1}@example.com`,
-                        profileImage: `/placeholder.svg?height=40&width=40`,
-                        role: "MEMBER" as const,
-                        createdDate: new Date(2023, i % 12, (i % 28) + 1).toISOString(),
-                    })),
-                ]
-
-                setMembers(mockMembers)
-            } catch (error) {
-                console.error("멤버 데이터 로드 오류:", error)
-                toast({
-                    title: "데이터 로드 실패",
-                    description: "멤버 목록을 불러오는데 실패했습니다.",
-                    variant: "destructive",
-                })
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        checkAdminAndFetchData()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []) // 의존성 배열을 비워서 컴포넌트 마운트 시 한 번만 실행되도록 함
-
-    // 멤버 삭제 함수
+    // 멤버 삭제 함수를 수정합니다 - 직접 백엔드 API 호출 대신 Next.js API 라우트 사용
     const handleDeleteMember = async (id: number, username: string) => {
         if (!confirm(`정말로 멤버 "${username}"을(를) 삭제하시겠습니까?`)) {
             return
@@ -96,7 +39,8 @@ export default function AdminMembersPage() {
         setIsDeleting(true)
 
         try {
-            const response = await fetch(`http://localhost:8080/api/v1/admin/members/${id}`, {
+            // 직접 백엔드 API 호출 대신 Next.js API 라우트 사용
+            const response = await fetch(`/api/admin/members/${id}`, {
                 method: "DELETE",
                 credentials: "include",
             })
@@ -123,6 +67,95 @@ export default function AdminMembersPage() {
             setIsDeleting(false)
         }
     }
+
+    // useEffect 내의 데이터 로딩 부분을 수정합니다
+    useEffect(() => {
+        // 관리자 권한 확인
+        const checkAdminAndFetchData = async () => {
+            const userRole = sessionStorage.getItem("userRole")
+            if (userRole !== "ADMIN") {
+                toast({
+                    title: "접근 권한 없음",
+                    description: "관리자만 접근할 수 있는 페이지입니다.",
+                    variant: "destructive",
+                })
+                router.push("/home")
+                return
+            }
+
+            setIsAdmin(true)
+
+            try {
+                // 세션 스토리지에 캐시된 데이터가 있는지 확인
+                const cachedMembers = sessionStorage.getItem("adminMembersData")
+                if (cachedMembers) {
+                    try {
+                        const parsedMembers = JSON.parse(cachedMembers)
+                        setMembers(parsedMembers)
+                        setIsLoading(false)
+
+                        // 백그라운드에서 최신 데이터 가져오기
+                        fetchLatestData()
+                        return
+                    } catch (error) {
+                        console.error("캐시된 데이터 파싱 오류:", error)
+                    }
+                }
+
+                // 캐시된 데이터가 없으면 API에서 가져오기
+                fetchLatestData(true)
+            } catch (error) {
+                console.error("멤버 데이터 로드 오류:", error)
+                toast({
+                    title: "데이터 로드 실패",
+                    description: "멤버 목록을 불러오는데 실패했습니다.",
+                    variant: "destructive",
+                })
+            }
+        }
+
+        // 최신 데이터 가져오기 함수
+        const fetchLatestData = async (showLoading = false) => {
+            if (showLoading) {
+                setIsLoading(true)
+            }
+
+            try {
+                // Next.js API 라우트를 통해 데이터 가져오기
+                const response = await fetch("/api/admin/members", {
+                    credentials: "include",
+                })
+
+                if (!response.ok) {
+                    throw new Error("멤버 데이터를 불러오는데 실패했습니다.")
+                }
+
+                const data = await response.json()
+
+                if (data && data.data) {
+                    setMembers(data.data)
+                    // 세션 스토리지에 데이터 캐싱
+                    sessionStorage.setItem("adminMembersData", JSON.stringify(data.data))
+                }
+            } catch (error) {
+                console.error("멤버 데이터 로드 오류:", error)
+                if (showLoading) {
+                    toast({
+                        title: "데이터 로드 실패",
+                        description: "멤버 목록을 불러오는데 실패했습니다.",
+                        variant: "destructive",
+                    })
+                }
+            } finally {
+                if (showLoading) {
+                    setIsLoading(false)
+                }
+            }
+        }
+
+        checkAdminAndFetchData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     // 검색 필터링
     const filteredMembers = members.filter(
@@ -196,20 +229,8 @@ export default function AdminMembersPage() {
                                     <TableRow key={member.id}>
                                         <TableCell>{member.id}</TableCell>
                                         <TableCell>
-                                            <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-100">
-                                                {member.profileImage ? (
-                                                    <Image
-                                                        src={member.profileImage || "/placeholder.svg"}
-                                                        alt={member.username}
-                                                        width={40}
-                                                        height={40}
-                                                        className="object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="flex items-center justify-center h-full">
-                                                        <User className="h-6 w-6 text-gray-400" />
-                                                    </div>
-                                                )}
+                                            <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                                                <User className="h-6 w-6 text-gray-400" />
                                             </div>
                                         </TableCell>
                                         <TableCell>{member.memberId}</TableCell>
