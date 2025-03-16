@@ -252,5 +252,4 @@ public class ApiV1PlaylistController {
         return RsData.success("좋아요한 플레이리스트 조회 성공", likedPlaylists);
     }
 
-
 }

@@ -69,10 +69,7 @@ export default function PlaylistItems({
 
   // 새 링크가 추가되었을 때 호출되는 함수
   const handleLinkAdded = (newItem: PlaylistItem) => {
-    setItems((prevItems) => {
-      const updatedItems = [...prevItems, newItem];
-      return updatedItems;
-    });
+    setItems((prevItems) => [...prevItems, newItem]);
   };
 
   const handleDelete = async (itemId: number) => {
@@ -87,27 +84,31 @@ export default function PlaylistItems({
     }
   };
 
-  // flat order를 생성하는 helper 함수
-  const getFlatOrder = (): number[] => {
-    const flatOrder: number[] = [];
-    // draggableItems에는 그룹 헤더와 단일 아이템이 포함되어 있음
-    draggableItems.forEach((dItem) => {
-      if (dItem.type === "group") {
-        // 그룹 헤더 먼저 추가
-        flatOrder.push(dItem.item.id);
-        // 해당 그룹의 내부 링크 추가 (이미 curationGroups에 정렬되어 있다고 가정)
-        const group = curationGroups[dItem.groupKey!];
-        if (group && group.links) {
-          group.links.forEach((link) => flatOrder.push(link.id));
+  // 전체 평탄한 배열(flat order)을 생성하는 헬퍼 함수
+  const getFlatOrder = (
+    draggables: DraggableItem[],
+    groups: Record<string, CurationGroup>
+  ) => {
+    const orderedItemIds: number[] = [];
+    draggables.forEach((draggable) => {
+      if (draggable.type === "group") {
+        // 그룹 헤더
+        orderedItemIds.push(draggable.item.id);
+        const groupKey = draggable.groupKey!;
+        // 그룹에 속한 모든 자식 링크 추가 (이미 displayOrder 기준 정렬됨)
+        if (groups[groupKey] && groups[groupKey].links) {
+          groups[groupKey].links.forEach((link) =>
+            orderedItemIds.push(link.id)
+          );
         }
       } else {
-        flatOrder.push(dItem.item.id);
+        orderedItemIds.push(draggable.item.id);
       }
     });
-    return flatOrder;
+    return orderedItemIds;
   };
 
-  // 메인 드래그 앤 드롭 핸들러 (그룹과 개별 링크 간의 순서 변경)
+  // 메인 및 그룹 드래그 앤 드롭 핸들러
   const handleDragEnd = async (result: any) => {
     const { source, destination, type } = result;
 
@@ -120,37 +121,36 @@ export default function PlaylistItems({
       return;
     }
 
+    // 메인 리스트에서의 드래그 앤 드롭 (그룹과 단일 아이템의 순서 변경)
     if (type === "MAIN_LIST") {
       const newDraggableItems = Array.from(draggableItems);
       const [removed] = newDraggableItems.splice(source.index, 1);
       newDraggableItems.splice(destination.index, 0, removed);
       setDraggableItems(newDraggableItems);
 
-      // 전체 flat order 재구성 후 업데이트 API 호출
-      const flatOrder = getFlatOrder();
+      const flatOrder = getFlatOrder(newDraggableItems, curationGroups);
       try {
         await updatePlaylistItemOrder(playlistId, flatOrder);
       } catch (error) {
         console.error("Failed to reorder items:", error);
       }
-    } else if (type.startsWith("GROUP_")) {
+    }
+    // 그룹 내부 링크 목록에서의 드래그 앤 드롭
+    else if (type.startsWith("GROUP_")) {
       const groupKey = type.replace("GROUP_", "");
       const group = { ...curationGroups[groupKey] };
-
-      // 그룹 내부 링크 순서 변경
       const newLinks = Array.from(group.links);
       const [removed] = newLinks.splice(source.index, 1);
       newLinks.splice(destination.index, 0, removed);
 
-      const newGroups = { ...curationGroups };
-      newGroups[groupKey] = {
-        ...group,
-        links: newLinks,
+      const newCurationGroups = {
+        ...curationGroups,
+        [groupKey]: { ...group, links: newLinks },
       };
-      setCurationGroups(newGroups);
+      setCurationGroups(newCurationGroups);
 
-      // 전체 flat order 재구성 후 업데이트 API 호출
-      const flatOrder = getFlatOrder();
+      // 메인 리스트는 그대로이므로, 업데이트된 그룹 정보를 반영해 전체 평탄한 배열 생성
+      const flatOrder = getFlatOrder(draggableItems, newCurationGroups);
       try {
         await updatePlaylistItemOrder(playlistId, flatOrder);
       } catch (error) {
@@ -183,7 +183,7 @@ export default function PlaylistItems({
     const groups: Record<string, CurationGroup> = {};
     const singles: PlaylistItem[] = [];
 
-    // 1. 큐레이션 헤더 식별 및 그룹 분류
+    // 1. 먼저 큐레이션 헤더를 식별하고 그룹으로 분류
     items.forEach((item) => {
       if (
         item.title?.startsWith("[큐레이션]") &&
@@ -191,6 +191,7 @@ export default function PlaylistItems({
       ) {
         const curationId = item.url.split("/").pop() || "unknown";
         const groupKey = `curation-${curationId}`;
+
         if (!groups[groupKey]) {
           groups[groupKey] = {
             header: item,
@@ -200,14 +201,16 @@ export default function PlaylistItems({
       }
     });
 
-    // 2. 그룹에 속하는 링크와 단일 아이템 분류
+    // 2. 모든 아이템을 순회하며 큐레이션에 속하는 링크 식별
     items.forEach((item) => {
+      // 이미 헤더로 식별된 아이템은 건너뜀
       if (
         item.title?.startsWith("[큐레이션]") &&
         item.url?.includes("/curation/")
       ) {
         return;
       }
+
       let foundGroup = false;
       for (const [groupKey, group] of Object.entries(groups)) {
         const curationId = group.header.url.split("/").pop() || "";
@@ -228,7 +231,7 @@ export default function PlaylistItems({
       }
     });
 
-    // 3. 각 그룹 내 링크 정렬
+    // 3. 각 그룹 내의 링크를 displayOrder 기준으로 정렬
     Object.keys(groups).forEach((key) => {
       groups[key].links.sort((a, b) => a.displayOrder - b.displayOrder);
     });
@@ -243,8 +246,9 @@ export default function PlaylistItems({
     });
     setExpandedGroups(initialExpandedState);
 
-    // 5. 드래그 가능한 아이템 목록 생성 (그룹 헤더와 단일 아이템)
+    // 5. 드래그 가능한 아이템 목록 생성 (그룹 헤더와 단일 링크 포함)
     const newDraggableItems: DraggableItem[] = [];
+
     Object.entries(groups).forEach(([groupKey, group]) => {
       newDraggableItems.push({
         id: `group-${group.header.id}`,
@@ -253,6 +257,7 @@ export default function PlaylistItems({
         item: group.header,
       });
     });
+
     singles.forEach((item) => {
       newDraggableItems.push({
         id: `single-${item.id}`,
@@ -260,6 +265,7 @@ export default function PlaylistItems({
         item,
       });
     });
+
     newDraggableItems.sort((a, b) => a.item.displayOrder - b.item.displayOrder);
     setDraggableItems(newDraggableItems);
   }, [items]);
@@ -275,6 +281,7 @@ export default function PlaylistItems({
           />
         )}
       </div>
+
       <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="main-list" type="MAIN_LIST">
           {(provided) => (
@@ -288,6 +295,7 @@ export default function PlaylistItems({
                   const groupKey = draggableItem.groupKey!;
                   const group = curationGroups[groupKey];
                   const isExpanded = expandedGroups[groupKey] || false;
+
                   return (
                     <Draggable
                       key={draggableItem.id}
@@ -307,6 +315,7 @@ export default function PlaylistItems({
                             >
                               <GripVertical className="h-5 w-5" />
                             </div>
+
                             <button
                               onClick={() => toggleGroup(groupKey)}
                               className="p-1 rounded-full hover:bg-blue-200"
@@ -317,6 +326,7 @@ export default function PlaylistItems({
                                 <ChevronRight className="h-4 w-4" />
                               )}
                             </button>
+
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <Badge
@@ -332,11 +342,13 @@ export default function PlaylistItems({
                                   {group.links.length} 링크
                                 </Badge>
                               </div>
+
                               {group.header.description && (
                                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                   {group.header.description}
                                 </p>
                               )}
+
                               <div className="overflow-x-auto">
                                 <a
                                   href={group.header.url}
@@ -351,6 +363,7 @@ export default function PlaylistItems({
                                 </a>
                               </div>
                             </div>
+
                             <div className="flex items-center gap-2">
                               <Button
                                 variant="ghost"
@@ -366,6 +379,7 @@ export default function PlaylistItems({
                                   방문하기
                                 </a>
                               </Button>
+
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
@@ -402,6 +416,7 @@ export default function PlaylistItems({
                               </DropdownMenu>
                             </div>
                           </div>
+
                           {isExpanded && group.links.length > 0 && (
                             <Droppable
                               droppableId={`group-${groupKey}`}
@@ -431,6 +446,7 @@ export default function PlaylistItems({
                                           >
                                             <GripVertical className="h-5 w-5" />
                                           </div>
+
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
                                               <Badge
@@ -443,6 +459,7 @@ export default function PlaylistItems({
                                                 {item.title}
                                               </h3>
                                             </div>
+
                                             {item.description && (
                                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                                 {item.description.replace(
@@ -451,6 +468,7 @@ export default function PlaylistItems({
                                                 )}
                                               </p>
                                             )}
+
                                             <div className="overflow-x-auto">
                                               <a
                                                 href={item.url}
@@ -465,6 +483,7 @@ export default function PlaylistItems({
                                               </a>
                                             </div>
                                           </div>
+
                                           <div className="flex items-center gap-2">
                                             <Button
                                               variant="ghost"
@@ -480,6 +499,7 @@ export default function PlaylistItems({
                                                 방문하기
                                               </a>
                                             </Button>
+
                                             <DropdownMenu>
                                               <DropdownMenuTrigger asChild>
                                                 <Button
@@ -531,7 +551,7 @@ export default function PlaylistItems({
                     </Draggable>
                   );
                 } else {
-                  // 단일 링크 렌더링
+                  // 개별 링크 렌더링
                   const item = draggableItem.item;
                   return (
                     <Draggable
@@ -551,6 +571,7 @@ export default function PlaylistItems({
                           >
                             <GripVertical className="h-5 w-5" />
                           </div>
+
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <Badge
@@ -563,11 +584,13 @@ export default function PlaylistItems({
                                 {item.title}
                               </h3>
                             </div>
+
                             {item.description && (
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                 {item.description}
                               </p>
                             )}
+
                             <div className="overflow-x-auto">
                               <a
                                 href={item.url}
@@ -582,6 +605,7 @@ export default function PlaylistItems({
                               </a>
                             </div>
                           </div>
+
                           <div className="flex items-center gap-2">
                             <Button
                               variant="ghost"
@@ -597,6 +621,7 @@ export default function PlaylistItems({
                                 방문하기
                               </a>
                             </Button>
+
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button

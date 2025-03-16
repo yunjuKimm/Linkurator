@@ -544,5 +544,14 @@ public class PlaylistService {
         return likedPlaylists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
     }
 
+    /**
+     *  사용자의 플레이리스트 중 특정 큐레이션이 포함된 플레이리스트 DTO로 반환
+     */
+    public List<PlaylistDto> getPlaylistsByMemberAndCuration(Member member, Long curationId) {
+        List<Playlist> playlists = playlistRepository.findByMemberAndCuration(member, curationId);
+        return playlists.stream()
+                .map(PlaylistDto::fromEntity)
+                .collect(Collectors.toList());
+    }
 
 }

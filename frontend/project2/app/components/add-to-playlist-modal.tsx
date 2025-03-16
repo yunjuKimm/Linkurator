@@ -149,6 +149,8 @@ export default function AddToPlaylistModal({
   const [showNewPlaylistForm, setShowNewPlaylistForm] = useState(false);
   const [newPlaylistTitle, setNewPlaylistTitle] = useState("");
   const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
+  // 1. 상태 추가: 이미 추가된 플레이리스트 ID 목록을 저장할 상태 변수 추가
+  const [addedToPlaylists, setAddedToPlaylists] = useState<number[]>([]);
 
   // 플레이리스트 목록 불러오기
   useEffect(() => {
@@ -157,15 +159,23 @@ export default function AddToPlaylistModal({
     async function fetchPlaylists() {
       try {
         setLoading(true);
+        console.log("플레이리스트 목록 및 추가된 플레이리스트 확인 시작");
+
         const res = await fetch("http://localhost:8080/api/v1/playlists", {
           credentials: "include",
         });
+
         if (!res.ok)
           throw new Error("플레이리스트 목록을 불러오지 못했습니다.");
+
         const result = await res.json();
+        console.log("플레이리스트 목록:", result.data);
         setPlaylists(result.data || []);
+
+        // 이미 큐레이션이 추가된 플레이리스트 확인
+        await checkAddedPlaylists();
       } catch (error) {
-        console.error(error);
+        console.error("플레이리스트 데이터 로딩 오류:", error);
         toast.error("플레이리스트 목록을 불러오는데 실패했습니다.");
       } finally {
         setLoading(false);
@@ -173,7 +183,46 @@ export default function AddToPlaylistModal({
     }
 
     fetchPlaylists();
-  }, [isOpen]);
+  }, [isOpen, curationId]);
+
+  // 3. 새로운 함수 추가: 이미 큐레이션이 추가된 플레이리스트 확인
+  const checkAddedPlaylists = async () => {
+    try {
+      console.log(`큐레이션 ID ${curationId}에 대한 플레이리스트 확인 시작`);
+
+      // 큐레이션이 이미 추가된 플레이리스트 목록 가져오기
+      const response = await fetch(
+        `http://localhost:8080/api/v1/curation/${curationId}/playlists`,
+        {
+          credentials: "include",
+        }
+      );
+
+      console.log("API 응답 상태:", response.status, response.statusText);
+
+      if (!response.ok) {
+        console.warn(
+          "큐레이션이 추가된 플레이리스트 확인 실패:",
+          response.status
+        );
+        return;
+      }
+
+      const data = await response.json();
+      console.log("API 응답 데이터:", data);
+
+      if (data.data && Array.isArray(data.data)) {
+        // 이미 추가된 플레이리스트 ID 목록 설정
+        const addedIds = data.data.map((playlist: any) => playlist.id);
+        console.log("추가된 플레이리스트 ID 목록:", addedIds);
+        setAddedToPlaylists(addedIds);
+      } else {
+        console.warn("API 응답에 예상된 데이터 형식이 없음:", data);
+      }
+    } catch (error) {
+      console.error("큐레이션이 추가된 플레이리스트 확인 중 오류:", error);
+    }
+  };
 
   // 기존 플레이리스트에 큐레이션 추가 함수
   const handleAddCuration = async () => {
@@ -363,7 +412,11 @@ export default function AddToPlaylistModal({
                     {playlists.map((playlist) => (
                       <div
                         key={playlist.id}
-                        className="flex items-center space-x-2 rounded-md border p-3 hover:bg-accent"
+                        className={`flex items-center space-x-2 rounded-md border p-3 hover:bg-accent transition-colors ${
+                          addedToPlaylists.includes(playlist.id)
+                            ? "border-green-500 bg-green-50/80"
+                            : ""
+                        }`}
                       >
                         <RadioGroupItem
                           value={playlist.id.toString()}
@@ -373,7 +426,16 @@ export default function AddToPlaylistModal({
                           htmlFor={`playlist-${playlist.id}`}
                           className="flex-1 cursor-pointer"
                         >
-                          <div className="font-medium">{playlist.title}</div>
+                          <div className="flex items-center">
+                            <span className="font-medium">
+                              {playlist.title}
+                            </span>
+                            {addedToPlaylists.includes(playlist.id) && (
+                              <span className="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium">
+                                추가됨
+                              </span>
+                            )}
+                          </div>
                           {playlist.description && (
                             <div className="text-xs text-muted-foreground line-clamp-1">
                               {playlist.description}

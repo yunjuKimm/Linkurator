@@ -264,7 +264,7 @@ export default function PostDetail() {
     return (
       <div className="text-gray-500 p-4 border border-gray-200 rounded-md bg-gray-50 flex items-center justify-center min-h-[40vh]">
         <div>
-          <h2 className="text-xl font-bold mb-2">데이터를 찾을 수 없습니다</h2>
+          <h2 className="text-xl font-bold mb-2">데이터를 ���을 수 없습니다</h2>
           <p>요청하신 큐레이션 정보가 존재하지 않습니다.</p>
         </div>
       </div>
