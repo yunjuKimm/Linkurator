@@ -37,7 +37,7 @@ public class AdminService {
     private final CommentRepository commentRepository;
 
     @Transactional(noRollbackFor = ServiceException.class)
-    public void deleteMember(Member member, List<Curation> curations, List<Comment> comments) {
+    public void deleteMember(Member member) {
         commentRepository.deleteByAuthor(member);
         curationRepository.deleteByMember(member);
         followRepository.deleteByFollowerOrFollowee(member,member);

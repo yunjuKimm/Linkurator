@@ -43,10 +43,7 @@ public class ApiV1AdminController {
     public RsData<String> deleteMember(@PathVariable Long memberId) {
         Member member = memberService.findById(memberId)
                 .orElseThrow(() -> new ServiceException("404-1", "해당 회원을 찾을 수 없습니다."));
-        List<Curation> curations = curationService.findAllByMember(member);
-        List<Comment> comments = commentService.findAllByAuthor(member);
-
-        adminService.deleteMember(member,curations,comments);
+        adminService.deleteMember(member);
         return RsData.success("멤버가 삭제되었습니다.");
     }
 

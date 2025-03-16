@@ -213,7 +213,7 @@ public class ApiV1MemberController {
         Member actor = rq.getActor();
         List<Curation> curations = curationService.findAllByMember(actor);
         List<Comment> comments = commentService.findAllByAuthor(actor);
-        adminService.deleteMember(actor,curations,comments);
+        adminService.deleteMember(actor);
         return new RsData<>("200-6", "회원 탈퇴가 완료되었습니다.");
     }
 }

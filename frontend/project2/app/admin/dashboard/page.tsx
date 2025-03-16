@@ -33,10 +33,14 @@ interface Member {
 interface Curation {
     id: number
     title: string
-    authorName: string
+    content: string
+    createdBy?: string
     createdAt: string
+    modifiedAt: string
     likeCount: number
-    viewCount: number
+    urls: { url: string }[]
+    tags: { name: string }[]
+    viewCount?: number
 }
 
 export default function AdminDashboardPage() {
@@ -116,7 +120,7 @@ export default function AdminDashboardPage() {
 
                 // 캐시된 데이터가 없으면 API에서 가져오기
                 await fetchMembers(true)
-                loadMockCurations()
+                await fetchCurations(true)
             } catch (error) {
                 console.error("권한 확인 오류:", error)
                 toast({
@@ -213,34 +217,29 @@ export default function AdminDashboardPage() {
         }
     }
 
-    // 큐레이션 데이터 로드 (목업 데이터)
-    const loadMockCurations = () => {
-        // 세션 스토리지에 캐시된 큐레이션 데이터가 있는지 확인
-        const cachedCurations = sessionStorage.getItem("adminCurationsData")
-        if (cachedCurations) {
-            try {
-                setCurations(JSON.parse(cachedCurations))
-                return
-            } catch (error) {
-                console.error("캐시된 큐레이션 데이터 파싱 오류:", error)
+    // 큐레이션 데이터 가져오기 함수
+    const fetchCurations = async (showLoading = true) =>{
+        try {
+            const response = await fetch(
+                `${API_URL}/api/v1/curation`
+            );
+            if (!response.ok) {
+                throw new Error("큐레이션 목록을 불러오는 데 실패했습니다.");
             }
+            const data = await response.json();
+            if (data && data.data) {
+                setCurations(data.data);
+            } else {
+                console.error("No curation data found in the response");
+                setCurations([]);
+            }
+        } catch (error) {
+            console.error("Error fetching curator curations:", error);
+            setError((error as Error).message);
+        } finally {
+            setLoading(false);
         }
-
-        // 캐시된 데이터가 없으면 목업 데이터 생성
-        const mockCurations: Curation[] = Array.from({ length: 10 }, (_, i) => ({
-            id: 100 + i,
-            title: `큐레이션 제목 ${i + 1}`,
-            authorName: `작성자 ${i % 3 === 0 ? "김철수" : i % 3 === 1 ? "이영희" : "박지민"}`,
-            createdAt: new Date(Date.now() - i * 86400000).toISOString(),
-            likeCount: Math.floor(Math.random() * 100),
-            viewCount: Math.floor(Math.random() * 1000),
-        }))
-
-        setCurations(mockCurations)
-
-        // 세션 스토리지에 큐레이션 데이터 저장
-        sessionStorage.setItem("adminCurationsData", JSON.stringify(mockCurations))
-    }
+    };
 
     // 멤버 삭제 함수
     const handleDeleteMember = async (id: number, username: string) => {
@@ -256,6 +255,10 @@ export default function AdminDashboardPage() {
             const response = await fetch(`${API_URL}/admin/members/${id}`, {
                 method: "DELETE",
                 credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                },
             })
 
             if (!response.ok) {
@@ -362,6 +365,7 @@ export default function AdminDashboardPage() {
     // 새로고침 함수
     const handleRefresh = async () => {
         await fetchMembers(true)
+        await fetchCurations(true)
         toast({
             title: "데이터 새로고침",
             description: "최신 데이터를 불러왔습니다.",
