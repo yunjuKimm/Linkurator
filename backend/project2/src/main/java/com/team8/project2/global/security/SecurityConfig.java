@@ -32,6 +32,7 @@ public class SecurityConfig {
 
 			// ✅ 요청별 인증/인가 설정
 			.authorizeHttpRequests(authorize -> authorize
+
 				// 🔹 Swagger UI 접근 허용
 				.requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
@@ -88,6 +89,7 @@ public class SecurityConfig {
 		configuration.setAllowedOrigins(List.of("http://localhost:3000")); // 허용할 프론트엔드 주소
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"));
 		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Forwarded-For", "X-Real-IP"));
+		configuration.setAllowedHeaders(List.of("*"));
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);

@@ -2,10 +2,7 @@ package com.team8.project2.domain.playlist.service;
 
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
-import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
-import com.team8.project2.domain.playlist.dto.PlaylistDto;
-import com.team8.project2.domain.playlist.dto.PlaylistLike;
-import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
+import com.team8.project2.domain.playlist.dto.*;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.repository.PlaylistLikeRepository;
@@ -14,6 +11,7 @@ import com.team8.project2.global.Rq;
 import com.team8.project2.global.exception.BadRequestException;
 import com.team8.project2.global.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -28,6 +26,7 @@ import java.util.stream.Collectors;
  * 플레이리스트(Playlist) 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
  * 플레이리스트 생성, 조회, 수정, 삭제 기능을 제공합니다.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -218,8 +217,6 @@ public class PlaylistService {
 //        playlist.incrementViewCount();
 //        playlistRepository.save(playlist);
 //    }
-
-
     @Transactional
     public void likePlaylist(Long playlistId, Long memberId) {
         Playlist playlist = playlistRepository.findById(playlistId)
@@ -331,7 +328,7 @@ public class PlaylistService {
         }
 
         redisTemplate.opsForZSet().incrementScore(VIEW_COUNT_KEY, id.toString(), 1);
-        System.out.println( "조회수 증가: Playlist ID " + id + " | 현재 조회수: " + redisTemplate.opsForZSet().score(VIEW_COUNT_KEY, id.toString()));
+        System.out.println("조회수 증가: Playlist ID " + id + " | 현재 조회수: " + redisTemplate.opsForZSet().score(VIEW_COUNT_KEY, id.toString()));
 
         return PlaylistDto.fromEntity(playlist);
     }
@@ -360,8 +357,7 @@ public class PlaylistService {
                     if (playlist != null) {
                         playlist.setViewCount(redisViewCount.longValue());
                         playlistRepository.save(playlist);
-                    }
-                    else {
+                    } else {
                         System.out.println("Playlist not found in DB for ID: " + id);
                     }
                 } catch (NumberFormatException e) {
@@ -389,7 +385,7 @@ public class PlaylistService {
     }
 
     /*
-        * 공개 플레이리스트 전체 조회
+     * 공개 플레이리스트 전체 조회
      */
     public List<PlaylistDto> getAllPublicPlaylists() {
         List<Playlist> playlists = playlistRepository.findAllByIsPublicTrue();
@@ -505,25 +501,54 @@ public class PlaylistService {
      * 플레이리스트 아이템 순서 변경
      */
     @Transactional
-    public PlaylistDto updatePlaylistItemOrder(Long playlistId, List<Long> orderedItemIds) {
+    public PlaylistDto updatePlaylistItemOrder(Long playlistId, List<PlaylistItemOrderUpdateDto> orderUpdates) {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
 
-        if (playlist.getItems().size() != orderedItemIds.size()) {
-            throw new BadRequestException("플레이리스트 아이템 개수가 일치하지 않습니다.");
+        int totalOrderCount = 0;
+        for (PlaylistItemOrderUpdateDto dto : orderUpdates) {
+            totalOrderCount++;
+            if (dto.getChildren() != null) {
+                totalOrderCount += dto.getChildren().size();
+            }
+        }
+
+        if (playlist.getItems().size() != totalOrderCount) {
+            throw new BadRequestException("플레이리스트 아이템 개수가 일치하지 않습니다. Expected: "
+                    + playlist.getItems().size() + ", but received: " + totalOrderCount);
         }
 
         Map<Long, PlaylistItem> itemMap = playlist.getItems().stream()
                 .collect(Collectors.toMap(PlaylistItem::getId, Function.identity()));
 
-        for (int i = 0; i < orderedItemIds.size(); i++) {
-            Long playlistItemId = orderedItemIds.get(i);
-            PlaylistItem item = itemMap.get(playlistItemId);
-            if (item != null) {
-                item.setDisplayOrder(i);
-            } else {
-                throw new BadRequestException("존재하지 않는 플레이리스트 아이템 ID가 포함되어 있습니다.");
+        int mainIndex = 0;
+        for (PlaylistItemOrderUpdateDto dto : orderUpdates) {
+            PlaylistItem mainItem = itemMap.get(dto.getId());
+            int mainOrder = mainIndex * 100;
+
+            if (mainItem == null) {
+                throw new BadRequestException("존재하지 않는 플레이리스트 아이템 ID: " + dto.getId());
             }
+
+            mainItem.setDisplayOrder(mainOrder);
+            mainItem.setParentItemId(null);
+
+            if (dto.getChildren() != null && !dto.getChildren().isEmpty()) {
+                int childOrder = 0;
+                for (Long childId : dto.getChildren()) {
+                    PlaylistItem childItem = itemMap.get(childId);
+                    if (childItem == null) {
+                        throw new BadRequestException("존재하지 않는 그룹 내부 아이템 ID: " + childId);
+                    }
+
+                    int childDisplayOrder = mainOrder + childOrder + 1;
+
+                    childItem.setDisplayOrder(childDisplayOrder);
+                    childItem.setParentItemId(mainItem.getId());
+                    childOrder++;
+                }
+            }
+            mainIndex++;
         }
 
         playlistRepository.save(playlist);
@@ -544,5 +569,14 @@ public class PlaylistService {
         return likedPlaylists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
     }
 
+    /**
+     * 사용자의 플레이리스트 중 특정 큐레이션이 포함된 플레이리스트 DTO로 반환
+     */
+    public List<PlaylistDto> getPlaylistsByMemberAndCuration(Member member, Long curationId) {
+        List<Playlist> playlists = playlistRepository.findByMemberAndCuration(member, curationId);
+        return playlists.stream()
+                .map(PlaylistDto::fromEntity)
+                .collect(Collectors.toList());
+    }
 
 }
