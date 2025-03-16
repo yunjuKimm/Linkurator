@@ -1,17 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Heart,
-  MessageSquare,
-  Bookmark,
-  Share2,
-  Flag,
-  LinkIcon,
-} from "lucide-react";
+import { Heart, MessageSquare, Bookmark, Flag, LinkIcon } from "lucide-react";
 import { stripHtml } from "@/lib/htmlutils";
 import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
 import ReportModal from "./report-modal";
+import ShareButton from "@/app/components/share-button";
 
 // API URL을 하드코딩된 값에서 환경 변수로 변경합니다.
 // 파일 상단에 다음 상수를 추가합니다:
@@ -520,9 +514,7 @@ export default function PostList() {
                     <button>
                       <Bookmark className="h-4 w-4 text-gray-500" />
                     </button>
-                    <button>
-                      <Share2 className="h-4 w-4 text-gray-500" />
-                    </button>
+                    <ShareButton id={curation.id} variant="icon" />
                     <button onClick={() => openReportModal(curation.id)}>
                       <Flag className="h-4 w-4 text-gray-500 hover:text-red-500" />
                     </button>

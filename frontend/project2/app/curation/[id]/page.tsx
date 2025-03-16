@@ -8,7 +8,6 @@ import {
   Heart,
   MessageSquare,
   Bookmark,
-  Share2,
   ArrowLeft,
   Edit,
   Trash2,
@@ -20,6 +19,7 @@ import {
 import RightSidebar from "@/app/components/right-sidebar";
 import CommentSection from "@/app/components/comment-section";
 import ReportModal from "@/app/components/report-modal";
+import ShareButton from "@/app/components/share-button";
 
 // API URL을 하드코딩된 값에서 환경 변수로 변경합니다.
 // 파일 상단에 다음 상수를 추가합니다:
@@ -620,9 +620,10 @@ export default function PostDetail() {
               <button className="rounded-md border p-2 hover:bg-gray-50">
                 <Bookmark className="h-5 w-5 text-gray-500" />
               </button>
-              <button className="rounded-md border p-2 hover:bg-gray-50">
-                <Share2 className="h-5 w-5 text-gray-500" />
-              </button>
+              <ShareButton
+                id={Number(id)}
+                className="rounded-md border p-2 hover:bg-gray-50"
+              />
               <button
                 className="rounded-md border p-2 hover:bg-gray-50 hover:text-red-500"
                 onClick={() => setShowReportModal(true)}
