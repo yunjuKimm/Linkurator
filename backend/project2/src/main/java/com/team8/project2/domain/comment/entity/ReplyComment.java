@@ -88,4 +88,8 @@ public class ReplyComment {
 	public String getAuthorProfileImageUrl() {
 		return author.getProfileImage();
 	}
+
+	public void updateContent(String content) {
+		this.content = content;
+	}
 }
