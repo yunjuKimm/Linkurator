@@ -109,4 +109,6 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 	long sumTotalLikes();
 
 	long countByMember(Member member);
+
+	List<Curation> findTop3ByOrderByViewCountDesc();
 }

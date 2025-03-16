@@ -28,4 +28,6 @@ public interface LikeRepository extends JpaRepository<Like, LikeId> {
      * @return 좋아요 정보 존재 여부
      */
     boolean existsByCurationIdAndMemberId(Long curationId, Long memberId);
+
+    void deleteByCurationIdAndMemberId(Long curationId, Long memberId);
 }

@@ -1,7 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Bookmark, Share2, Flag } from "lucide-react";
+import {
+  Heart,
+  MessageSquare,
+  Bookmark,
+  Share2,
+  Flag,
+  LinkIcon,
+} from "lucide-react";
 import { stripHtml } from "@/lib/htmlutils";
 import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
 import ReportModal from "./report-modal";
@@ -60,6 +67,7 @@ export default function PostList() {
   const [selectedCurationId, setSelectedCurationId] = useState<number | null>(
     null
   );
+  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
 
   // API 요청 함수
   const fetchCurations = async (params: CurationRequestParams) => {
@@ -116,7 +124,14 @@ export default function PostList() {
 
   // 메타 데이터 추출 함수
   const fetchLinkMetaData = async (url: string, curationId: number) => {
+    // 이미 실패한 URL이면 다시 요청하지 않음
+    if (failedUrls.has(url)) return;
+
     try {
+      // 타임아웃 설정 (5초)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch(
         `http://localhost:8080/api/v1/link/preview`,
         {
@@ -124,9 +139,12 @@ export default function PostList() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ url: url }), // body에 JSON 형태로 URL을 전달
+          body: JSON.stringify({ url: url }),
+          signal: controller.signal,
         }
       );
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error("Failed to fetch link metadata");
@@ -145,7 +163,13 @@ export default function PostList() {
         };
       });
     } catch (error) {
-      console.error("Error fetching link metadata:", error);
+      console.error(`Error fetching metadata for ${url}:`, error);
+      // 실패한 URL 기록
+      setFailedUrls((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(url);
+        return newSet;
+      });
     }
   };
 
@@ -236,6 +260,19 @@ export default function PostList() {
 
   useEffect(() => {
     fetchCurations({}); // 페이지 로딩 시 한번 API 호출
+
+    // 사이드바에서 태그 선택 이벤트 리스너 추가
+    const handleSelectTag = (event: CustomEvent) => {
+      const { tag } = event.detail;
+      toggleTagFilter(tag);
+    };
+
+    window.addEventListener("selectTag", handleSelectTag as EventListener);
+
+    // 컴포넌트 언마운트 시 이벤트 리스너 제거
+    return () => {
+      window.removeEventListener("selectTag", handleSelectTag as EventListener);
+    };
   }, []); // 빈 배열을 의존성으로 두어 처음 한 번만 호출되게 설정
 
   useEffect(() => {
@@ -408,25 +445,56 @@ export default function PostList() {
                 </div>
 
                 {/* 메타 데이터 카드 */}
-                {linkMetaDataList[curation.id]?.map((metaData, index) => (
-                  <Link key={index} href={metaData.url} passHref>
-                    <div className="mt-4 rounded-lg border p-4 cursor-pointer">
-                      <div className="flex items-center space-x-3">
-                        <img
-                          src={metaData.image || "/placeholder.svg"}
-                          alt="Preview"
-                          className="h-12 w-12 rounded-lg"
-                        />
-                        <div>
-                          <h3 className="font-medium">{metaData.title}</h3>
-                          <p className="text-sm text-gray-600">
-                            {metaData.description}
-                          </p>
-                        </div>
+                {curation.urls.map((urlObj, index) => {
+                  const metaData = linkMetaDataList[curation.id]?.find(
+                    (meta) => meta.url === urlObj.url
+                  );
+
+                  return (
+                    <Link
+                      key={`${urlObj.url}-${index}`}
+                      href={urlObj.url}
+                      passHref
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <div className="mt-4 rounded-lg border p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+                        {metaData ? (
+                          <div className="flex items-center space-x-3">
+                            <img
+                              src={
+                                metaData.image ||
+                                "/placeholder.svg?height=48&width=48"
+                              }
+                              alt="Preview"
+                              className="h-12 w-12 rounded-lg object-cover"
+                            />
+                            <div>
+                              <h3 className="font-medium">
+                                {metaData.title || "링크"}
+                              </h3>
+                              <p className="text-sm text-gray-600 line-clamp-1">
+                                {metaData.description || urlObj.url}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-3">
+                            <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <LinkIcon className="h-6 w-6 text-gray-400" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium">링크</h3>
+                              <p className="text-sm text-gray-600 truncate">
+                                {urlObj.url}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">

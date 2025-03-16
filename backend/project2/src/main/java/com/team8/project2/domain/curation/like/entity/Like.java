@@ -65,13 +65,14 @@ public class Like {
      * @param member 좋아요를 누른 회원
      * @return 설정된 Like 객체
      */
-    public Like setLike(Curation curation, Member member) {
+    public static Like of(Curation curation, Member member) {
         LikeId likeId = new LikeId();
         likeId.setCurationId(curation.getId());
         likeId.setMemberId(member.getId());
-        this.id = likeId;
-        this.curation = curation;
-        this.member = member;
-        return this;
+        Like like = new Like();
+        like.id = likeId;
+        like.curation = curation;
+        like.member = member;
+        return like;
     }
 }

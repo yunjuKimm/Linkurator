@@ -3,10 +3,13 @@ package com.team8.project2.domain.curation.curation.controller;
 import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
+import com.team8.project2.domain.curation.curation.dto.TrendingCurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.curation.report.entity.ReportType;
+import com.team8.project2.domain.curation.tag.dto.TagResDto;
+import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
@@ -38,6 +41,7 @@ public class ApiV1CurationController {
     private final Rq rq;
     private final MemberService memberService;
     private final PlaylistService playlistService;
+    private final TagService tagService;
 
     /**
      * 새로운 큐레이션을 생성합니다.
@@ -175,7 +179,6 @@ public class ApiV1CurationController {
         return new RsData<>("200-1", "신고가 접수되었습니다.");
     }
 
-
     /**
      * 특정 큐레이션에 속한 플레이리스트 목록을 조회합니다.
      * @param curationId
@@ -187,6 +190,18 @@ public class ApiV1CurationController {
         Member member = rq.getActor();
         List<PlaylistDto> playlists = playlistService.getPlaylistsByMemberAndCuration(member, curationId);
         return RsData.success("플레이리스트 조회 성공", playlists);
+    }
+
+    @GetMapping("/trending-tag")
+    public RsData<TagResDto> trendingTag() {
+        TagResDto tagResDto = tagService.getTrendingTag();
+        return new RsData<>("200-1", "트렌딩 태그가 조회되었습니다.", tagResDto);
+    }
+
+    @GetMapping("/trending-curation")
+    public RsData<TrendingCurationResDto> trendingCuration() {
+        TrendingCurationResDto trendingCurationResDto = curationService.getTrendingCuration();
+        return new RsData<>("200-1", "트렌딩 큐레이션이 조회되었습니다.", trendingCurationResDto);
     }
 
 }

@@ -15,6 +15,7 @@ import {
   MoreVertical,
   MousePointer,
   Flag,
+  LinkIcon,
 } from "lucide-react";
 import RightSidebar from "@/app/components/right-sidebar";
 import CommentSection from "@/app/components/comment-section";
@@ -62,21 +63,21 @@ export default function PostDetail() {
   const [linksMetaData, setLinksMetaData] = useState<Map<string, LinkMetaData>>(
     new Map()
   );
-  const [loading, setLoading] = useState(true);
+  // 로딩 상태 분리 - 글 내용과 메타데이터 로딩을 별도로 관리
+  const [contentLoading, setContentLoading] = useState(true); // 글 내용 로딩 상태
+  const [metaDataLoading, setMetaDataLoading] = useState(false); // 메타데이터 로딩 상태
   const [error, setError] = useState<string | null>(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
 
-  // API 데이터 호출
+  // API 데이터 호출 함수 수정
   async function fetchData() {
     try {
-      setLoading(true);
+      setContentLoading(true);
       setError(null);
 
-      // 그리고 모든 fetch 호출에서 하드코딩된 URL을 변경합니다.
-      // 예를 들어:
-      // 이렇게 변경합니다:
       const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
         method: "GET",
         credentials: "include",
@@ -97,7 +98,7 @@ export default function PostDetail() {
       setError((err as Error).message);
       console.error("Error fetching curation data:", err);
     } finally {
-      setLoading(false);
+      setContentLoading(false); // 글 내용 로딩 완료
     }
   }
 
@@ -106,28 +107,47 @@ export default function PostDetail() {
     fetchData();
   }, [id]);
 
-  // 모든 링크의 메타데이터 가져오기
+  // 모든 링크의 메타데이터 가져오기 - 글 내용과 분리
   useEffect(() => {
     if (!post?.urls?.length) return;
 
     // 각 URL에 대한 메타데이터 가져오기
     async function fetchAllLinksMetaData() {
+      if (!post?.urls?.length) return;
+
+      setMetaDataLoading(true); // 메타데이터 로딩 시작
+
       const newLinksMetaData = new Map<string, LinkMetaData>();
+
+      // 이미 있는 메타데이터는 유지
+      linksMetaData.forEach((value, key) => {
+        newLinksMetaData.set(key, value);
+      });
 
       // 모든 URL에 대해 병렬로 메타데이터 가져오기
       await Promise.all(
         post.urls.map(async ({ url }) => {
+          // 이미 메타데이터가 있거나 실패한 URL이면 스킵
+          if (linksMetaData.has(url) || failedUrls.has(url)) return;
+
           try {
+            // 타임아웃 설정 (5초)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
             const response = await fetch(`${API_URL}/api/v1/link/preview`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "X-Forwarded-For": "127.0.0.1", // IP 주소 헤더 추가 (테스트용)
-                "X-Real-IP": "127.0.0.1", // 실제 IP 헤더 추가 (테스트용)
+                "X-Forwarded-For": "127.0.0.1",
+                "X-Real-IP": "127.0.0.1",
               },
-              credentials: "include", // 쿠키를 포함하여 요청
+              credentials: "include",
               body: JSON.stringify({ url }),
+              signal: controller.signal,
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
               throw new Error(
@@ -136,21 +156,27 @@ export default function PostDetail() {
             }
 
             const data = await response.json();
-            console.log(data);
             if (data.data) {
               newLinksMetaData.set(url, data.data);
             }
           } catch (error) {
             console.error(`Error fetching metadata for ${url}:`, error);
+            // 실패한 URL 기록
+            setFailedUrls((prev) => {
+              const newSet = new Set(prev);
+              newSet.add(url);
+              return newSet;
+            });
           }
         })
       );
 
       setLinksMetaData(newLinksMetaData);
+      setMetaDataLoading(false); // 메타데이터 로딩 완료
     }
 
     fetchAllLinksMetaData();
-  }, [post?.urls]);
+  }, [post?.urls]); // linksMetaData 의존성 제거
 
   // 좋아요 토글 API 호출
   const toggleLike = async () => {
@@ -240,8 +266,8 @@ export default function PostDetail() {
     }
   };
 
-  // 로딩 상태 처리
-  if (loading) {
+  // 로딩 상태 처리 - 글 내용 로딩만 체크
+  if (contentLoading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -455,7 +481,7 @@ export default function PostDetail() {
               )
             ) : (
               <Link href="/auth/login">
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                <button className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                   로그인하고 팔로우
                 </button>
               </Link>
@@ -476,73 +502,83 @@ export default function PostDetail() {
                 링크 ({post.urls.length}개)
               </h2>
 
-              {/* 각 URL마다 별도의 카드 생성 */}
-              {post.urls.map(({ url }, index) => (
-                <div
-                  key={`${url}-${index}`}
-                  className="rounded-lg border shadow-sm overflow-hidden"
-                >
+              {/* 메타데이터 로딩 중 표시 */}
+              {metaDataLoading && (
+                <div className="flex items-center text-sm text-gray-500 mb-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500 mr-2"></div>
+                  링크 정보를 불러오는 중...
+                </div>
+              )}
+
+              {post.urls.map(({ url, linkId }, index) => {
+                const metaData = linksMetaData.get(url);
+                const bgClass =
+                  index % 3 === 0
+                    ? "from-blue-50 to-indigo-50"
+                    : index % 3 === 1
+                    ? "from-green-50 to-teal-50"
+                    : "from-purple-50 to-pink-50";
+
+                return (
                   <div
-                    className={`bg-gradient-to-r ${
-                      index % 3 === 0
-                        ? "from-blue-50 to-indigo-50"
-                        : index % 3 === 1
-                        ? "from-green-50 to-teal-50"
-                        : "from-purple-50 to-pink-50"
-                    } p-6`}
+                    key={`${url}-${index}`}
+                    className="rounded-lg border shadow-sm overflow-hidden"
                   >
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center">
-                      <div className="mr-0 sm:mr-4 mb-4 sm:mb-0 flex-shrink-0">
-                        <Image
-                          src={
-                            linksMetaData.get(url)?.image ||
-                            "/placeholder.svg?height=80&width=80"
-                          }
-                          alt="링크 썸네일"
-                          width={80}
-                          height={80}
-                          className="rounded-md object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                          {linksMetaData.get(url)?.title ||
-                            "링크 제목을 불러오는 중..."}
-                        </h2>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                          {linksMetaData.get(url)?.description ||
-                            "설명을 불러오는 중..."}
-                        </p>
-                        <div className="flex items-center text-sm">
-                          <span className="text-blue-600 truncate max-w-[200px]">
-                            {extractDomain(url)}
-                          </span>
-                          <span className="mx-2 text-gray-300">|</span>
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-500 hover:text-gray-700"
-                            onClick={() =>
-                              handleLinkClick(
-                                url,
-                                linksMetaData.get(url)?.linkId
-                              )
-                            }
-                          >
-                            바로가기
-                          </a>
-                          <span className="mx-2 text-gray-300">|</span>
-                          <div className="flex items-center text-gray-500">
-                            <MousePointer className="h-3 w-3 mr-1" />
-                            <span>{linksMetaData.get(url)?.click || 0}</span>
+                    <div className={`bg-gradient-to-r ${bgClass} p-6`}>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center">
+                        <div className="mr-0 sm:mr-4 mb-4 sm:mb-0 flex-shrink-0">
+                          {metaData?.image ? (
+                            <Image
+                              src={
+                                metaData.image ||
+                                "/placeholder.svg?height=80&width=80"
+                              }
+                              alt="링크 썸네일"
+                              width={80}
+                              height={80}
+                              className="rounded-md object-cover"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 bg-gray-100 rounded-md flex items-center justify-center">
+                              <LinkIcon className="h-8 w-8 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h2 className="text-xl font-semibold text-gray-900 mb-1">
+                            {metaData?.title || extractDomain(url) || "링크"}
+                          </h2>
+                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                            {metaData?.description || url}
+                          </p>
+                          <div className="flex items-center text-sm">
+                            <span className="text-blue-600 truncate max-w-[200px]">
+                              {extractDomain(url)}
+                            </span>
+                            <span className="mx-2 text-gray-300">|</span>
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-500 hover:text-gray-700"
+                              onClick={() =>
+                                handleLinkClick(url, metaData?.linkId || linkId)
+                              }
+                            >
+                              바로가기
+                            </a>
+                            <span className="mx-2 text-gray-300">|</span>
+                            <div className="flex items-center text-gray-500">
+                              <MousePointer className="h-3 w-3 mr-1" />
+                              <span>{metaData?.click || 0}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Bookmark, Share2 } from "lucide-react";
+import { Heart, MessageSquare, Bookmark, Share2, LinkIcon } from "lucide-react";
 import CurationSkeleton from "@/app/components/skeleton/curation-skeleton";
 import { stripHtml } from "@/lib/htmlutils";
-// Add the import for the stripHtml function
 
 // Curation 데이터 인터페이스 정의
 interface Curation {
@@ -34,6 +33,7 @@ export default function FollowingCurations() {
   const [linkMetaDataList, setLinkMetaDataList] = useState<{
     [key: number]: LinkMetaData[];
   }>({});
+  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
 
   // API 요청 함수
   const fetchFollowingCurations = async () => {
@@ -71,7 +71,14 @@ export default function FollowingCurations() {
 
   // 메타 데이터 추출 함수
   const fetchLinkMetaData = async (url: string, curationId: number) => {
+    // 이미 실패한 URL이면 다시 요청하지 않음
+    if (failedUrls.has(url)) return;
+
     try {
+      // 타임아웃 설정 (5초)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch(
         `http://localhost:8080/api/v1/link/preview`,
         {
@@ -80,8 +87,11 @@ export default function FollowingCurations() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ url: url }),
+          signal: controller.signal,
         }
       );
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error("Failed to fetch link metadata");
@@ -90,16 +100,23 @@ export default function FollowingCurations() {
       const data = await response.json();
       setLinkMetaDataList((prev) => {
         const existingMetaData = prev[curationId] || [];
+        // 중복된 메타 데이터가 추가되지 않도록 필터링
         const newMetaData = existingMetaData.filter(
-          (meta) => meta.url !== data.data.url
+          (meta) => meta.url !== data.data.url // 이미 존재하는 URL은 제외
         );
         return {
           ...prev,
-          [curationId]: [...newMetaData, data.data],
+          [curationId]: [...newMetaData, data.data], // 중복 제거 후 메타 데이터 추가
         };
       });
     } catch (error) {
-      console.error("Error fetching link metadata:", error);
+      console.error(`Error fetching metadata for ${url}:`, error);
+      // 실패한 URL 기록
+      setFailedUrls((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(url);
+        return newSet;
+      });
     }
   };
 
@@ -108,17 +125,20 @@ export default function FollowingCurations() {
     curations.forEach((curation) => {
       if (curation.urls && curation.urls.length > 0) {
         curation.urls.forEach((urlObj) => {
+          // 이미 메타데이터가 있거나 실패한 URL이면 스킵
           if (
-            !linkMetaDataList[curation.id]?.some(
+            linkMetaDataList[curation.id]?.some(
               (meta) => meta.url === urlObj.url
-            )
+            ) ||
+            failedUrls.has(urlObj.url)
           ) {
-            fetchLinkMetaData(urlObj.url, curation.id);
+            return;
           }
+          fetchLinkMetaData(urlObj.url, curation.id);
         });
       }
     });
-  }, [curations, linkMetaDataList]);
+  }, [curations]); // linkMetaDataList 의존성 제거
 
   // 좋아요 추가 API 호출 함수
   const likeCuration = async (id: number) => {
@@ -184,7 +204,6 @@ export default function FollowingCurations() {
                       {curation.title}
                     </h2>
                   </Link>
-                  {/* Replace the content rendering in the curations.map section with: */}
                   <p className="mt-2 text-gray-600">
                     {curation.content ? stripHtml(curation.content, 100) : ""}
                   </p>
@@ -206,28 +225,56 @@ export default function FollowingCurations() {
                 </div>
 
                 {/* 메타 데이터 카드 */}
-                {linkMetaDataList[curation.id]?.map((metaData, index) => (
-                  <Link key={index} href={metaData.url} passHref>
-                    <div className="mt-4 rounded-lg border p-4 cursor-pointer">
-                      <div className="flex items-center space-x-3">
-                        <img
-                          src={
-                            metaData.image ||
-                            "/placeholder.svg?height=48&width=48"
-                          }
-                          alt="Preview"
-                          className="h-12 w-12 rounded-lg"
-                        />
-                        <div>
-                          <h3 className="font-medium">{metaData.title}</h3>
-                          <p className="text-sm text-gray-600">
-                            {metaData.description}
-                          </p>
-                        </div>
+                {curation.urls.map((urlObj, index) => {
+                  const metaData = linkMetaDataList[curation.id]?.find(
+                    (meta) => meta.url === urlObj.url
+                  );
+
+                  return (
+                    <Link
+                      key={`${urlObj.url}-${index}`}
+                      href={urlObj.url}
+                      passHref
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <div className="mt-4 rounded-lg border p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+                        {metaData ? (
+                          <div className="flex items-center space-x-3">
+                            <img
+                              src={
+                                metaData.image ||
+                                "/placeholder.svg?height=48&width=48"
+                              }
+                              alt="Preview"
+                              className="h-12 w-12 rounded-lg object-cover"
+                            />
+                            <div>
+                              <h3 className="font-medium">
+                                {metaData.title || "링크"}
+                              </h3>
+                              <p className="text-sm text-gray-600 line-clamp-1">
+                                {metaData.description || urlObj.url}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-3">
+                            <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <LinkIcon className="h-6 w-6 text-gray-400" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium">링크</h3>
+                              <p className="text-sm text-gray-600 truncate">
+                                {urlObj.url}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
