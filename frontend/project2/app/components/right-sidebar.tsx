@@ -91,7 +91,7 @@ export default function RightSidebar() {
                   </Link>
                 </div>
                 <p className="pl-8 text-xs text-gray-500">
-                  {curation.authorName}님 • 조회 {curation.viewCount}
+                  {curation.authorName}님 • Today {curation.viewCount}
                 </p>
               </div>
             ))}
