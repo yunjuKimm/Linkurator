@@ -1,16 +1,17 @@
 package com.team8.project2.domain.member.controller;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
+import com.team8.project2.domain.admin.service.AdminService;
+import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.comment.service.CommentService;
+import com.team8.project2.domain.curation.curation.entity.Curation;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
@@ -39,8 +40,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ApiV1MemberController {
 
+    @Autowired
+    @Lazy
     private final CurationService curationService;
+    private final AdminService adminService;
     private final MemberService memberService;
+    private final CommentService commentService;
     private final Rq rq;
 
 
@@ -190,5 +195,25 @@ public class ApiV1MemberController {
             return new RsData<>("500-1", "프로필 이미지 업로드에 실패했습니다.");
 		}
 		return new RsData<>("200-1", "프로필 이미지가 변경되었습니다.");
+    }
+
+    @GetMapping("/members")
+    public RsData<List<MemberResDTO>> findAllMember() {
+        Member member = rq.getActor();
+        List<Member> members = adminService.getAllMembers(member);
+        List<MemberResDTO> memberReqDTOList = new ArrayList<>();
+        for(Member m : members){
+            memberReqDTOList.add(MemberResDTO.fromEntity(m));
+        }
+        return RsData.success("멤버 조회 성공",memberReqDTOList);
+    }
+
+    @DeleteMapping("/delete")
+    public RsData<Void> deleteMember() {
+        Member actor = rq.getActor();
+        List<Curation> curations = curationService.findAllByMember(actor);
+        List<Comment> comments = commentService.findAllByAuthor(actor);
+        adminService.deleteMember(actor);
+        return new RsData<>("200-6", "회원 탈퇴가 완료되었습니다.");
     }
 }

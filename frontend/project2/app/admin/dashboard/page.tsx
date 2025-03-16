@@ -3,15 +3,17 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Trash2, ExternalLink, User } from "lucide-react"
+import { ArrowLeft, Trash2, ExternalLink, User, AlertCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Badge } from "@/components/ui/badge"
+
+// 백엔드 API URL
+const API_URL = "http://localhost:8080/api/v1"
 
 // 멤버 타입 정의
 interface Member {
@@ -21,17 +23,24 @@ interface Member {
     email: string
     profileImage?: string
     role: "ADMIN" | "MEMBER"
+    introduce?: string
     createdDate: string
+    modifiedDate?: string
+    apiKey?: string
 }
 
 // 큐레이션 타입 정의
 interface Curation {
     id: number
     title: string
-    authorName: string
+    content: string
+    createdBy?: string
     createdAt: string
+    modifiedAt: string
     likeCount: number
-    viewCount: number
+    urls: { url: string }[]
+    tags: { name: string }[]
+    viewCount?: number
 }
 
 export default function AdminDashboardPage() {
@@ -45,73 +54,192 @@ export default function AdminDashboardPage() {
     const [curationSearchTerm, setCurationSearchTerm] = useState("")
     const [isDeleting, setIsDeleting] = useState(false)
     const [activeTab, setActiveTab] = useState("members")
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         // 관리자 권한 확인
         const checkAdminAndFetchData = async () => {
-            const userRole = sessionStorage.getItem("userRole")
-            if (userRole !== "ADMIN") {
-                toast({
-                    title: "접근 권한 없음",
-                    description: "관리자만 접근할 수 있는 페이지입니다.",
-                    variant: "destructive",
-                })
-                router.push("/home")
-                return
-            }
-
-            setIsAdmin(true)
-
-            // 데이터 로드
             try {
-                // 멤버 데이터
-                const mockMembers: Member[] = [
-                    {
-                        id: 1,
-                        memberId: "admin",
-                        username: "관리자",
-                        email: "admin@example.com",
-                        profileImage: "/placeholder.svg?height=40&width=40",
-                        role: "ADMIN",
-                        createdDate: new Date(2023, 0, 1).toISOString(),
-                    },
-                    ...Array.from({ length: 9 }, (_, i) => ({
-                        id: i + 2,
-                        memberId: `user${i + 1}`,
-                        username: `사용자 ${i + 1}`,
-                        email: `user${i + 1}@example.com`,
-                        profileImage: `/placeholder.svg?height=40&width=40`,
-                        role: "MEMBER" as const,
-                        createdDate: new Date(2023, i % 12, (i % 28) + 1).toISOString(),
-                    })),
-                ]
-                setMembers(mockMembers)
+                // 세션 스토리지에서 사용자 정보 확인
+                const userRole = sessionStorage.getItem("userRole")
+                const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
 
-                // 큐레이션 데이터
-                const mockCurations: Curation[] = Array.from({ length: 10 }, (_, i) => ({
-                    id: 100 + i,
-                    title: `큐레이션 제목 ${i + 1}`,
-                    authorName: `작성자 ${i % 3 === 0 ? "김철수" : i % 3 === 1 ? "이영희" : "박지민"}`,
-                    createdAt: new Date(Date.now() - i * 86400000).toISOString(),
-                    likeCount: Math.floor(Math.random() * 100),
-                    viewCount: Math.floor(Math.random() * 1000),
-                }))
-                setCurations(mockCurations)
+                if (!isLoggedIn) {
+                    // 로그인되지 않은 경우 로그인 페이지로 리디렉션
+                    toast({
+                        title: "로그인이 필요합니다",
+                        description: "로그인 페이지로 이동합니다.",
+                        variant: "destructive",
+                    })
+                    router.replace("/auth/login")
+                    return
+                }
+
+                if (userRole !== "ADMIN") {
+                    // 관리자가 아닌 경우 홈 페이지로 리디렉션
+                    toast({
+                        title: "접근 권한 없음",
+                        description: "관리자만 접근할 수 있는 페이지입니다.",
+                        variant: "destructive",
+                    })
+                    router.replace("/home")
+                    return
+                }
+
+                setIsAdmin(true)
+
+                // 세션 스토리지에 캐시된 데이터가 있는지 확인
+                const cachedMembers = sessionStorage.getItem("adminMembersData")
+                if (cachedMembers) {
+                    try {
+                        const parsedMembers = JSON.parse(cachedMembers)
+                        setMembers(
+                            parsedMembers.map((member: any) => ({
+                                id: member.id,
+                                memberId: member.memberId,
+                                username: member.username,
+                                email: member.email,
+                                profileImage: member.profileImage || "/placeholder.svg?height=40&width=40",
+                                role: member.role === "ADMIN" ? "ADMIN" : "MEMBER",
+                                introduce: member.introduce,
+                                createdDate: member.createdDatetime || new Date().toISOString(),
+                                modifiedDate: member.modifiedDatetime,
+                                apiKey: member.apiKey,
+                            })),
+                        )
+                        setIsLoading(false)
+
+                        // 백그라운드에서 최신 데이터 가져오기
+                        fetchMembers(false)
+                        return
+                    } catch (error) {
+                        console.error("캐시된 데이터 파싱 오류:", error)
+                        // 캐시 데이터 오류 시 API에서 다시 가져오기
+                    }
+                }
+
+                // 캐시된 데이터가 없으면 API에서 가져오기
+                await fetchMembers(true)
+                await fetchCurations(true)
             } catch (error) {
-                console.error("데이터 로드 오류:", error)
+                console.error("권한 확인 오류:", error)
                 toast({
-                    title: "데이터 로드 실패",
-                    description: "데이터를 불러오는데 실패했습니다.",
+                    title: "오류 발생",
+                    description: "페이지 로드 중 오류가 발생했습니다.",
                     variant: "destructive",
                 })
-            } finally {
-                setIsLoading(false)
+                router.replace("/home")
             }
         }
 
         checkAdminAndFetchData()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []) // 의존성 배열을 비워서 컴포넌트 마운트 시 한 번만 실행되도록 함
+    }, [])
+
+    // 멤버 데이터 가져오기 함수
+    const fetchMembers = async (showLoading = true) => {
+        if (showLoading) {
+            setIsLoading(true)
+        }
+        setError(null)
+
+        try {
+            // 직접 백엔드 API 호출
+            const response = await fetch(`${API_URL}/members/members`, {
+                method: "GET",
+                credentials: "include",
+            })
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    toast({
+                        title: "로그인이 필요합니다",
+                        description: "로그인 페이지로 이동합니다.",
+                        variant: "destructive",
+                    })
+                    router.replace("/auth/login")
+                    return
+                }
+                throw new Error("멤버 데이터를 불러오는데 실패했습니다.")
+            }
+
+            const data = await response.json()
+
+            if ((data.code === "200-OK" || data.code === "200-1") && data.data) {
+                // API에서 받은 데이터로 멤버 목록 설정
+                const formattedMembers = data.data.map((member: any) => {
+                    // 프로필 이미지 URL 유효성 검사
+                    let profileImage = member.profileImage
+                    if (!profileImage || profileImage.trim() === "" || profileImage === "null" || profileImage === "undefined") {
+                        profileImage = "/placeholder.svg?height=40&width=40"
+                    }
+
+                    return {
+                        id: member.id,
+                        memberId: member.memberId,
+                        username: member.username,
+                        email: member.email,
+                        profileImage: profileImage,
+                        role: member.role === "ADMIN" ? "ADMIN" : "MEMBER",
+                        introduce: member.introduce,
+                        createdDate: member.createdDatetime || new Date().toISOString(),
+                        modifiedDate: member.modifiedDatetime,
+                        apiKey: member.apiKey,
+                    }
+                })
+
+                setMembers(formattedMembers)
+
+                // 세션 스토리지에 멤버 데이터 저장
+                sessionStorage.setItem("adminMembersData", JSON.stringify(data.data))
+            } else {
+                throw new Error(data.msg || "멤버 데이터가 없습니다.")
+            }
+        } catch (error) {
+            console.error("멤버 데이터 로드 오류:", error)
+            if (showLoading) {
+                setError((error as Error).message)
+                toast({
+                    title: "멤버 데이터 로드 실패",
+                    description: (error as Error).message,
+                    variant: "destructive",
+                })
+            }
+
+            // 에러 발생 시 캐시된 데이터가 없으면 빈 배열 설정
+            if (members.length === 0) {
+                setMembers([])
+            }
+        } finally {
+            if (showLoading) {
+                setIsLoading(false)
+            }
+        }
+    }
+
+    // 큐레이션 데이터 가져오기 함수
+    const fetchCurations = async (showLoading = true) =>{
+        try {
+            const response = await fetch(
+                `${API_URL}/api/v1/curation`
+            );
+            if (!response.ok) {
+                throw new Error("큐레이션 목록을 불러오는 데 실패했습니다.");
+            }
+            const data = await response.json();
+            if (data && data.data) {
+                setCurations(data.data);
+            } else {
+                console.error("No curation data found in the response");
+                setCurations([]);
+            }
+        } catch (error) {
+            console.error("Error fetching curator curations:", error);
+            setError((error as Error).message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // 멤버 삭제 함수
     const handleDeleteMember = async (id: number, username: string) => {
@@ -120,19 +248,46 @@ export default function AdminDashboardPage() {
         }
 
         setIsDeleting(true)
+        setError(null)
 
         try {
-            const response = await fetch(`http://localhost:8080/api/v1/admin/members/${id}`, {
+            // 직접 백엔드 API 호출
+            const response = await fetch(`${API_URL}/admin/members/${id}`, {
                 method: "DELETE",
                 credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                },
             })
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    toast({
+                        title: "권한 없음",
+                        description: "멤버 삭제 권한이 없습니다.",
+                        variant: "destructive",
+                    })
+                    return
+                }
                 throw new Error("멤버 삭제에 실패했습니다.")
             }
 
             // 삭제 성공 시 목록에서 제거
-            setMembers(members.filter((member) => member.id !== id))
+            const updatedMembers = members.filter((member) => member.id !== id)
+            setMembers(updatedMembers)
+
+            // 세션 스토리지 업데이트
+            const cachedMembers = sessionStorage.getItem("adminMembersData")
+            if (cachedMembers) {
+                try {
+                    const parsedMembers = JSON.parse(cachedMembers)
+                    const updatedCachedMembers = parsedMembers.filter((member: any) => member.id !== id)
+                    sessionStorage.setItem("adminMembersData", JSON.stringify(updatedCachedMembers))
+                } catch (error) {
+                    console.error("캐시 업데이트 오류:", error)
+                }
+            }
 
             toast({
                 title: "삭제 성공",
@@ -140,9 +295,10 @@ export default function AdminDashboardPage() {
             })
         } catch (error) {
             console.error("멤버 삭제 오류:", error)
+            setError((error as Error).message)
             toast({
                 title: "삭제 실패",
-                description: "멤버를 삭제하는데 실패했습니다.",
+                description: (error as Error).message,
                 variant: "destructive",
             })
         } finally {
@@ -157,19 +313,37 @@ export default function AdminDashboardPage() {
         }
 
         setIsDeleting(true)
+        setError(null)
 
         try {
-            const response = await fetch(`http://localhost:8080/api/v1/admin/curations/${id}`, {
+            // 직접 백엔드 API 호출
+            const response = await fetch(`${API_URL}/admin/curations/${id}`, {
                 method: "DELETE",
                 credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                },
             })
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    toast({
+                        title: "권한 없음",
+                        description: "큐레이션 삭제 권한이 없습니다.",
+                        variant: "destructive",
+                    })
+                    return
+                }
                 throw new Error("큐레이션 삭제에 실패했습니다.")
             }
 
             // 삭제 성공 시 목록에서 제거
-            setCurations(curations.filter((curation) => curation.id !== id))
+            const updatedCurations = curations.filter((curation) => curation.id !== id)
+            setCurations(updatedCurations)
+
+            // 세션 스토리지 업데이트
+            sessionStorage.setItem("adminCurationsData", JSON.stringify(updatedCurations))
 
             toast({
                 title: "삭제 성공",
@@ -177,14 +351,25 @@ export default function AdminDashboardPage() {
             })
         } catch (error) {
             console.error("큐레이션 삭제 오류:", error)
+            setError((error as Error).message)
             toast({
                 title: "삭제 실패",
-                description: "큐레이션을 삭제하는데 실패했습니다.",
+                description: (error as Error).message,
                 variant: "destructive",
             })
         } finally {
             setIsDeleting(false)
         }
+    }
+
+    // 새로고침 함수
+    const handleRefresh = async () => {
+        await fetchMembers(true)
+        await fetchCurations(true)
+        toast({
+            title: "데이터 새로고침",
+            description: "최신 데이터를 불러왔습니다.",
+        })
     }
 
     // 멤버 검색 필터링
@@ -240,9 +425,21 @@ export default function AdminDashboardPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     관리자 대시보드로 돌아가기
                 </Link>
-                <h1 className="text-3xl font-bold mb-2">관리자 대시보드</h1>
+                <div className="flex justify-between items-center">
+                    <h1 className="text-3xl font-bold mb-2">관리자 대시보드</h1>
+                    <Button onClick={handleRefresh} variant="outline" size="sm">
+                        데이터 새로고침
+                    </Button>
+                </div>
                 <p className="text-gray-500">멤버와 큐레이션을 관리할 수 있습니다.</p>
             </div>
+
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md flex items-start mb-6">
+                    <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                    <p>{error}</p>
+                </div>
+            )}
 
             <Tabs defaultValue="members" value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
@@ -286,20 +483,8 @@ export default function AdminDashboardPage() {
                                         <TableRow key={member.id}>
                                             <TableCell>{member.id}</TableCell>
                                             <TableCell>
-                                                <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-100">
-                                                    {member.profileImage ? (
-                                                        <Image
-                                                            src={member.profileImage || "/placeholder.svg"}
-                                                            alt={member.username}
-                                                            width={40}
-                                                            height={40}
-                                                            className="object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="flex items-center justify-center h-full">
-                                                            <User className="h-6 w-6 text-gray-400" />
-                                                        </div>
-                                                    )}
+                                                <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                                                    <User className="h-6 w-6 text-gray-400" />
                                                 </div>
                                             </TableCell>
                                             <TableCell>{member.memberId}</TableCell>
