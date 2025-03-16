@@ -3,6 +3,7 @@ package com.team8.project2.domain.admin.service;
 import com.team8.project2.domain.admin.dto.StatsResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
+import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
 import com.team8.project2.global.exception.NotFoundException;
@@ -61,5 +62,9 @@ public class AdminService {
         long totalPlaylistLikes = playlistRepository.sumTotalLikes();
 
         return new StatsResDto(totalCurationViews, totalCurationLikes, totalPlaylistViews, totalPlaylistLikes);
+    }
+
+    public List<Member> getAllMembers(Member member) {
+        return memberRepository.findAll();
     }
 }

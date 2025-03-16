@@ -38,6 +38,7 @@ public class SecurityConfig {
 				// 🔹 특정 API 엔드포인트에 대한 인증 예외
 				.requestMatchers(HttpMethod.GET, "/api/v1/playlists", "/api/v1/playlists/{id}").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/v1/members/**", "/api/v1/members/{id}").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/v1/members/members").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/v1/members/**", "/api/v1/members/{id}").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/v1/curation/**").permitAll()
 				.requestMatchers(HttpMethod.PUT, "/api/v1/curation/**").permitAll()
@@ -85,7 +86,7 @@ public class SecurityConfig {
 	CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowCredentials(true);
-		configuration.setAllowedOrigins(List.of("http://localhost:3000")); // 허용할 프론트엔드 주소
+		configuration.setAllowedOriginPatterns(List.of("*"));// 허용할 프론트엔드 주소
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"));
 		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Forwarded-For", "X-Real-IP"));
 

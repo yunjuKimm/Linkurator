@@ -2,6 +2,7 @@ package com.team8.project2.global.exception;
 
 import java.util.stream.Collectors;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger; // ✅ 추가: 로깅을 위해 Logger import
 import org.slf4j.LoggerFactory; // ✅ 추가: LoggerFactory import
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.team8.project2.global.dto.Empty;
 import com.team8.project2.global.dto.RsData;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
