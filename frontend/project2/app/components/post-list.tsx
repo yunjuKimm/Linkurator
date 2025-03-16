@@ -21,6 +21,7 @@ interface Curation {
   modifiedAt: string;
   likeCount: number;
   viewCount: number; // Add viewCount field
+  commentCount: number; // Add commentCount field
   urls: { url: string }[]; // URLs 배열 추가
   tags: { name: string }[];
 }
@@ -507,7 +508,7 @@ export default function PostList() {
                     </button>
                     <button className="flex items-center space-x-1 text-sm text-gray-500">
                       <MessageSquare className="h-4 w-4" />
-                      <span>12</span>
+                      <span>{curation.commentCount}</span>
                     </button>
                   </div>
                   <div className="flex space-x-2">

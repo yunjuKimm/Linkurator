@@ -34,15 +34,19 @@ public class CurationResDto {
     /** 이미지 url */
     private String memberImgUrl;
 
-
     /** 큐레이션에 포함된 링크 목록 */
     private List<LinkResDto> urls;
 
     /** 큐레이션에 포함된 태그 목록 */
     private List<TagResDto> tags;
+
     private LocalDateTime createdAt;
+
     private LocalDateTime modifiedAt;
+
     private Long likeCount;
+
+    private int commentCount;
 
     /**
      * 링크 정보를 포함하는 내부 DTO 클래스
@@ -90,5 +94,6 @@ public class CurationResDto {
         this.memberImgUrl = curation.getMemberImgUrl();
         this.likeCount = curation.getLikeCount();
         this.viewCount = curation.getViewCount();
+        this.commentCount = curation.getCommentCount();
     }
 }
