@@ -5,6 +5,7 @@ import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
 import com.team8.project2.domain.playlist.dto.PlaylistDto;
+import com.team8.project2.domain.playlist.dto.PlaylistItemOrderUpdateDto;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.service.PlaylistService;
 import org.junit.jupiter.api.BeforeEach;
@@ -124,13 +125,20 @@ class ApiV1PlaylistControllerTest {
                 .description("테스트 설명")
                 .build();
 
-        List<Long> newOrder = Arrays.asList(3L, 1L, 2L);
+        List<PlaylistItemOrderUpdateDto> newOrder = Arrays.asList(
+                new PlaylistItemOrderUpdateDto(3L, null),
+                new PlaylistItemOrderUpdateDto(1L, null),
+                new PlaylistItemOrderUpdateDto(2L, null)
+        );
 
-        when(playlistService.updatePlaylistItemOrder(1L, newOrder)).thenReturn(updatedDto);
+        when(playlistService.updatePlaylistItemOrder(eq(1L), anyList()))
+                .thenReturn(updatedDto);
+
+        String jsonContent = "[{\"id\":3},{\"id\":1},{\"id\":2}]";
 
         mockMvc.perform(patch("/api/v1/playlists/1/items/order")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("[3, 1, 2]"))
+                        .content(jsonContent))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.msg").value("플레이리스트 아이템 순서가 변경되었습니다."))
                 .andExpect(jsonPath("$.data.id").value(1L))
@@ -138,7 +146,9 @@ class ApiV1PlaylistControllerTest {
     }
 
 
-    /** ✅ 좋아요 증가 API 테스트 */
+    /**
+     * ✅ 좋아요 증가 API 테스트
+     */
     @Test
     @DisplayName("좋아요 증가 API가 정상적으로 호출되어야 한다.")
     void shouldIncreaseLikeCount() throws Exception {
@@ -156,10 +166,12 @@ class ApiV1PlaylistControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.msg").value("좋아요가 증가되었습니다."));
 
-        verify(playlistService, times(1)).likePlaylist(playlistId,  savedMember.getId());
+        verify(playlistService, times(1)).likePlaylist(playlistId, savedMember.getId());
     }
 
-    /** ✅ 추천 API 테스트 */
+    /**
+     * ✅ 추천 API 테스트
+     */
     @Test
     @DisplayName("플레이리스트의 추천 목록을 정렬하여 조회할 수 있다.")
     void getRecommendedPlaylistsWithSorting() throws Exception {

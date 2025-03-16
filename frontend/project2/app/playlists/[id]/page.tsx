@@ -69,14 +69,21 @@ export default function PlaylistDetailPage() {
     }
   }, [params.id]);
 
+  // 플레이리스트 데이터 가져오기 함수 수정
   async function fetchData() {
     setIsLoading(true);
     try {
-      // 플레이리스트 데이터 가져오기
+      // 플레이리스트 데이터 가져오기 - 캐시 무시 설정 추가
       const response = await fetch(
         `http://localhost:8080/api/v1/playlists/${params.id}`,
         {
           credentials: "include",
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
         }
       );
 
@@ -92,6 +99,7 @@ export default function PlaylistDetailPage() {
         `http://localhost:8080/api/v1/playlists/${params.id}/recommendation`,
         {
           credentials: "include",
+          cache: "no-store",
         }
       );
 

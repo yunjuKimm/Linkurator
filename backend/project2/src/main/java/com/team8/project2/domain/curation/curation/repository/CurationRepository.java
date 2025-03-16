@@ -113,4 +113,6 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
     List<Curation> findAllByMember(Member member);
 
 	void deleteByMember(Member member);
+
+	List<Curation> findTop3ByOrderByViewCountDesc();
 }
