@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
+import com.team8.project2.domain.curation.curation.dto.TrendingCurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.service.CurationService;
@@ -186,8 +187,14 @@ public class ApiV1CurationController {
     }
 
     @GetMapping("/trending-tag")
-    public RsData<TagResDto> trendingCuration() {
+    public RsData<TagResDto> trendingTag() {
         TagResDto tagResDto = tagService.getTrendingTag();
         return new RsData<>("200-1", "트렌딩 태그가 조회되었습니다.", tagResDto);
+    }
+
+    @GetMapping("/trending-curation")
+    public RsData<TrendingCurationResDto> trendingCuration() {
+        TrendingCurationResDto trendingCurationResDto = curationService.getTrendingCuration();
+        return new RsData<>("200-1", "트렌딩 큐레이션이 조회되었습니다.", trendingCurationResDto);
     }
 }
