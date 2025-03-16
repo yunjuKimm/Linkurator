@@ -260,6 +260,19 @@ export default function PostList() {
 
   useEffect(() => {
     fetchCurations({}); // 페이지 로딩 시 한번 API 호출
+
+    // 사이드바에서 태그 선택 이벤트 리스너 추가
+    const handleSelectTag = (event: CustomEvent) => {
+      const { tag } = event.detail;
+      toggleTagFilter(tag);
+    };
+
+    window.addEventListener("selectTag", handleSelectTag as EventListener);
+
+    // 컴포넌트 언마운트 시 이벤트 리스너 제거
+    return () => {
+      window.removeEventListener("selectTag", handleSelectTag as EventListener);
+    };
   }, []); // 빈 배열을 의존성으로 두어 처음 한 번만 호출되게 설정
 
   useEffect(() => {
