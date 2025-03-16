@@ -1,20 +1,5 @@
 package com.team8.project2.domain.curation.curation.controller;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
@@ -27,13 +12,20 @@ import com.team8.project2.domain.curation.tag.dto.TagResDto;
 import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.service.MemberService;
+import com.team8.project2.domain.playlist.dto.PlaylistDto;
+import com.team8.project2.domain.playlist.service.PlaylistService;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 큐레이션(Curation) API 컨트롤러 클래스입니다.
@@ -48,6 +40,7 @@ public class ApiV1CurationController {
 
     private final Rq rq;
     private final MemberService memberService;
+    private final PlaylistService playlistService;
     private final TagService tagService;
 
     /**
@@ -186,6 +179,19 @@ public class ApiV1CurationController {
         return new RsData<>("200-1", "신고가 접수되었습니다.");
     }
 
+    /**
+     * 특정 큐레이션에 속한 플레이리스트 목록을 조회합니다.
+     * @param curationId
+     * @return
+     */
+    @GetMapping("/{curationId}/playlists")
+    @Transactional(readOnly = true)
+    public RsData<List<PlaylistDto>> getPlaylistsForCuration(@PathVariable Long curationId) {
+        Member member = rq.getActor();
+        List<PlaylistDto> playlists = playlistService.getPlaylistsByMemberAndCuration(member, curationId);
+        return RsData.success("플레이리스트 조회 성공", playlists);
+    }
+
     @GetMapping("/trending-tag")
     public RsData<TagResDto> trendingTag() {
         TagResDto tagResDto = tagService.getTrendingTag();
@@ -197,4 +203,5 @@ public class ApiV1CurationController {
         TrendingCurationResDto trendingCurationResDto = curationService.getTrendingCuration();
         return new RsData<>("200-1", "트렌딩 큐레이션이 조회되었습니다.", trendingCurationResDto);
     }
+
 }

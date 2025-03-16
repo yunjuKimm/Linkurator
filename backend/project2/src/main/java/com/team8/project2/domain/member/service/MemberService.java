@@ -94,12 +94,10 @@ public class MemberService {
 	}
 
 	@Transactional
-	public void deleteMember(Long memberId) {
-		// 1. 연관된 Curation 데이터 삭제
-		//TODO: curation에 memberID로 인한 삭제 필요
-		//curationRepository.deleteByMemberId(memberId);
-		// 2. Member 삭제
-		memberRepository.deleteById(memberId);
+	public void deleteMember(String memberId) {
+		Member member = memberRepository.findByMemberId(memberId)
+				.orElseThrow(() -> new ServiceException("404-1", "해당 회원을 찾을 수 없습니다."));
+		memberRepository.delete(member);
 	}
 
 	@Transactional

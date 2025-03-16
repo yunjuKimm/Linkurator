@@ -6,6 +6,7 @@ import com.team8.project2.domain.comment.repository.CommentRepository;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.member.entity.Member;
+import com.team8.project2.domain.member.entity.RoleEnum;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.global.exception.ServiceException;
 
@@ -113,6 +114,10 @@ public class CommentService {
 		}
 
 		return true;
+	}
+
+	public List<Comment> findAllByAuthor(Member author) {
+		return commentRepository.findAllByAuthor(author);
 	}
 }
 

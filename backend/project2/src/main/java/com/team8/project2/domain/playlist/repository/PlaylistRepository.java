@@ -60,4 +60,18 @@ public interface PlaylistRepository extends JpaRepository<Playlist, Long> {
     List<Playlist> findByMember(Member member);
 
     List<Playlist> findAllByIsPublicTrue();
+
+    /**
+     * 특정 사용자의 플레이리스트 중 특정 큐레이션이 포함된 플레이리스트를 조회하는 메서드입니다.
+     *
+     * @param member 플레이리스트를 좋아요한 회원
+     * @return 플레이리스트 목록
+     */
+    @Query("SELECT DISTINCT p " +
+            "FROM Playlist p JOIN p.items pi " +
+            "WHERE pi.curation.id = :curationId " +
+            "AND p.member = :member")
+    List<Playlist> findByMemberAndCuration(@Param("member") Member member, @Param("curationId") Long curationId);
+
+
 }

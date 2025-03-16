@@ -65,7 +65,7 @@ class AdminServiceTest {
         Long memberId = 1L;
         when(memberRepository.existsById(memberId)).thenReturn(true);
 
-        adminService.deleteMember(memberId);
+        adminService.deleteMemberById(memberId);
 
         verify(memberRepository, times(1)).deleteById(memberId);
     }
@@ -77,7 +77,7 @@ class AdminServiceTest {
         Long memberId = 1L;
         when(memberRepository.existsById(memberId)).thenReturn(false);
 
-        NotFoundException exception = assertThrows(NotFoundException.class, () -> adminService.deleteMember(memberId));
+        NotFoundException exception = assertThrows(NotFoundException.class, () -> adminService.deleteMemberById(memberId));
 
         assertEquals("멤버를 찾을 수 없습니다.", exception.getMessage());
     }

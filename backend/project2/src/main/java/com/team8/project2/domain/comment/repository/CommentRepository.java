@@ -1,6 +1,7 @@
 package com.team8.project2.domain.comment.repository;
 
 import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.member.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -19,4 +20,8 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
      * @return 해당 큐레이션에 속한 댓글 리스트
      */
     List<Comment> findByCurationId(Long curationId);
+
+    List<Comment> findAllByAuthor(Member author);
+
+    void deleteByAuthor(Member member);
 }
