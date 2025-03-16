@@ -22,6 +22,8 @@ import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.curation.report.entity.ReportType;
+import com.team8.project2.domain.curation.tag.dto.TagResDto;
+import com.team8.project2.domain.curation.tag.service.TagService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
@@ -45,6 +47,7 @@ public class ApiV1CurationController {
 
     private final Rq rq;
     private final MemberService memberService;
+    private final TagService tagService;
 
     /**
      * 새로운 큐레이션을 생성합니다.
@@ -180,5 +183,11 @@ public class ApiV1CurationController {
         ReportType reportType = ReportType.fromString(curationReportReqDto.reportType());
         curationService.reportCuration(id, reportType);
         return new RsData<>("200-1", "신고가 접수되었습니다.");
+    }
+
+    @GetMapping("/trending-tag")
+    public RsData<TagResDto> trendingCuration() {
+        TagResDto tagResDto = tagService.getTrendingTag();
+        return new RsData<>("200-1", "트렌딩 태그가 조회되었습니다.", tagResDto);
     }
 }
