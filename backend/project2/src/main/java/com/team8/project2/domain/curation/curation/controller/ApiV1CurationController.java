@@ -203,5 +203,4 @@ public class ApiV1CurationController {
         TrendingCurationResDto trendingCurationResDto = curationService.getTrendingCuration();
         return new RsData<>("200-1", "트렌딩 큐레이션이 조회되었습니다.", trendingCurationResDto);
     }
-
 }
