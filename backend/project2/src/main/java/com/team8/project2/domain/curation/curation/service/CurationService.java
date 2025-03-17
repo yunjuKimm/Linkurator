@@ -441,8 +441,9 @@ public class CurationService {
 	 * @param member 팔로우한 멤버
 	 * @return 팔로우한 멤버의 큐레이션 목록
 	 */
-	public List<CurationResDto> getFollowingCurations(Member member) {
-		List<Curation> followingCurations = curationRepository.findFollowingCurations(member.getId());
+	public List<CurationResDto> getFollowingCurations(Member member, int page, int size) {
+		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+		List<Curation> followingCurations = curationRepository.findFollowingCurations(member.getId(), pageable);
 		return followingCurations.stream()
 			.map(CurationResDto::new)
 			.collect(Collectors.toList());

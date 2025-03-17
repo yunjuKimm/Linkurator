@@ -60,7 +60,7 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 		Pageable pageable);
 
 	@Query("SELECT c FROM Curation c WHERE c.member IN (SELECT f.followee FROM Follow f WHERE f.follower.id = :userId) ORDER BY c.createdAt DESC")
-	List<Curation> findFollowingCurations(@Param("userId") Long userId);
+	List<Curation> findFollowingCurations(@Param("userId") Long userId, Pageable pageable);
 
 	/**
 	 * 일정 개수 이상 신고된 큐레이션을 조회하는 메서드
