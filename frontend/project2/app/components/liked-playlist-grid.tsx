@@ -42,7 +42,7 @@ export default function LikedPlaylistGrid({
 
   // 좋아요 취소 핸들러
   const handleUnlike = (playlistId: number) => {
-    // 로컬 UI 업데이트
+    // 로컬 UI 즉시 업데이트
     setLikedPlaylists((prev) => prev.filter((p) => p.id !== playlistId));
 
     // 부모 컴포넌트에 알림
@@ -50,6 +50,34 @@ export default function LikedPlaylistGrid({
       onLikeStatusChange();
     }
   };
+
+  // useEffect 추가 - 좋아요 상태 변경 이벤트 리스너
+  useEffect(() => {
+    // 다른 컴포넌트에서 발생한 좋아요 상태 변경 이벤트 처리
+    const handleLikeChanged = (event: CustomEvent) => {
+      const { playlistId: changedPlaylistId, isLiked: changedIsLiked } =
+        event.detail;
+
+      // 좋아요가 취소된 경우 해당 플레이리스트를 목록에서 제거
+      if (!changedIsLiked) {
+        setLikedPlaylists((prev) =>
+          prev.filter((p) => p.id !== changedPlaylistId)
+        );
+      }
+    };
+
+    window.addEventListener(
+      "playlist-like-changed",
+      handleLikeChanged as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "playlist-like-changed",
+        handleLikeChanged as EventListener
+      );
+    };
+  }, []);
 
   if (isLoading) {
     return (

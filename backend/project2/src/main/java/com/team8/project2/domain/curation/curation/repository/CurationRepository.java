@@ -1,8 +1,11 @@
 package com.team8.project2.domain.curation.curation.repository;
 
 import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.curation.curation.entity.SearchOrder;
 import com.team8.project2.domain.member.entity.Member;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,58 +30,37 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 	 * @param tags 태그 목록 (선택적)
 	 * @param title 제목 검색어 (선택적)
 	 * @param content 내용 검색어 (선택적)
-	 * @param searchOrder 정렬 기준 (LATEST, OLDEST, LIKECOUNT)
 	 * @return 검색된 큐레이션 목록
 	 */
 	@Query("SELECT c FROM Curation c " +
 		"LEFT JOIN c.tags ct " +
 		"LEFT JOIN ct.tag t " +
-		"WHERE (:title IS NULL OR c.title LIKE %:title%) " +
-		"AND (:content IS NULL OR c.content LIKE %:content%) " +
-		"AND (:author IS NULL OR c.member.username LIKE %:author%) " +
-		"AND (:tags IS NULL OR t.name IN :tags) " +
+		"WHERE (:title IS NULL OR c.title LIKE CONCAT('%', :title, '%')) " +
+		"AND (:content IS NULL OR c.content LIKE CONCAT('%', :content, '%')) " +
+		"AND (:author IS NULL OR c.member.username LIKE CONCAT('%', :author, '%')) " +
+		"AND (t.name IN :tags) " +
 		"GROUP BY c.id " +
-		"HAVING COUNT(DISTINCT t.name) = :tagsSize " +
-		"ORDER BY " +
-		"CASE WHEN :searchOrder = 'LATEST' THEN c.createdAt END DESC, " +
-		"CASE WHEN :searchOrder = 'OLDEST' THEN c.createdAt END ASC, " +
-		"CASE WHEN :searchOrder = 'LIKECOUNT' THEN c.likeCount END DESC")
-	List<Curation> searchByFilters(@Param("tags") List<String> tags,
+		"HAVING COUNT(DISTINCT t.name) = :tagsSize ")
+	Page<Curation> searchByFilters(@Param("tags") List<String> tags,
 		@Param("tagsSize") int tagsSize,
 		@Param("title") String title,
 		@Param("content") String content,
 		@Param("author") String author,
-		@Param("searchOrder") String searchOrder);
+		Pageable pageable);
 
-
-	/**
-	 * 태그가 비어있는 경우 필터를 적용하지 않고 큐레이션을 검색하는 메서드입니다.
-	 *
-	 * @param tags 태그 목록 (선택적)
-	 * @param title 제목 검색어 (선택적)
-	 * @param content 내용 검색어 (선택적)
-	 * @param searchOrder 정렬 기준 (LATEST, OLDEST, LIKECOUNT)
-	 * @return 검색된 큐레이션 목록
-	 */
 	@Query("SELECT c FROM Curation c " +
-		"LEFT JOIN c.tags ct " +
-		"LEFT JOIN ct.tag t " +
-		"WHERE (:title IS NULL OR c.title LIKE %:title%) " +
-		"AND (:content IS NULL OR c.content LIKE %:content%) " +
-		"AND (:author IS NULL OR c.member.username LIKE %:author%) " +
-		"AND (:tags IS NULL OR t.name IN :tags) " +
-		"ORDER BY " +
-		"CASE WHEN :searchOrder = 'LATEST' THEN c.createdAt END DESC, " +
-		"CASE WHEN :searchOrder = 'OLDEST' THEN c.createdAt END ASC, " +
-		"CASE WHEN :searchOrder = 'LIKECOUNT' THEN c.likeCount END DESC")
-	List<Curation> searchByFiltersWithoutTags(@Param("tags") List<String> tags,
+		"WHERE (:title IS NULL OR c.title LIKE CONCAT('%', :title, '%')) " +
+		"AND (:content IS NULL OR c.content LIKE CONCAT('%', :content, '%')) " +
+		"AND (:author IS NULL OR c.member.username LIKE CONCAT('%', :author, '%')) " +
+		"GROUP BY c.id ")
+	Page<Curation> searchByFiltersWithoutTags(@Param("tags") List<String> tags,
 		@Param("title") String title,
 		@Param("content") String content,
 		@Param("author") String author,
-		@Param("searchOrder") String searchOrder);
+		Pageable pageable);
 
 	@Query("SELECT c FROM Curation c WHERE c.member IN (SELECT f.followee FROM Follow f WHERE f.follower.id = :userId) ORDER BY c.createdAt DESC")
-	List<Curation> findFollowingCurations(@Param("userId") Long userId);
+	List<Curation> findFollowingCurations(@Param("userId") Long userId, Pageable pageable);
 
 	/**
 	 * 일정 개수 이상 신고된 큐레이션을 조회하는 메서드
@@ -88,7 +70,7 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 	 */
 	@Query("SELECT c FROM Curation c WHERE " +
 			"(SELECT COUNT(r) FROM Report r WHERE r.curation.id = c.id) >= :minReports")
-	List<Curation> findReportedCurations(int minReports);
+	List<Curation> findReportedCurations(int minReports, Pageable pageable);
 
 	/**
 	 * 전체 큐레이션의 조회수를 합산하는 메서드입니다.
@@ -111,6 +93,8 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 	long countByMember(Member member);
 
     List<Curation> findAllByMember(Member member);
+
+    List<Curation> findAllByMember(Member member, Pageable pageable);
 
 	void deleteByMember(Member member);
 

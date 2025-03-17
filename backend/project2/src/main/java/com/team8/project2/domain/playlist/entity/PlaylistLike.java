@@ -1,7 +1,6 @@
-package com.team8.project2.domain.playlist.dto;
+package com.team8.project2.domain.playlist.entity;
 
 import com.team8.project2.domain.member.entity.Member;
-import com.team8.project2.domain.playlist.entity.Playlist;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

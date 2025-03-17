@@ -104,22 +104,6 @@ public class Playlist {
                 .collect(Collectors.toSet());
     }
 
-    /**
-     * ✅ 조회수 증가 메서드
-     */
-    public void incrementViewCount() {
-        this.viewCount += 1;
-    }
-
-    /**
-     * ✅ 좋아요 증가 메서드
-     */
-    public void incrementLikeCount() {
-        this.likeCount += 1;
-    }
-
-
-
     @CreatedDate
     @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;

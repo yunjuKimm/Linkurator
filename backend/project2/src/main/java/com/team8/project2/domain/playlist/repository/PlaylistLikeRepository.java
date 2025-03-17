@@ -1,7 +1,7 @@
 package com.team8.project2.domain.playlist.repository;
 
 import com.team8.project2.domain.member.entity.Member;
-import com.team8.project2.domain.playlist.dto.PlaylistLike;
+import com.team8.project2.domain.playlist.entity.PlaylistLike;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import org.springframework.data.jpa.repository.JpaRepository;
 

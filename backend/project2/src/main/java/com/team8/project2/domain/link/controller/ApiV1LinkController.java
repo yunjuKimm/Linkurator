@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.team8.project2.domain.link.dto.LinkClickResDto;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.service.LinkService;
@@ -70,9 +71,8 @@ public class ApiV1LinkController {
      * @return 조회된 링크 정보 응답
      */
     @GetMapping("/{linkId}")
-    public RsData<Link> getLink(@PathVariable Long linkId, HttpServletRequest request) {
-        Link link = linkService.getLinkAndIncrementClick(linkId, request);
-        return new RsData<>("200-2", "링크가 성공적으로 조회되었습니다.", link);
+    public RsData<LinkClickResDto> getLink(@PathVariable Long linkId, HttpServletRequest request) {
+        LinkClickResDto linkClickResDto = linkService.getLinkAndIncrementClick(linkId, request);
+        return new RsData<>("200-2", "링크가 성공적으로 조회되었습니다.", linkClickResDto);
     }
-
 }

@@ -213,7 +213,7 @@ export async function updatePlaylistItemOrder(
   }
 }
 
-// 추천 플레이리스트 가져오기
+// 추천 플레이���스트 가져오기
 export async function recommendPlaylist(
   playlistId: number,
   sortType = "combined"
@@ -279,45 +279,24 @@ export async function getLikedPlaylists(): Promise<Playlist[]> {
   }
 }
 
-// 플레이리스트 좋아요 상태 확인
-export async function getPlaylistLikeStatus(
-  playlistId: number
-): Promise<boolean> {
-  try {
-    const response = await fetch(
-      `http://localhost:8080/api/v1/playlists/${playlistId}/like/status`,
-      {
-        method: "GET",
-        credentials: "include",
-      }
-    );
-
-    if (!response.ok) {
-      // 401 에러는 로그인이 필요한 경우이므로 false 반환
-      if (response.status === 401) {
-        return false;
-      }
-      throw new Error("좋아요 상태 조회 실패");
-    }
-
-    const data = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error("좋아요 상태 조회 오류:", error);
-    return false;
-  }
-}
-
-// 플레이리스트 좋아요 수 가져오기
+// 플레이리스트 좋아요 수 가져오기 함수 수정 - 캐시 방지 강화
 export async function getPlaylistLikeCount(
   playlistId: number
 ): Promise<number> {
   try {
-    // 기존 코드에서 사용하던 정확한 엔드포인트로 수정
+    // 현재 타임스탬프를 쿼리 파라미터로 추가하여 캐시 방지
+    const timestamp = new Date().getTime();
+
     const response = await fetch(
-      `http://localhost:8080/api/v1/playlists/${playlistId}/like/count`,
+      `http://localhost:8080/api/v1/playlists/${playlistId}/like/count?_t=${timestamp}`,
       {
-        credentials: "include", // 인증 정보 포함
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
       }
     );
 
@@ -334,7 +313,69 @@ export async function getPlaylistLikeCount(
   }
 }
 
-// 플레이리스트 좋아요 추가
+// 플레이리스트 좋아요 상태 확인 함수 수정 - 캐시 방지 강화
+export async function getPlaylistLikeStatus(
+  playlistId: number
+): Promise<boolean> {
+  try {
+    // 강제 새로고침 파라미터가 있는 경우 캐시 무시
+    const forceRefresh = sessionStorage.getItem(
+      `force_refresh_like_${playlistId}`
+    );
+
+    // 세션 스토리지에서 먼저 확인 (캐싱)
+    const cachedStatus = sessionStorage.getItem(`playlist_like_${playlistId}`);
+    if (cachedStatus !== null && forceRefresh !== "true") {
+      return cachedStatus === "true";
+    }
+
+    // 강제 새로고침 플래그 제거
+    if (forceRefresh === "true") {
+      sessionStorage.removeItem(`force_refresh_like_${playlistId}`);
+    }
+
+    // 현재 타임스탬프를 쿼리 파라미터로 추가하여 캐시 방지
+    const timestamp = new Date().getTime();
+
+    const response = await fetch(
+      `http://localhost:8080/api/v1/playlists/${playlistId}/like/status?_t=${timestamp}`,
+      {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      // 401 에러는 로그인이 필요한 경우이므로 false 반환
+      if (response.status === 401) {
+        return false;
+      }
+      throw new Error("좋아요 상태 조회 실패");
+    }
+
+    const data = await response.json();
+    const likeStatus = data.data;
+
+    // 세션 스토리지에 상태 저장 (캐싱)
+    sessionStorage.setItem(
+      `playlist_like_${playlistId}`,
+      likeStatus.toString()
+    );
+
+    return likeStatus;
+  } catch (error) {
+    console.error("좋아요 상태 조회 오류:", error);
+    return false;
+  }
+}
+
+// 플레이리스트 좋아요 추가 함수 수정 - 캐시 방지 강화
 export async function likePlaylist(playlistId: number): Promise<void> {
   const response = await fetch(
     `http://localhost:8080/api/v1/playlists/${playlistId}/like`,
@@ -342,6 +383,9 @@ export async function likePlaylist(playlistId: number): Promise<void> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
       },
       credentials: "include",
     }
@@ -350,9 +394,15 @@ export async function likePlaylist(playlistId: number): Promise<void> {
   if (!response.ok) {
     throw new Error("좋아요 추가 실패");
   }
+
+  // 좋아요 상태 캐시 업데이트
+  sessionStorage.setItem(`playlist_like_${playlistId}`, "true");
+
+  // 강제 새로고침 플래그 설정
+  sessionStorage.setItem(`force_refresh_like_${playlistId}`, "true");
 }
 
-// 플레이리스트 좋아요 취소
+// 플레이리스트 좋아요 취소 함수 수정 - 캐시 방지 강화
 export async function unlikePlaylist(playlistId: number): Promise<void> {
   const response = await fetch(
     `http://localhost:8080/api/v1/playlists/${playlistId}/like`,
@@ -360,6 +410,9 @@ export async function unlikePlaylist(playlistId: number): Promise<void> {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
       },
       credentials: "include",
     }
@@ -368,6 +421,12 @@ export async function unlikePlaylist(playlistId: number): Promise<void> {
   if (!response.ok) {
     throw new Error("좋아요 취소 실패");
   }
+
+  // 좋아요 상태 캐시 업데이트
+  sessionStorage.setItem(`playlist_like_${playlistId}`, "false");
+
+  // 강제 새로고침 플래그 설정
+  sessionStorage.setItem(`force_refresh_like_${playlistId}`, "true");
 }
 
 // 로그인 상태 확인

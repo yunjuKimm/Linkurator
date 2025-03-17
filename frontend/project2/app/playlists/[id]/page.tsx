@@ -69,19 +69,29 @@ export default function PlaylistDetailPage() {
     }
   }, [params.id]);
 
-  // 플레이리스트 데이터 가져오기 함수 수정
-  async function fetchData() {
+  // fetchData 함수 수정 - 좋아요 상태 확인 로직 개선
+  async function fetchData(incrementView = true) {
     setIsLoading(true);
     try {
+      // 현재 타임스탬프를 쿼리 파라미터로 추가하여 캐시 방지
+      const timestamp = new Date().getTime();
+
       // 플레이리스트 데이터 가져오기 - 로그인 여부와 관계없이 조회 가능하도록 수정
       const response = await fetch(
-        `http://localhost:8080/api/v1/playlists/${params.id}`,
+        `http://localhost:8080/api/v1/playlists/${params.id}${
+          incrementView ? "" : "?noIncrement=true"
+        }&_t=${timestamp}`,
         {
           // 로그인한 경우에만 credentials 포함
           ...(sessionStorage.getItem("isLoggedIn") === "true"
             ? { credentials: "include" }
             : {}),
           cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
         }
       );
 
@@ -97,15 +107,64 @@ export default function PlaylistDetailPage() {
 
       setPlaylist(result.data);
 
+      // 로그인 상태인 경우 좋아요 상태 확인 및 세션 스토리지에 저장
+      if (sessionStorage.getItem("isLoggedIn") === "true") {
+        try {
+          // 강제 새로고침 플래그 확인
+          const forceRefresh = sessionStorage.getItem(
+            `force_refresh_like_${params.id}`
+          );
+
+          // 강제 새로고침이 필요하거나 좋아요 상태가 없는 경우에만 API 호출
+          if (
+            forceRefresh === "true" ||
+            !sessionStorage.getItem(`playlist_like_${params.id}`)
+          ) {
+            const likeStatusResponse = await fetch(
+              `http://localhost:8080/api/v1/playlists/${params.id}/like/status?_t=${timestamp}`,
+              {
+                credentials: "include",
+                cache: "no-store",
+                headers: {
+                  "Cache-Control": "no-cache, no-store, must-revalidate",
+                  Pragma: "no-cache",
+                  Expires: "0",
+                },
+              }
+            );
+
+            if (likeStatusResponse.ok) {
+              const likeStatusData = await likeStatusResponse.json();
+              sessionStorage.setItem(
+                `playlist_like_${params.id}`,
+                likeStatusData.data.toString()
+              );
+
+              // 강제 새로고침 플래그 제거
+              if (forceRefresh === "true") {
+                sessionStorage.removeItem(`force_refresh_like_${params.id}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("좋아요 상태 확인 오류:", error);
+        }
+      }
+
       // 추천 플레이리스트 가져오기
       const recResponse = await fetch(
-        `http://localhost:8080/api/v1/playlists/${params.id}/recommendation`,
+        `http://localhost:8080/api/v1/playlists/${params.id}/recommendation?_t=${timestamp}`,
         {
           // 로그인한 경우에만 credentials 포함
           ...(sessionStorage.getItem("isLoggedIn") === "true"
             ? { credentials: "include" }
             : {}),
           cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
         }
       );
 
@@ -132,9 +191,46 @@ export default function PlaylistDetailPage() {
     return playlist?.owner === true;
   };
 
+  // useEffect 수정 - 좋아요 상태 변경 이벤트 리스너 추가
   useEffect(() => {
     if (params.id) {
-      fetchData();
+      // 페이지 첫 로드 시에만 조회수를 증가시킵니다
+      const hasVisited = sessionStorage.getItem(
+        `visited_playlist_${params.id}`
+      );
+
+      if (!hasVisited) {
+        // 아직 방문하지 않은 경우 조회수 증가
+        fetchData(true);
+        // 방문 기록 저장 (세션 동안 유지)
+        sessionStorage.setItem(`visited_playlist_${params.id}`, "true");
+      } else {
+        // 이미 방문한 경우 조회수 증가 없이 데이터만 가져옴
+        fetchData(false);
+      }
+
+      // 좋아요 상태 변경 이벤트 리스너 추가
+      const handleLikeChanged = (event: CustomEvent) => {
+        const { playlistId: changedPlaylistId } = event.detail;
+
+        // 현재 페이지의 플레이리스트 ID와 일치하는 경우 데이터 새로고침
+        if (changedPlaylistId === Number(params.id)) {
+          // 조회수 증가 없이 데이터만 새로고침
+          fetchData(false);
+        }
+      };
+
+      window.addEventListener(
+        "playlist-like-changed",
+        handleLikeChanged as EventListener
+      );
+
+      return () => {
+        window.removeEventListener(
+          "playlist-like-changed",
+          handleLikeChanged as EventListener
+        );
+      };
     }
   }, [params.id]);
 
@@ -208,11 +304,6 @@ export default function PlaylistDetailPage() {
               </div>
 
               <div className="flex items-center gap-2 self-start">
-                <LikeButton
-                  playlistId={playlist.id}
-                  initialLikes={playlist.likeCount}
-                />
-
                 {/* 소유자 확인 로직 개선 - owner 필드 사용 */}
                 {isPlaylistOwner() && (
                   <>

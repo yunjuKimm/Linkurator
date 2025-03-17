@@ -100,7 +100,7 @@ export default function PlaylistsPage() {
 
   // 로그인 페이지로 이동
   const handleLoginRedirect = () => {
-    // ��재 경로를 저장하여 로그인 후 돌아올 수 있도록 함
+    // 현재 경로를 저장하여 로그인 후 돌아올 수 있도록 함
     sessionStorage.setItem(
       "loginRedirectPath",
       pathname + (activeTab === "liked" ? "?tab=liked" : "")

@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 // 백엔드 API URL
 const API_URL = "http://localhost:8080/api/v1";
 
-// 멤버 타입 정의
+// Update the Member interface to match the new API response structure
 interface Member {
   id: number;
   memberId: string;
@@ -37,9 +37,18 @@ interface Member {
   profileImage?: string;
   role: "ADMIN" | "MEMBER";
   introduce?: string;
-  createdDate: string;
-  modifiedDate?: string;
+  createdDatetime: string;
+  modifiedDatetime?: string;
   apiKey?: string;
+}
+
+// Add a new interface for the paginated response
+interface PaginatedMembersResponse {
+  members: Member[];
+  totalPages: number;
+  totalElements: number;
+  numberOfElements: number;
+  size: number;
 }
 
 // 큐레이션 타입 정의
@@ -64,7 +73,7 @@ interface CurationRequestParams {
   order?: SortOrder;
 }
 
-type SortOrder = "LATEST" | "LIKECOUNT";
+type SortOrder = "LATEST" | "LIKECOUNT" | "OLDEST";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -78,7 +87,20 @@ export default function AdminDashboardPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState("members");
   const [error, setError] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState("LATEST"); // 정렬 순서 상태 추가
+  const [sortOrder, setSortOrder] = useState<SortOrder>("LATEST"); // 정렬 순서 상태 추가
+
+  // Add pagination state variables after the existing state declarations
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalMembers, setTotalMembers] = useState(0);
+
+  // Update the curations API to also use pagination
+  // Update the fetchCurations function to include pagination parameters
+  const [curationsCurrentPage, setCurationsCurrentPage] = useState(0);
+  const [curationsTotalPages, setCurationsTotalPages] = useState(1);
+  const [curationsPageSize, setCurationsPageSize] = useState(20);
+  const [totalCurations, setTotalCurations] = useState(0);
 
   useEffect(() => {
     // 관리자 권한 확인
@@ -127,8 +149,9 @@ export default function AdminDashboardPage() {
                   member.profileImage || "/placeholder.svg?height=40&width=40",
                 role: member.role === "ADMIN" ? "ADMIN" : "MEMBER",
                 introduce: member.introduce,
-                createdDate: member.createdDatetime || new Date().toISOString(),
-                modifiedDate: member.modifiedDatetime,
+                createdDatetime:
+                  member.createdDatetime || new Date().toISOString(),
+                modifiedDatetime: member.modifiedDatetime,
                 apiKey: member.apiKey,
               }))
             );
@@ -158,9 +181,9 @@ export default function AdminDashboardPage() {
 
     checkAdminAndFetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentPage]); // Add currentPage as a dependency
 
-  // 멤버 데이터 가져오기 함수
+  // Update the fetchMembers function to include pagination
   const fetchMembers = async (showLoading = true) => {
     if (showLoading) {
       setIsLoading(true);
@@ -168,10 +191,13 @@ export default function AdminDashboardPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/members/members`, {
-        method: "GET",
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${API_URL}/members/members?page=${currentPage}&size=${pageSize}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -190,7 +216,13 @@ export default function AdminDashboardPage() {
 
       if ((data.code === "200-OK" || data.code === "200-1") && data.data) {
         // API에서 받은 데이터로 멤버 목록 설정
-        const formattedMembers = data.data.map((member: any) => {
+        const paginatedData = data.data as PaginatedMembersResponse;
+
+        // 페이지네이션 정보 설정
+        setTotalPages(paginatedData.totalPages);
+        setTotalMembers(paginatedData.totalElements);
+
+        const formattedMembers = paginatedData.members.map((member: any) => {
           // 프로필 이미지 URL 유효성 검사
           let profileImage = member.profileImage;
           if (
@@ -210,8 +242,8 @@ export default function AdminDashboardPage() {
             profileImage: profileImage,
             role: member.role === "ADMIN" ? "ADMIN" : "MEMBER",
             introduce: member.introduce,
-            createdDate: member.createdDatetime || new Date().toISOString(),
-            modifiedDate: member.modifiedDatetime,
+            createdDatetime: member.createdDatetime || new Date().toISOString(),
+            modifiedDatetime: member.modifiedDatetime,
             apiKey: member.apiKey,
           };
         });
@@ -219,7 +251,10 @@ export default function AdminDashboardPage() {
         setMembers(formattedMembers);
 
         // 세션 스토리지에 멤버 데이터 저장
-        sessionStorage.setItem("adminMembersData", JSON.stringify(data.data));
+        sessionStorage.setItem(
+          "adminMembersData",
+          JSON.stringify(paginatedData.members)
+        );
       } else {
         throw new Error(data.msg || "멤버 데이터가 없습니다.");
       }
@@ -245,7 +280,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // 큐레이션 데이터 가져오기 함수
+  // Update the fetchCurations function
   const fetchCurations = async (params: CurationRequestParams) => {
     setIsLoading(true);
     setError(null);
@@ -254,11 +289,10 @@ export default function AdminDashboardPage() {
     console.log("조회 파라미터:", params);
 
     try {
-      // 세션 스토리지에 캐시된 큐레이션 데이터가 있는지 확인
-      const cachedCurations = sessionStorage.getItem("adminCurationsData");
-
       const queryParams = new URLSearchParams({
         order: sortOrder,
+        page: curationsCurrentPage.toString(),
+        size: curationsPageSize.toString(),
         ...(params.tags && params.tags.length > 0
           ? { tags: params.tags.join(",") }
           : {}),
@@ -290,10 +324,18 @@ export default function AdminDashboardPage() {
 
       if (data && data.data) {
         console.log("큐레이션 데이터 개수:", data.data.length);
-        setCurations(data.data);
 
-        // 세션 스토리지에 큐레이션 데이터 저장
-        /* sessionStorage.setItem("adminCurationsData", JSON.stringify(data.data))*/
+        // 페이지네이션 정보가 있는 경우 설정
+        if (data.data.curations) {
+          setCurations(data.data.curations);
+          setCurationsTotalPages(data.data.totalPages || 1);
+          setTotalCurations(
+            data.data.totalElements || data.data.curations.length
+          );
+        } else {
+          // 기존 구조 처리
+          setCurations(data.data);
+        }
       } else {
         console.error("큐레이션 데이터가 없습니다:", data);
         setCurations([]);
@@ -309,6 +351,21 @@ export default function AdminDashboardPage() {
     } finally {
       console.log("큐레이션 데이터 조회 완료:", new Date().toISOString());
       setIsLoading(false);
+    }
+  };
+
+  // Add a function to handle curations page changes
+  const handleCurationsPageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < curationsTotalPages) {
+      setCurationsCurrentPage(newPage);
+      fetchCurations({});
+    }
+  };
+
+  // Add a function to handle page changes
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
     }
   };
 
@@ -445,7 +502,7 @@ export default function AdminDashboardPage() {
 
   // 정렬 순서 변경 함수
   const handleSortOrderChange = (order: string) => {
-    setSortOrder(order);
+    setSortOrder(order as SortOrder);
     fetchCurations({});
   };
 
@@ -496,6 +553,13 @@ export default function AdminDashboardPage() {
       minute: "2-digit",
     });
   };
+
+  // Update the useEffect to include curationsCurrentPage as a dependency
+  useEffect(() => {
+    if (activeTab === "curations" && isAdmin) {
+      fetchCurations({});
+    }
+  }, [activeTab, curationsCurrentPage, isAdmin]);
 
   if (!isAdmin || isLoading) {
     return (
@@ -595,7 +659,9 @@ export default function AdminDashboardPage() {
                           {member.role === "ADMIN" ? "관리자" : "일반회원"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatDate(member.createdDate)}</TableCell>
+                      <TableCell>
+                        {formatDate(member.createdDatetime)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="destructive"
@@ -620,6 +686,81 @@ export default function AdminDashboardPage() {
               </TableBody>
             </Table>
           </div>
+          {filteredMembers.length > 0 && (
+            <div className="flex justify-between items-center mt-4 px-2">
+              <div className="text-sm text-gray-500">
+                총 {totalMembers}명의 멤버 중 {currentPage * pageSize + 1}-
+                {Math.min((currentPage + 1) * pageSize, totalMembers)}명 표시
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(0)}
+                  disabled={currentPage === 0}
+                >
+                  처음
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 0}
+                >
+                  이전
+                </Button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    // 현재 페이지 주변의 페이지 번호만 표시
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      // 전체 페이지가 5개 이하면 모든 페이지 표시
+                      pageNum = i;
+                    } else if (currentPage < 2) {
+                      // 현재 페이지가 처음 부분이면 0-4 표시
+                      pageNum = i;
+                    } else if (currentPage > totalPages - 3) {
+                      // 현재 페이지가 마지막 부분이면 마지막 5개 표시
+                      pageNum = totalPages - 5 + i;
+                    } else {
+                      // 그 외에는 현재 페이지 중심으로 표시
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={
+                          currentPage === pageNum ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum + 1}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages - 1}
+                >
+                  다음
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(totalPages - 1)}
+                  disabled={currentPage === totalPages - 1}
+                >
+                  마지막
+                </Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         {/* 큐레이션 관리 탭 */}
@@ -730,6 +871,100 @@ export default function AdminDashboardPage() {
               </TableBody>
             </Table>
           </div>
+          {filteredCurations.length > 0 && (
+            <div className="flex justify-between items-center mt-4 px-2">
+              <div className="text-sm text-gray-500">
+                총 {totalCurations}개의 큐레이션 중{" "}
+                {curationsCurrentPage * curationsPageSize + 1}-
+                {Math.min(
+                  (curationsCurrentPage + 1) * curationsPageSize,
+                  totalCurations
+                )}
+                개 표시
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleCurationsPageChange(0)}
+                  disabled={curationsCurrentPage === 0}
+                >
+                  처음
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    handleCurationsPageChange(curationsCurrentPage - 1)
+                  }
+                  disabled={curationsCurrentPage === 0}
+                >
+                  이전
+                </Button>
+                <div className="flex items-center space-x-1">
+                  {Array.from(
+                    { length: Math.min(5, curationsTotalPages) },
+                    (_, i) => {
+                      // 현재 페이지 주변의 페이지 번호만 표시
+                      let pageNum;
+                      if (curationsTotalPages <= 5) {
+                        // 전체 페이지가 5개 이하면 모든 페이지 표시
+                        pageNum = i;
+                      } else if (curationsCurrentPage < 2) {
+                        // 현재 페이지가 처음 부분이면 0-4 표시
+                        pageNum = i;
+                      } else if (
+                        curationsCurrentPage >
+                        curationsTotalPages - 3
+                      ) {
+                        // 현재 페이지가 마지막 부분이면 마지막 5개 표시
+                        pageNum = curationsTotalPages - 5 + i;
+                      } else {
+                        // 그 외에는 현재 페이지 중심으로 표시
+                        pageNum = curationsCurrentPage - 2 + i;
+                      }
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={
+                            curationsCurrentPage === pageNum
+                              ? "default"
+                              : "outline"
+                          }
+                          size="sm"
+                          onClick={() => handleCurationsPageChange(pageNum)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {pageNum + 1}
+                        </Button>
+                      );
+                    }
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    handleCurationsPageChange(curationsCurrentPage + 1)
+                  }
+                  disabled={curationsCurrentPage === curationsTotalPages - 1}
+                >
+                  다음
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    handleCurationsPageChange(curationsTotalPages - 1)
+                  }
+                  disabled={curationsCurrentPage === curationsTotalPages - 1}
+                >
+                  마지막
+                </Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
