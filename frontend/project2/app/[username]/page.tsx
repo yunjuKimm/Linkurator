@@ -81,7 +81,7 @@ export default function CuratorProfile({
   const fetchCuratorCurations = async (username: string) => {
     try {
       const response = await fetch(
-        `${API_URL}/api/v1/curation?author=${username}`
+        `${API_URL}/api/v1/curation/author/${username}`
       );
       if (!response.ok) {
         throw new Error("큐레이션 목록을 불러오는 데 실패했습니다.");

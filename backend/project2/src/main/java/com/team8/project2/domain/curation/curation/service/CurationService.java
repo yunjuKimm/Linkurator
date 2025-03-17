@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -478,5 +479,14 @@ public class CurationService {
 			return TrendingCurationResDto.of(curationRepository.findTop3ByOrderByViewCountDesc());
 		}
 		return TrendingCurationResDto.of(topCurations);
+	}
+
+	@Transactional(readOnly = true)
+	public List<CurationResDto> searchCurationByUserName(String username) {
+		Member author = memberRepository.findByUsername(username)
+			.orElseThrow(() -> new ServiceException("404-1", "작성자가 존재하지 않습니다."));
+		return curationRepository.findAllByMember(author).stream()
+			.map(CurationResDto::new)
+			.collect(Collectors.toUnmodifiableList());
 	}
 }
