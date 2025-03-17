@@ -363,7 +363,7 @@ export default function Header() {
                             if (userRole === "ADMIN") {
                               router.push("/admin"); // ✅ 인증된 사용자만 이동
                             } else if (userRole === "MEMBER") {
-                              router.push("/");
+                              router.push("/dashboard");
                             } else {
                               console.warn("접근 권한이 없습니다.");
                             }
