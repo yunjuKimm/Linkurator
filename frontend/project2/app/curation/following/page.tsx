@@ -38,7 +38,7 @@ interface ApiResponse {
 }
 
 // API URL 상수
-const API_URL = "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const PAGE_SIZE = 20;
 
 // 디바운스 함수 구현
@@ -64,86 +64,95 @@ export default function FollowingCurations() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const currentPageRef = useRef<number>(0); // 현재 페이지를 추적하기 위한 ref 추가
 
-  // API 요청 함수
-  const fetchFollowingCurations = async (pageNum = 0, isLoadMore = false) => {
-    // 이미 로딩 중이면 중복 요청 방지
-    if ((isLoadMore && loadingMore) || (!isLoadMore && loading)) {
-      console.log("이미 로딩 중입니다. 요청 무시됨.");
-      return;
-    }
-
-    // 페이지 번호가 현재 페이지와 같으면 중복 요청 방지 (무한 스크롤 시)
-    if (isLoadMore && pageNum <= currentPageRef.current) {
-      console.log(`이미 로드된 페이지(${pageNum})입니다. 요청 무시됨.`);
-      return;
-    }
-
-    try {
-      if (isLoadMore) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
+  // API 요청 함수를 useCallback으로 감싸기
+  const fetchFollowingCurations = useCallback(
+    async (pageNum = 0, isLoadMore = false, forceLoad = false) => {
+      // 이미 로딩 중이면 중복 요청 방지 (forceLoad가 true면 무시)
+      if (
+        !forceLoad &&
+        ((isLoadMore && loadingMore) || (!isLoadMore && loading))
+      ) {
+        console.log("이미 로딩 중입니다. 요청 무시됨.");
+        return;
       }
 
-      console.log(`Fetching following curations page ${pageNum}`);
-
-      const response = await fetch(
-        `${API_URL}/api/v1/curation/following?page=${pageNum}&size=${PAGE_SIZE}`,
-        {
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "팔로우 중인 큐레이터의 큐레이션을 불러오지 못했습니다."
-        );
+      // 페이지 번호가 현재 페이지와 같으면 중복 요청 방지 (무한 스크롤 시)
+      if (isLoadMore && pageNum <= currentPageRef.current) {
+        console.log(`이미 로드된 페이지(${pageNum})입니다. 요청 무시됨.`);
+        return;
       }
 
-      const data = (await response.json()) as ApiResponse;
-      if (data && data.data) {
-        // API 응답에서 큐레이션 배열 직접 추출
-        const newCurations = data.data;
-
-        console.log(
-          `Received ${newCurations.length} curations for page ${pageNum}`
-        );
-
-        // 더 불러올 데이터가 있는지 확인 (받은 데이터가 PAGE_SIZE보다 적으면 더 이상 없음)
-        setHasMore(newCurations.length === PAGE_SIZE);
-
+      try {
         if (isLoadMore) {
-          setCurations((prev) => [...prev, ...newCurations]);
-          // 현재 페이지 업데이트
-          currentPageRef.current = pageNum;
+          setLoadingMore(true);
         } else {
-          setCurations(newCurations);
-          // 페이지 초기화
-          currentPageRef.current = pageNum;
+          setLoading(true);
         }
-      } else {
-        console.error("No data found in the response");
-        if (!isLoadMore) {
-          setCurations([]);
-        }
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error("Error fetching following curations:", error);
-      setError((error as Error).message);
-    } finally {
-      if (isLoadMore) {
-        setLoadingMore(false);
-      } else {
-        // 스켈레톤 UI가 잠시 보이도록 약간의 지연 추가 (실제 환경에서는 제거 가능)
-        setTimeout(() => {
-          setLoading(false);
-        }, 500);
-      }
-    }
-  };
 
-  // 더 불러오기 함수
+        const url = `${API_URL}/api/v1/curation/following?page=${pageNum}&size=${PAGE_SIZE}`;
+        console.log(`API 요청: ${url}`);
+
+        const response = await fetch(url, {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        console.log(`API 응답 상태: ${response.status}`);
+
+        if (!response.ok) {
+          throw new Error(
+            `API 요청 실패: ${response.status} ${response.statusText}`
+          );
+        }
+
+        const data = await response.json();
+        console.log("API 응답 데이터:", data);
+
+        if (data && data.data) {
+          // API 응답에서 큐레이션 배열 직접 추출
+          const newCurations = data.data;
+
+          console.log(
+            `Received ${newCurations.length} curations for page ${pageNum}`
+          );
+
+          // 더 불러올 데이터가 있는지 확인 (받은 데이터가 PAGE_SIZE보다 적으면 더 이상 없음)
+          setHasMore(newCurations.length === PAGE_SIZE);
+
+          if (isLoadMore) {
+            setCurations((prev) => [...prev, ...newCurations]);
+            // 현재 페이지 업데이트
+            currentPageRef.current = pageNum;
+          } else {
+            setCurations(newCurations);
+            // 페이지 초기화
+            currentPageRef.current = pageNum;
+          }
+        } else {
+          console.error("응답에 데이터가 없습니다:", data);
+          if (!isLoadMore) {
+            setCurations([]);
+          }
+          setHasMore(false);
+        }
+      } catch (error) {
+        console.error("팔로잉 큐레이션 가져오기 오류:", error);
+        setError((error as Error).message);
+      } finally {
+        if (isLoadMore) {
+          setLoadingMore(false);
+        } else {
+          setLoading(false);
+        }
+      }
+    },
+    [loading, loadingMore]
+  );
+
+  // 더 불러오기 함수 수정
   const loadMore = useCallback(() => {
     if (loadingMore || !hasMore) return;
 
@@ -151,23 +160,27 @@ export default function FollowingCurations() {
     console.log(`Loading more: page ${nextPage}`);
     setPage(nextPage);
     fetchFollowingCurations(nextPage, true);
-  }, [page, loadingMore, hasMore]);
+  }, [page, loadingMore, hasMore, fetchFollowingCurations]);
 
   // 링크 클릭 처리 함수
   const handleLinkClick = async (url: string, linkId?: number) => {
     if (!linkId && !url) return;
 
     try {
-      // 링크 클릭 시 백엔드에 조회수 증가 요청
-      const response = await fetch(`${API_URL}/api/v1/link/${linkId}`, {
-        method: "GET",
-        credentials: "include",
-      });
+      if (linkId) {
+        console.log(`링크 클릭 요청: 링크 ID ${linkId}`);
+        // 링크 클릭 시 백엔드에 조회수 증가 요청
+        const response = await fetch(`${API_URL}/api/v1/link/click/${linkId}`, {
+          method: "GET",
+          credentials: "include",
+        });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log("Link click recorded:", result);
-        // 여기서 필요하다면 UI 업데이트 가능
+        console.log(`링크 클릭 응답 상태: ${response.status}`);
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log("링크 클릭 기록됨:", result);
+        }
       }
     } catch (error) {
       console.error("링크 클릭 처리 중 오류:", error);
@@ -180,12 +193,25 @@ export default function FollowingCurations() {
   // 좋아요 추가 API 호출 함수
   const likeCuration = async (id: number) => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
+      console.log(`좋아요 요청: 큐레이션 ID ${id}`);
+      const response = await fetch(`${API_URL}/api/v1/curation/like/${id}`, {
         method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
+
+      console.log(`좋아요 응답 상태: ${response.status}`);
+
       if (!response.ok) {
-        throw new Error("Failed to like the post");
+        throw new Error(
+          `좋아요 실패: ${response.status} ${response.statusText}`
+        );
       }
+
+      const result = await response.json();
+      console.log("좋아요 응답:", result);
 
       // 좋아요를 추가한 후, 좋아요 카운트만 업데이트
       setCurations((prev) =>
@@ -196,7 +222,7 @@ export default function FollowingCurations() {
         )
       );
     } catch (error) {
-      console.error("Error liking the post:", error);
+      console.error("좋아요 처리 중 오류:", error);
     }
   };
 
@@ -211,12 +237,15 @@ export default function FollowingCurations() {
     return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
   };
 
-  // 초기 데이터 로드
+  // 초기 데이터 로드 수정
   useEffect(() => {
+    console.log("컴포넌트 마운트: 초기 데이터 로드 시작");
     setPage(0);
     setHasMore(true);
     currentPageRef.current = 0; // 현재 페이지 초기화
-    fetchFollowingCurations(0);
+
+    // forceLoad를 true로 설정하여 로딩 상태와 관계없이 요청 실행
+    fetchFollowingCurations(0, false, true);
   }, []);
 
   // 디바운스된 스크롤 핸들러 생성
@@ -315,43 +344,46 @@ export default function FollowingCurations() {
                   </div>
 
                   {/* 메타 데이터 카드 */}
-                  {curation.urls.map((urlObj, index) => (
-                    <div
-                      key={`${urlObj.url}-${index}`}
-                      onClick={() => handleLinkClick(urlObj.url, urlObj.id)}
-                      className="mt-4 rounded-lg border p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center space-x-3">
-                        {urlObj.imageUrl ? (
-                          <img
-                            src={
-                              urlObj.imageUrl ||
-                              "/placeholder.svg?height=48&width=48"
-                            }
-                            alt="Preview"
-                            className="h-12 w-12 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <LinkIcon className="h-6 w-6 text-gray-400" />
-                          </div>
-                        )}
-                        <div>
-                          <h3 className="font-medium">
-                            {urlObj.title || "링크"}
-                          </h3>
-                          <p className="text-sm text-gray-600 line-clamp-1">
-                            {urlObj.description || urlObj.url}
-                          </p>
-                          {urlObj.click !== undefined && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              조회수: {urlObj.click}
-                            </p>
+                  {curation.urls.map((urlObj, index) => {
+                    const url = urlObj.url;
+                    return (
+                      <div
+                        key={`${urlObj.url}-${index}`}
+                        onClick={() => handleLinkClick(url, urlObj.id)}
+                        className="mt-4 rounded-lg border p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          {urlObj.imageUrl ? (
+                            <img
+                              src={
+                                urlObj.imageUrl ||
+                                "/placeholder.svg?height=48&width=48"
+                              }
+                              alt="Preview"
+                              className="h-12 w-12 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <LinkIcon className="h-6 w-6 text-gray-400" />
+                            </div>
                           )}
+                          <div>
+                            <h3 className="font-medium">
+                              {urlObj.title || "링크"}
+                            </h3>
+                            <p className="text-sm text-gray-600 line-clamp-1">
+                              {urlObj.description || urlObj.url}
+                            </p>
+                            {urlObj.click !== undefined && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                조회수: {urlObj.click}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
