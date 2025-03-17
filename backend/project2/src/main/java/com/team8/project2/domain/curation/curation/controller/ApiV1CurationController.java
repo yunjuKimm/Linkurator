@@ -133,6 +133,12 @@ public class ApiV1CurationController {
         return new RsData<>("200-1", "글이 검색되었습니다.", result);
     }
 
+    @GetMapping("/author/{username}")
+    public RsData<List<CurationResDto>> searchCurationByUserName(@PathVariable String username) {
+        List<CurationResDto> result = curationService.searchCurationByUserName(username);
+        return new RsData<>("200-1", "작성자로 큐레이션이 검색되었습니다.", result);
+    }
+
     /**
      * 특정 큐레이션에 좋아요를 추가합니다.
      * @param id 큐레이션 ID
