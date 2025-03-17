@@ -58,8 +58,9 @@ public class ApiV1AdminController {
 	// ✅ 일정 개수 이상 신고된 큐레이션 상세 조회
 	@GetMapping("/reported-curations-detail")
 	public RsData<List<ReportedCurationsDetailResDto>> getReportedCurationsDetail(
-		@RequestParam(defaultValue = "5") int minReports) {
-		List<Long> reportedcurations = adminService.getReportedCurations(minReports);
+		@RequestParam(defaultValue = "5") int minReports, @RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "20") int size) {
+		List<Long> reportedcurations = adminService.getReportedCurations(minReports, page, size);
 		reportedcurations.forEach(System.out::println);
 		return RsData.success("신고된 큐레이션 목록 조회 성공", reportService.getReportedCurationsDetailResDtos(reportedcurations));
 	}

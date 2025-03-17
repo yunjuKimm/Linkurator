@@ -53,6 +53,32 @@ public class BaseInitData {
 		members.add(createMember("team9@gmail.com", "team9", "othermember", "other", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test2", RoleEnum.MEMBER));
 		members.add(createMember("team10@gmail.com", "team10", "othermember2", "other2", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test3", RoleEnum.MEMBER));
 		members.add(createMember("admin@gmail.com", "admin", "admin", "admin", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "admin", RoleEnum.ADMIN));
+
+
+		members.add(createMember("team11@gmail.com", "team11", "member11", "username11", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test11", RoleEnum.MEMBER));
+		members.add(createMember("team12@gmail.com", "team12", "member12", "username12", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test12", RoleEnum.MEMBER));
+		members.add(createMember("team13@gmail.com", "team13", "member13", "username13", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test13", RoleEnum.MEMBER));
+		members.add(createMember("team14@gmail.com", "team14", "member14", "username14", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test14", RoleEnum.MEMBER));
+		members.add(createMember("team15@gmail.com", "team15", "member15", "username15", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test15", RoleEnum.MEMBER));
+		members.add(createMember("team16@gmail.com", "team16", "member16", "username16", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test16", RoleEnum.MEMBER));
+		members.add(createMember("team17@gmail.com", "team17", "member17", "username17", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test17", RoleEnum.MEMBER));
+		members.add(createMember("team18@gmail.com", "team18", "member18", "username18", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test18", RoleEnum.MEMBER));
+		members.add(createMember("team19@gmail.com", "team19", "member19", "username19", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test19", RoleEnum.MEMBER));
+		members.add(createMember("team20@gmail.com", "team20", "member20", "username20", "password", s3Uploader.getBaseUrl() + "default-profile.svg", "test20", RoleEnum.MEMBER));
+
+		for (int i = 21; i <= 50; i++) {
+			members.add(createMember(
+				"team" + i + "@gmail.com",
+				"team" + i,
+				"member" + i,
+				"username" + i,
+				"password",
+				s3Uploader.getBaseUrl() + "default-profile.svg",
+				"test" + i,
+				RoleEnum.MEMBER
+			));
+		}
+
 		return members;
 	}
 
