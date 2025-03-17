@@ -51,13 +51,14 @@ interface PlaylistItemsProps {
   playlistId: number;
   items: PlaylistItem[];
   isOwner?: boolean;
+  onItemsChanged?: () => void; // 아이템 변경 시 호출할 콜백 추가
 }
 
 // 중첩된 드래그 앤 드롭을 위한 인터페이스 정의
 interface DraggableItem {
   id: string; // 드래그 앤 드롭을 위한 고유 ID
   type: "group" | "single"; // 그룹인지 개별 링크인지 구분
-  groupKey?: string; // 그룹인 경�� 그룹 키
+  groupKey?: string; // 그룹인 경우 그룹 키
   item: PlaylistItem; // 실제 아이템 데이터
   displayOrder?: number; // 정렬을 위한 표시 순서 (추가)
 }
@@ -72,6 +73,7 @@ export default function PlaylistItems({
   playlistId,
   items: initialItems,
   isOwner = false,
+  onItemsChanged,
 }: PlaylistItemsProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -98,9 +100,15 @@ export default function PlaylistItems({
   // 새 링크가 추가되었을 때 호출되는 함수
   const handleLinkAdded = (newItem: PlaylistItem) => {
     setItems((prevItems) => [...prevItems, newItem]);
+
+    // 부모 컴포넌트에 변경 알림
+    if (onItemsChanged) {
+      onItemsChanged();
+    }
   };
 
-  const handleDelete = async (itemId: number) => {
+  // handleDelete 함수를 수정하여 그룹 삭제 시 UI에서 하위 링크들을 확실히 제거하도록 합니다
+  const handleDelete = async (itemId: number, isGroup = false) => {
     // 로그인 상태 확인
     if (sessionStorage.getItem("isLoggedIn") !== "true") {
       toast({
@@ -111,13 +119,76 @@ export default function PlaylistItems({
       return;
     }
 
-    if (window.confirm("이 링크를 플레이리스트에서 삭제하시겠습니까?")) {
+    // 큐레이션 그룹인 경우 다른 메시지 표시
+    const confirmMessage = isGroup
+      ? "이 큐레이션 그룹을 삭제하면 그룹 내 모든 링크도 함께 삭제됩니다. 계속하시겠습니까?"
+      : "이 링크를 플레이리스트에서 삭제하시겠습니까?";
+
+    if (window.confirm(confirmMessage)) {
       try {
-        await deletePlaylistItem(playlistId, itemId);
-        setItems(items.filter((item) => item.id !== itemId));
-        router.refresh();
+        // 삭제 전에 그룹 정보 저장 (UI 업데이트용)
+        let groupLinksToRemove: number[] = [];
+
+        if (isGroup) {
+          // 삭제할 그룹 헤더 찾기
+          const groupHeader = items.find((item) => item.id === itemId);
+          if (groupHeader && groupHeader.url) {
+            const curationId = groupHeader.url.split("/").pop() || "";
+            const groupKey = `curation-${curationId}`;
+
+            // 해당 그룹의 모든 링크 ID 수집
+            if (curationGroups[groupKey] && curationGroups[groupKey].links) {
+              groupLinksToRemove = curationGroups[groupKey].links.map(
+                (link) => link.id
+              );
+              console.log("삭제할 그룹 링크 IDs:", groupLinksToRemove);
+            }
+          }
+        }
+
+        // 백엔드 API 호출 - deleteChildren 파라미터 명시적으로 전달
+        await deletePlaylistItem(playlistId, itemId, true);
+
+        // 로컬 상태 업데이트
+        if (isGroup && groupLinksToRemove.length > 0) {
+          // 그룹 헤더와 모든 하위 링크 제거
+          const updatedItems = items.filter(
+            (item) =>
+              item.id !== itemId && !groupLinksToRemove.includes(item.id)
+          );
+          setItems(updatedItems);
+        } else {
+          // 단일 아이템 삭제 시 기존 로직
+          const updatedItems = items.filter((item) => item.id !== itemId);
+          setItems(updatedItems);
+        }
+
+        // 부모 컴포넌트에 변경 알림
+        if (onItemsChanged) {
+          onItemsChanged();
+        }
+
+        // 모든 아이템이 삭제된 경우 추가 처리
+        setTimeout(() => {
+          if (onItemsChanged) {
+            onItemsChanged(); // 약간의 지연 후 한 번 더 호출하여 UI 갱신 보장
+          }
+          router.refresh();
+        }, 300);
+
+        toast({
+          title: isGroup ? "큐레이션 그룹 삭제 완료" : "링크 삭제 완료",
+          description: isGroup
+            ? "큐레이션 그룹과 하위 링크들이 삭제되었습니다."
+            : "링크가 삭제되었습니다.",
+        });
       } catch (error) {
         console.error("Failed to delete link:", error);
+        toast({
+          title: "삭제 실패",
+          description: "아이템 삭제 중 오류가 발생했습니다.",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -690,7 +761,7 @@ export default function PlaylistItems({
                                         <DropdownMenuItem
                                           className="text-destructive focus:text-destructive"
                                           onClick={() =>
-                                            handleDelete(group.header.id)
+                                            handleDelete(group.header.id, true)
                                           }
                                         >
                                           <Trash2 className="mr-2 h-4 w-4" />

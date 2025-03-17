@@ -70,7 +70,7 @@ const QuillEditor = forwardRef<QuillEditorRef, QuillEditorProps>(
 
               // 이미지 파일 타입 확인
               if (!file.type.startsWith("image/")) {
-                toast.error("이미지 파일만 업로드 가능합니다.");
+                toast.error("이미지 파일만 업로드 ���능합니다.");
                 return;
               }
 

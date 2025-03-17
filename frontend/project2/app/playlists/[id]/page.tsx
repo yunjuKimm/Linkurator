@@ -1,9 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Bookmark, Edit, Eye, LinkIcon, Share2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Bookmark,
+  Edit,
+  Eye,
+  LinkIcon,
+  Share2,
+  RefreshCw,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -24,6 +32,8 @@ export default function PlaylistDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previousPath, setPreviousPath] = useState<string>("/playlists"); // 기본값 설정
+  const [refreshKey, setRefreshKey] = useState(0); // 강제 리렌더링을 위한 키
+  const [hasRetried, setHasRetried] = useState(false); // 재시도 여부 (한 번만 시도)
 
   // 이전 경로 확인 로직 개선
   useEffect(() => {
@@ -69,57 +79,82 @@ export default function PlaylistDetailPage() {
     }
   }, [params.id]);
 
-  // fetchData 함수 수정 - 좋아요 상태 확인 로직 개선
-  async function fetchData(incrementView = true) {
-    setIsLoading(true);
-    try {
-      // 현재 타임스탬프를 쿼리 파라미터로 추가하여 캐시 방지
-      const timestamp = new Date().getTime();
+  // fetchData 함수 수정 - 재시도 메커니즘 개선 (딱 한 번만 재시도)
+  const fetchData = useCallback(
+    async (incrementView = true) => {
+      setIsLoading(true);
+      setError(null); // 오류 상태 초기화
 
-      // 플레이리스트 데이터 가져오기 - 로그인 여부와 관계없이 조회 가능하도록 수정
-      const response = await fetch(
-        `http://localhost:8080/api/v1/playlists/${params.id}${
-          incrementView ? "" : "?noIncrement=true"
-        }&_t=${timestamp}`,
-        {
-          // 로그인한 경우에만 credentials 포함
-          ...(sessionStorage.getItem("isLoggedIn") === "true"
-            ? { credentials: "include" }
-            : {}),
-          cache: "no-store",
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-            Expires: "0",
-          },
+      try {
+        // 현재 타임스탬프를 쿼리 파라미터로 추가하여 캐시 방지
+        const timestamp = new Date().getTime();
+
+        // 플레이리스트 데이터 가져오기 - 로그인 여부와 관계없이 조회 가능하도록 수정
+        const response = await fetch(
+          `http://localhost:8080/api/v1/playlists/${params.id}${
+            incrementView ? "" : "?noIncrement=true"
+          }&_t=${timestamp}`,
+          {
+            // 로그인한 경우에만 credentials 포함
+            ...(sessionStorage.getItem("isLoggedIn") === "true"
+              ? { credentials: "include" }
+              : {}),
+            cache: "no-store",
+            headers: {
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+              Pragma: "no-cache",
+              Expires: "0",
+            },
+            // 타임아웃 설정 (10초)
+            signal: AbortSignal.timeout(10000),
+          }
+        );
+
+        // 응답 상태 코드 확인 및 처리 개선
+        if (!response.ok) {
+          // 404 오류인 경우 특별 처리
+          if (response.status === 404) {
+            throw new Error("플레이리스트를 찾을 수 없습니다.");
+          }
+          // 기타 오류 처리
+          const errorText = await response.text();
+          let errorMessage =
+            "플레이리스트 데이터를 불러오는 중 오류가 발생했습니다.";
+          try {
+            const errorData = JSON.parse(errorText);
+            if (errorData.message) {
+              errorMessage = errorData.message;
+            }
+          } catch (e) {
+            // JSON 파싱 실패 시 기본 메시지 사용
+            console.error("오류 응답 파싱 실패:", e);
+          }
+          throw new Error(errorMessage);
         }
-      );
 
-      if (!response.ok) {
-        throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");
-      }
+        const result = await response.json();
 
-      const result = await response.json();
+        // 결과가 없거나 데이터가 없는 경우 처리
+        if (!result || !result.data) {
+          throw new Error("플레이리스트 데이터가 없습니다.");
+        }
 
-      // 디버깅 로그 추가
-      console.log("플레이리스트 데이터:", result.data);
-      console.log("플레이리스트 소유자 여부:", result.data.owner);
+        // 디버깅 로그 추가
+        console.log("플레이리스트 데이터:", result.data);
+        console.log("플레이리스트 소유자 여부:", result.data.owner);
 
-      setPlaylist(result.data);
+        // 빈 items 배열 초기화 - 링크가 없는 경우를 위해
+        if (!result.data.items) {
+          result.data.items = [];
+        }
 
-      // 로그인 상태인 경우 좋아요 상태 확인 및 세션 스토리지에 저장
-      if (sessionStorage.getItem("isLoggedIn") === "true") {
-        try {
-          // 강제 새로고침 플래그 확인
-          const forceRefresh = sessionStorage.getItem(
-            `force_refresh_like_${params.id}`
-          );
+        setPlaylist(result.data);
+        // 재시도 플래그 초기화 (성공 시)
+        setHasRetried(false);
 
-          // 강제 새로고침이 필요하거나 좋아요 상태가 없는 경우에만 API 호출
-          if (
-            forceRefresh === "true" ||
-            !sessionStorage.getItem(`playlist_like_${params.id}`)
-          ) {
+        // 로그인 상태인 경우 좋아요 상태 확인 및 세션 스토리지에 저장
+        if (sessionStorage.getItem("isLoggedIn") === "true") {
+          try {
             const likeStatusResponse = await fetch(
               `http://localhost:8080/api/v1/playlists/${params.id}/like/status?_t=${timestamp}`,
               {
@@ -130,55 +165,86 @@ export default function PlaylistDetailPage() {
                   Pragma: "no-cache",
                   Expires: "0",
                 },
+                signal: AbortSignal.timeout(5000), // 좋아요 상태는 더 짧은 타임아웃
               }
             );
 
             if (likeStatusResponse.ok) {
               const likeStatusData = await likeStatusResponse.json();
+              const likeStatus = Boolean(likeStatusData.data);
+              console.log(`좋아요 상태 확인 결과: ${likeStatus}`);
               sessionStorage.setItem(
                 `playlist_like_${params.id}`,
-                likeStatusData.data.toString()
+                String(likeStatus)
               );
-
-              // 강제 새로고침 플래그 제거
-              if (forceRefresh === "true") {
-                sessionStorage.removeItem(`force_refresh_like_${params.id}`);
-              }
+            } else {
+              // API 응답이 실패한 경우 세션 스토리지에 false 저장
+              console.log("좋아요 상태 확인 API 실패: 기본값 false로 설정");
+              sessionStorage.setItem(`playlist_like_${params.id}`, "false");
             }
+          } catch (error) {
+            console.error("좋아요 상태 확인 오류:", error);
+            // 오류 발생 시 세션 스토리지에 false 저장
+            sessionStorage.setItem(`playlist_like_${params.id}`, "false");
           }
-        } catch (error) {
-          console.error("좋아요 상태 확인 오류:", error);
         }
-      }
 
-      // 추천 플레이리스트 가져오기
-      const recResponse = await fetch(
-        `http://localhost:8080/api/v1/playlists/${params.id}/recommendation?_t=${timestamp}`,
-        {
-          // 로그인한 경우에만 credentials 포함
-          ...(sessionStorage.getItem("isLoggedIn") === "true"
-            ? { credentials: "include" }
-            : {}),
-          cache: "no-store",
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-            Expires: "0",
-          },
+        // 추천 플레이리스트 가져오기 - 실패해도 주요 기능에 영향 없도록 try-catch로 분리
+        try {
+          const recResponse = await fetch(
+            `http://localhost:8080/api/v1/playlists/${params.id}/recommendation?_t=${timestamp}`,
+            {
+              // 로그인한 경우에만 credentials 포함
+              ...(sessionStorage.getItem("isLoggedIn") === "true"
+                ? { credentials: "include" }
+                : {}),
+              cache: "no-store",
+              headers: {
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                Pragma: "no-cache",
+                Expires: "0",
+              },
+              signal: AbortSignal.timeout(5000), // 추천은 더 짧은 타임아웃
+            }
+          );
+
+          if (recResponse.ok) {
+            const recResult = await recResponse.json();
+            setRecommendedPlaylists(recResult.data || []);
+          } else {
+            // 추천 API 실패 시 빈 배열 설정
+            setRecommendedPlaylists([]);
+          }
+        } catch (recError) {
+          console.error("추천 플레이리스트 로딩 오류:", recError);
+          setRecommendedPlaylists([]);
         }
-      );
+      } catch (err) {
+        console.error("데이터 로딩 오류:", err);
 
-      if (recResponse.ok) {
-        const recResult = await recResponse.json();
-        setRecommendedPlaylists(recResult.data || []);
+        // AbortError(타임아웃)인 경우 특별 메시지
+        if (err instanceof DOMException && err.name === "AbortError") {
+          setError("서버 응답 시간이 너무 오래 걸립니다. 다시 시도해주세요.");
+        } else {
+          setError((err as Error).message);
+        }
+
+        // 자동 재시도 (딱 한 번만)
+        if (!hasRetried) {
+          console.log("자동 재시도 중... (1회만 시도)");
+          setHasRetried(true);
+
+          // 0.5초 후 재시도
+          setTimeout(() => {
+            fetchData(incrementView);
+          }, 500);
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("데이터 로딩 오류:", err);
-      setError((err as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+    },
+    [params.id, hasRetried]
+  );
 
   // 소유자 확인 로직을 개선하는 함수 수정
   const isPlaylistOwner = () => {
@@ -189,6 +255,12 @@ export default function PlaylistDetailPage() {
 
     // API에서 제공하는 owner 필드 사용
     return playlist?.owner === true;
+  };
+
+  // 수동 새로고침 함수
+  const handleManualRefresh = () => {
+    setHasRetried(false); // 재시도 플래그 초기화
+    fetchData(false); // 조회수 증가 없이 데이터만 새로고침
   };
 
   // useEffect 수정 - 좋아요 상태 변경 이벤트 리스너 추가
@@ -213,10 +285,17 @@ export default function PlaylistDetailPage() {
       const handleLikeChanged = (event: CustomEvent) => {
         const { playlistId: changedPlaylistId } = event.detail;
 
+        console.log(
+          `좋아요 이벤트 수신 (페이지): playlistId=${changedPlaylistId}, 현재 페이지 ID=${params.id}`
+        );
+
         // 현재 페이지의 플레이리스트 ID와 일치하는 경우 데이터 새로고침
-        if (changedPlaylistId === Number(params.id)) {
+        if (Number(changedPlaylistId) === Number(params.id)) {
+          console.log("좋아요 상태 변경으로 인한 데이터 새로고침");
           // 조회수 증가 없이 데이터만 새로고침
           fetchData(false);
+          // 강제 리렌더링을 위한 키 업데이트
+          setRefreshKey((prev) => prev + 1);
         }
       };
 
@@ -232,7 +311,7 @@ export default function PlaylistDetailPage() {
         );
       };
     }
-  }, [params.id]);
+  }, [params.id, fetchData]);
 
   if (isLoading) {
     return (
@@ -247,17 +326,29 @@ export default function PlaylistDetailPage() {
       <div className="container py-6 max-w-6xl mx-auto">
         <div className="mb-4">
           <Link
-            href="/playlists"
+            href={previousPath}
             className="inline-flex items-center text-sm text-muted-foreground hover:underline"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            플레이리스트 목록으로 돌아가기
+            {previousPath.includes("explore")
+              ? "플레이리스트 탐색으로 돌아가기"
+              : "플레이리스트 목록으로 돌아가기"}
           </Link>
         </div>
 
         <div className="p-6 bg-red-50 text-red-600 rounded-lg border border-red-200">
           <h2 className="text-xl font-bold mb-2">오류가 발생했습니다</h2>
           <p>{error || "플레이리스트를 찾을 수 없습니다."}</p>
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleManualRefresh}
+            >
+              <RefreshCw className="h-4 w-4" />
+              다시 시도하기
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -305,8 +396,19 @@ export default function PlaylistDetailPage() {
 
               <div className="flex items-center gap-2 self-start">
                 <LikeButton
+                  key={`like-button-${refreshKey}`}
                   playlistId={playlist.id}
                   initialLikes={playlist.likeCount}
+                  onUnlike={() => {
+                    console.log("좋아요 취소 콜백 실행");
+                    // 좋아요 취소 시 세션 스토리지 업데이트
+                    sessionStorage.setItem(
+                      `playlist_like_${playlist.id}`,
+                      "false"
+                    );
+                    // 데이터 새로고침
+                    fetchData(false);
+                  }}
                 />
 
                 {/* 소유자 확인 로직 개선 - owner 필드 사용 */}
@@ -359,6 +461,10 @@ export default function PlaylistDetailPage() {
               playlistId={playlist.id}
               items={playlist.items}
               isOwner={isPlaylistOwner()}
+              onItemsChanged={() => {
+                console.log("아이템 변경 감지 - 데이터 새로고침");
+                fetchData(false);
+              }}
             />
           ) : (
             <div className="text-center py-12">
@@ -374,7 +480,8 @@ export default function PlaylistDetailPage() {
                   playlistId={playlist.id}
                   onLinkAdded={() => {
                     // 새 링크가 추가되면 플레이리스트 데이터를 다시 가져옵니다
-                    fetchData();
+                    console.log("링크 추가 감지 - 데이터 새로고침");
+                    fetchData(false);
                   }}
                 />
               )}
@@ -409,6 +516,7 @@ export default function PlaylistDetailPage() {
                             <span>{rec.items?.length || 0}</span>
                           </div>
                           <LikeButton
+                            key={`rec-like-${rec.id}-${refreshKey}`}
                             playlistId={rec.id}
                             initialLikes={rec.likeCount}
                             size="sm"

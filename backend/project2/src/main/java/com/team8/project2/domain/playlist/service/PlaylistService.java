@@ -299,15 +299,20 @@ public class PlaylistService {
     public PlaylistDto createPlaylist(PlaylistCreateDto request) {
         Member actor = rq.getActor();
 
+        return createPlaylist(request, actor);
+    }
+
+    public PlaylistDto createPlaylist(PlaylistCreateDto request, Member member) {
         Playlist playlist = Playlist.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .isPublic(request.getIsPublic())
-                .member(actor)
+                .member(member)
                 .build();
 
-        return PlaylistDto.fromEntity(playlistRepository.save(playlist), actor);
+        return PlaylistDto.fromEntity(playlistRepository.save(playlist), member);
     }
+
 
     /**
      * 특정 플레이리스트를 조회합니다.

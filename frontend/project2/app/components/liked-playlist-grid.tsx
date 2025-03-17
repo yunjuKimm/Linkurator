@@ -83,7 +83,7 @@ export default function LikedPlaylistGrid({
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         {[...Array(8)].map((_, i) => (
-          <Card key={i} className="h-[220px]">
+          <Card key={i} className="h-[180px]">
             <CardContent className="p-4">
               <Skeleton className="h-6 w-full mb-2" />
               <Skeleton className="h-4 w-1/2" />
@@ -118,10 +118,13 @@ export default function LikedPlaylistGrid({
       {likedPlaylists.map((playlist) => (
         <Card
           key={playlist.id}
-          className="relative hover:shadow-md transition-all duration-200 overflow-hidden group border-l-4 border-l-rose-500"
+          className="relative hover:shadow-md transition-all duration-200 overflow-hidden group border-l-4 border-l-rose-500 flex flex-col h-[180px]"
         >
-          <Link href={`/playlists/${playlist.id}`} className="block">
-            <CardContent className="p-4 pb-2">
+          <Link
+            href={`/playlists/${playlist.id}`}
+            className="block flex-1 flex flex-col"
+          >
+            <CardContent className="p-4 pb-2 flex-1 flex flex-col">
               <h3 className="font-bold text-lg truncate">{playlist.title}</h3>
 
               {playlist.description && (
@@ -130,7 +133,7 @@ export default function LikedPlaylistGrid({
                 </p>
               )}
 
-              <div className="flex items-center flex-wrap gap-2 mt-3 text-xs text-muted-foreground">
+              <div className="flex items-center flex-wrap gap-2 mt-auto text-xs text-muted-foreground">
                 <Badge
                   variant="secondary"
                   className="flex items-center gap-1 font-normal"
@@ -157,7 +160,7 @@ export default function LikedPlaylistGrid({
               </div>
             </CardContent>
 
-            <CardFooter className="px-4 py-2 bg-muted/10 border-t text-xs text-muted-foreground flex justify-between items-center">
+            <CardFooter className="px-4 py-2 bg-muted/10 border-t text-xs text-muted-foreground flex justify-between items-center mt-auto">
               <span className="text-xs opacity-70">
                 {playlist.createdAt
                   ? formatDate(playlist.createdAt)

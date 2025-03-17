@@ -1,10 +1,11 @@
 package com.team8.project2.domain.playlist.dto;
 
-import lombok.Data;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 
 /**
@@ -12,6 +13,9 @@ import jakarta.validation.constraints.NotNull;
  * 클라이언트가 전송하는 플레이리스트 데이터를 검증하고 전달합니다.
  */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PlaylistCreateDto {
 
     /**
@@ -39,4 +43,6 @@ public class PlaylistCreateDto {
     public Boolean getIsPublic() {
         return isPublic != null ? isPublic : true;
     }
+
 }
+

@@ -174,8 +174,10 @@ export default function NewPlaylistPage() {
       }
     }
 
-    // 큐레이션 추가가 없거나 실패한 경우 기본 경로로 이동
-    router.push(`/playlists/${playlistId}`);
+    // 새로고침 없이 바로 플레이리스트 상세 페이지로 이동하도록 수정
+    // 쿼리 파라미터를 추가하여 캐시 방지
+    const timestamp = new Date().getTime();
+    router.push(`/playlists/${playlistId}?_t=${timestamp}`);
   };
 
   return (
