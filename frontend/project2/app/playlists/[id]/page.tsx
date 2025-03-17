@@ -304,11 +304,6 @@ export default function PlaylistDetailPage() {
               </div>
 
               <div className="flex items-center gap-2 self-start">
-                <LikeButton
-                  playlistId={playlist.id}
-                  initialLikes={playlist.likeCount}
-                />
-
                 {/* 소유자 확인 로직 개선 - owner 필드 사용 */}
                 {isPlaylistOwner() && (
                   <>
