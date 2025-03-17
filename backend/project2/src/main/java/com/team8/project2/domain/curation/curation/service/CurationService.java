@@ -13,6 +13,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -320,11 +323,20 @@ public class CurationService {
 	 * @return 검색된 큐레이션 목록
 	 */
 	public List<Curation> searchCurations(List<String> tags, String title, String content, String author,
-		SearchOrder order) {
+		SearchOrder order, int page, int size) {
+		Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+		if (order.equals(SearchOrder.OLDEST)) {
+				sort = Sort.by(Sort.Direction.ASC, "createdAt");
+		}
+		if (order.equals(SearchOrder.LIKECOUNT)) {
+				sort = Sort.by(Sort.Direction.DESC, "likeCount");
+		}
+		Pageable pageable = PageRequest.of(page, size, sort);
+
 		List<Curation> curations;
 		if (tags == null || tags.isEmpty()) {
 			// 태그가 없을 경우 필터 없이 검색
-			curations = curationRepository.searchByFiltersWithoutTags(tags, title, content, author, order.name()).stream()
+			curations = curationRepository.searchByFiltersWithoutTags(tags, title, content, author, pageable).getContent().stream()
 				.map(curation -> {
 					String redisKey = "curation_like:" + curation.getId();
 					curation.setLikeCount(redisTemplate.opsForSet().size(redisKey));
@@ -332,7 +344,7 @@ public class CurationService {
 				}).collect(Collectors.toList());
 		} else {
 			// 태그가 있을 경우 태그 필터 적용
-			curations = curationRepository.searchByFilters(tags, tags.size(), title, content, author, order.name()).stream()
+			curations = curationRepository.searchByFilters(tags, tags.size(), title, content, author, pageable).getContent().stream()
 				.map(curation -> {
 					String redisKey = "curation_like:" + curation.getId();
 					curation.setLikeCount(redisTemplate.opsForSet().size(redisKey));

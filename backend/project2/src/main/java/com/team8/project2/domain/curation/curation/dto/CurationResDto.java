@@ -48,6 +48,8 @@ public class CurationResDto {
 
     private int commentCount;
 
+
+
     /**
      * 링크 정보를 포함하는 내부 DTO 클래스
      */
