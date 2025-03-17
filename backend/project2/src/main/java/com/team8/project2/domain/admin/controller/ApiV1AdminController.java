@@ -2,9 +2,7 @@ package com.team8.project2.domain.admin.controller;
 
 import com.team8.project2.domain.admin.dto.StatsResDto;
 import com.team8.project2.domain.admin.service.AdminService;
-import com.team8.project2.domain.comment.entity.Comment;
 import com.team8.project2.domain.comment.service.CommentService;
-import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.service.CurationService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.service.MemberService;
@@ -12,7 +10,6 @@ import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
 import com.team8.project2.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

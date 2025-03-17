@@ -39,7 +39,6 @@ public class ApiV1CurationController {
     private final CurationService curationService;
 
     private final Rq rq;
-    private final MemberService memberService;
     private final PlaylistService playlistService;
     private final TagService tagService;
 
