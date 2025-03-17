@@ -83,18 +83,6 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 </Link>
-
-                <Link href="/my-curations">
-                    <Card className="h-full cursor-pointer hover:shadow-md transition-shadow">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-lg font-medium">내 큐레이션</CardTitle>
-                            <User className="h-5 w-5 text-blue-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <CardDescription>내가 작성한 큐레이션을 확인하고 관리합니다.</CardDescription>
-                        </CardContent>
-                    </Card>
-                </Link>
             </div>
         </div>
     )
