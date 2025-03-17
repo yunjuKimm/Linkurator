@@ -3,6 +3,7 @@ package com.team8.project2.domain.comment.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.hibernate.annotations.Comments;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -118,9 +119,18 @@ public class CommentService {
 		return true;
 	}
 
+	@Transactional
+	public List<CommentDto> findAllByAuthorId(Long authorId) {
+		return commentRepository.findAllByAuthor_Id(authorId).stream()
+				.map(CommentDto::fromEntity) // 정적 메서드 활용
+				.collect(Collectors.toList());
+	}
+
+	@Transactional
 	public List<Comment> findAllByAuthor(Member author) {
 		return commentRepository.findAllByAuthor(author);
 	}
+
 
 	/**
 	 * 댓글에 대한 답글 작성
@@ -189,5 +199,6 @@ public class CommentService {
 			.orElseThrow(() -> new ServiceException("404-2", "해당 답글을 찾을 수 없습니다."));
 		replyCommentRepository.delete(replyComment);
 	}
+
 }
 

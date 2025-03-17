@@ -167,8 +167,8 @@ public class MemberService {
 	}
 
 	@Transactional
-	public Member updateMember(String memberId, MemberReqDTO updateDTO) {
-		return null;
+	public Member updateMember(Member member) {
+		return memberRepository.save(member);
 	}
 
 	@Transactional(readOnly = true)

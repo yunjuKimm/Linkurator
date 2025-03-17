@@ -1,6 +1,7 @@
 package com.team8.project2.domain.curation.report.repository;
 
 import com.team8.project2.domain.curation.curation.entity.Curation;
+import com.team8.project2.domain.member.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.team8.project2.domain.curation.report.entity.Report;
@@ -24,4 +25,6 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
 	List<Report> findByCurationIdIn(List<Long> reportedCurationIds);
 
 	void deleteByCurationId(Long curationId);
+
+	List<Report> findAllByReporter(Member reporter);
 }

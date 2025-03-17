@@ -11,9 +11,7 @@ import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
 import com.team8.project2.global.exception.ServiceException;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

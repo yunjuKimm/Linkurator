@@ -149,16 +149,16 @@ public class ApiV1MemberController {
 
         Member actor = rq.getActor();
 
-        RoleEnum role = actor.getRole();
-        String password = actor.getPassword();
-
-        MemberReqDTO updateDTO = updateReqDTO.toMemberReqDTO(password,role);
-
         if (actor == null || !actor.getMemberId().equals(memberId)) {
             throw new ServiceException("403-1", "권한이 없습니다.");
         }
 
-        Member updatedMember = memberService.updateMember(memberId, updateDTO);
+        Member existingMember = memberService.findByMemberId(memberId).get();
+        existingMember.setEmail(updateReqDTO.getEmail());
+        existingMember.setUsername(updateReqDTO.getUsername());
+        existingMember.setIntroduce(updateReqDTO.getIntroduce());
+
+        Member updatedMember = memberService.updateMember(existingMember);
         return new RsData<>("200-5", "회원 정보가 수정되었습니다.", MemberResDTO.fromEntity(updatedMember));
     }
 

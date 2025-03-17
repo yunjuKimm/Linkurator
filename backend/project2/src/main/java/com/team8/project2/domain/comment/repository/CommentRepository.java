@@ -21,6 +21,8 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
      */
     List<Comment> findByCurationId(Long curationId);
 
+    List<Comment> findAllByAuthor_Id(Long memberId);
+
     List<Comment> findAllByAuthor(Member author);
 
     void deleteByAuthor(Member member);

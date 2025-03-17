@@ -23,6 +23,7 @@ export default function Header() {
   const pathname = usePathname();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
+  const [memberId, setMemberId] = useState("");
   const [userImage, setUserImage] = useState(
     "/placeholder.svg?height=32&width=32"
   );
@@ -74,6 +75,7 @@ export default function Header() {
     if (savedLoginStatus === "true") {
       setIsLoggedIn(true);
       setUserName(sessionStorage.getItem("userName") || "사용자");
+      setMemberId(sessionStorage.getItem("memberId") || "");
       setUserImage(
         sessionStorage.getItem("userImage") ||
           "/placeholder.svg?height=32&width=32"
@@ -97,6 +99,7 @@ export default function Header() {
           const userRole = data.data.role || "MEMBER";
           setIsLoggedIn(true);
           setUserName(data.data.username || data.data.memberId || "사용자");
+          setMemberId(data.data.memberId || "사용자");
           setUserImage(
             data.data.profileImage || "/placeholder.svg?height=32&width=32"
           );
@@ -104,6 +107,7 @@ export default function Header() {
 
           sessionStorage.setItem("isLoggedIn", "true");
           sessionStorage.setItem("userName", data.data.username || "사용자");
+          sessionStorage.setItem("memberId", data.data.memberId || "사용자");
           sessionStorage.setItem(
             "userImage",
             data.data.profileImage || "/placeholder.svg?height=32&width=32"
@@ -135,6 +139,7 @@ export default function Header() {
 
     sessionStorage.removeItem("isLoggedIn");
     sessionStorage.removeItem("userName");
+    sessionStorage.removeItem("memberId");
     sessionStorage.removeItem("userImage");
     sessionStorage.removeItem("userId");
     sessionStorage.removeItem("userRole");
@@ -161,6 +166,7 @@ export default function Header() {
     if (savedLoginStatus === "true") {
       setIsLoggedIn(true);
       setUserName(sessionStorage.getItem("userName") || "사용자");
+      setMemberId(sessionStorage.getItem("memberId") || "");
       setUserImage(
         sessionStorage.getItem("userImage") ||
           "/placeholder.svg?height=32&width=32"
@@ -178,6 +184,7 @@ export default function Header() {
       if (savedLoginStatus === "true") {
         setIsLoggedIn(true);
         setUserName(sessionStorage.getItem("userName") || "사용자");
+        setMemberId(sessionStorage.getItem("memberId") || "");
         setUserImage(
           sessionStorage.getItem("userImage") ||
             "/placeholder.svg?height=32&width=32"
@@ -245,6 +252,7 @@ export default function Header() {
         setIsLoggedIn(false);
         setIsAdmin(false);
         setUserName("");
+        setMemberId("");
         setUserImage("/placeholder.svg?height=32&width=32");
         document.cookie =
           "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
@@ -528,7 +536,7 @@ export default function Header() {
                             if (userRole === "ADMIN") {
                               router.push("/admin"); // ✅ 인증된 사용자만 이동
                             } else if (userRole === "MEMBER") {
-                              router.push("/");
+                              router.push("/dashboard");
                             } else {
                               console.warn("접근 권한이 없습니다.");
                             }

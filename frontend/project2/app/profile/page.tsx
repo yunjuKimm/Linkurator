@@ -52,14 +52,14 @@ export default function ProfilePage() {
   useEffect(() => {
     // 이미 세션에 사용자 정보가 있는지 확인
     const savedLoginStatus = sessionStorage.getItem("isLoggedIn");
-    const savedUserName = sessionStorage.getItem("userName");
+    const savedMemberId = sessionStorage.getItem("memberId");
 
     // 이미 로그인 정보가 있으면 API 호출 스킵
-    if (savedLoginStatus === "true" && savedUserName) {
+    if (savedLoginStatus === "true" && savedMemberId) {
       setIsLoading(false);
       setProfile({
         id: Number(sessionStorage.getItem("userId") || "0"),
-        memberId: savedUserName,
+        memberId: savedMemberId,
         username: sessionStorage.getItem("userName") || "",
         email: sessionStorage.getItem("userEmail") || "",
         profileImage: sessionStorage.getItem("userImage") || "",
@@ -318,6 +318,7 @@ export default function ProfilePage() {
 
       // 세션 스토리지 초기화
       sessionStorage.removeItem("isLoggedIn");
+      sessionStorage.removeItem("memberId");
       sessionStorage.removeItem("userName");
       sessionStorage.removeItem("userImage");
       sessionStorage.removeItem("userId");
