@@ -12,6 +12,7 @@ import com.team8.project2.domain.playlist.repository.PlaylistRepository;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.exception.BadRequestException;
 import com.team8.project2.global.exception.NotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -19,6 +20,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
@@ -325,7 +328,7 @@ public class PlaylistService {
      * @param id 조회할 플레이리스트 ID
      * @return 조회된 플레이리스트 DTO
      */
-    public PlaylistDto getPlaylist(Long id) {
+    public PlaylistDto getPlaylist(Long id, HttpServletRequest request) {
         Playlist playlist = playlistRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
 
@@ -338,8 +341,18 @@ public class PlaylistService {
             playlist.setItems(new ArrayList<>());
         }
 
-        redisTemplate.opsForZSet().incrementScore(VIEW_COUNT_KEY, id.toString(), 1);
-        System.out.println("조회수 증가: Playlist ID " + id + " | 현재 조회수: " + redisTemplate.opsForZSet().score(VIEW_COUNT_KEY, id.toString()));
+        String ip = getClientIp(request);
+        String redisKey = "playlist_view_" + id + "_" + ip;
+
+        // 1일 동안 동일 IP 중복 조회 방지
+        Boolean isNewView = redisTemplate.opsForValue().setIfAbsent(redisKey, "true", Duration.ofDays(1));
+
+        if (Boolean.TRUE.equals(isNewView)) {
+            redisTemplate.opsForZSet().incrementScore(VIEW_COUNT_KEY, id.toString(), 1);
+            System.out.println("조회수 증가: Playlist ID " + id + " | 현재 조회수: " + redisTemplate.opsForZSet().score(VIEW_COUNT_KEY, id.toString()));
+        } else {
+            System.out.println("중복 조회 방지: Playlist ID " + id);
+        }
 
         Member actor = rq.isLogin() ? rq.getActor() : null;
 
@@ -380,6 +393,47 @@ public class PlaylistService {
             }
         }
     }
+
+    // getCuration의  IP 기반 조회수 증가 방지 로직 추가
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-RealIP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("REMOTE_ADDR");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+
+        if ("0:0:0:0:0:0:0:1".equals(ip) || "127.0.0.1".equals(ip)) {
+            try {
+                InetAddress address = InetAddress.getLocalHost();
+                ip = address.getHostName() + "/" + address.getHostAddress();
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        return ip;
+    }
+
 
 
     /**

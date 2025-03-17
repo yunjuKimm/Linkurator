@@ -70,12 +70,14 @@ export default function PlaylistDetailPage() {
   }, [params.id]);
 
   // 플레이리스트 데이터 가져오기 함수 수정
-  async function fetchData() {
+  async function fetchData(incrementView = true) {
     setIsLoading(true);
     try {
       // 플레이리스트 데이터 가져오기 - 로그인 여부와 관계없이 조회 가능하도록 수정
       const response = await fetch(
-        `http://localhost:8080/api/v1/playlists/${params.id}`,
+        `http://localhost:8080/api/v1/playlists/${params.id}${
+          incrementView ? "" : "?noIncrement=true"
+        }`,
         {
           // 로그인한 경우에만 credentials 포함
           ...(sessionStorage.getItem("isLoggedIn") === "true"
@@ -134,7 +136,17 @@ export default function PlaylistDetailPage() {
 
   useEffect(() => {
     if (params.id) {
-      fetchData();
+      // 페이지 첫 로드 시에만 조회수를 증가시킵니다
+      const hasVisited = sessionStorage.getItem(
+        `visited_playlist_${params.id}`
+      );
+
+      if (!hasVisited) {
+        sessionStorage.setItem(`visited_playlist_${params.id}`, "true");
+        fetchData(true);
+      } else {
+        fetchData(false);
+      }
     }
   }, [params.id]);
 

@@ -59,9 +59,10 @@ public class ApiV1PlaylistController {
      */
     @GetMapping("/{id}")
     public RsData<PlaylistDto> getPlaylist(@PathVariable Long id, HttpServletRequest request) {
-        PlaylistDto playlist = playlistService.getPlaylist(id);
+        PlaylistDto playlist = playlistService.getPlaylist(id, request);
         return RsData.success("플레이리스트 조회 성공", playlist);
     }
+
 
     /**
      * 사용자의 모든 플레이리스트를 조회합니다.
