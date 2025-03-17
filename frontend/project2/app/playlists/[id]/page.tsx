@@ -269,7 +269,7 @@ export default function PlaylistDetailPage() {
               <LinkIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">아직 링크가 없습니다</h3>
               <p className="text-muted-foreground mt-1 mb-4">
-                이 플레이리스트에 링크를 추가해보세요.
+                이 플레이리스트에 링크를 추��해보세요.
               </p>
 
               {/* 소유자인 경우에만 링크 추가 버튼 표시 */}

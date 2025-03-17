@@ -289,7 +289,7 @@ export default function CuratorProfile({
                 ) : (
                   <Link href="/auth/login">
                     <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                      로그인��고 팔로우
+                      로그인하고 팔로우
                     </button>
                   </Link>
                 )}

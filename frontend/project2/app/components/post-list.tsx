@@ -93,24 +93,39 @@ export default function PostList() {
     }
 
     try {
-      const queryParams = new URLSearchParams({
-        order: sortOrder,
-        page: params.page !== undefined ? params.page.toString() : "0",
-        size:
-          params.size !== undefined
-            ? params.size.toString()
-            : PAGE_SIZE.toString(),
-        ...(params.tags && params.tags.length > 0
-          ? { tags: params.tags.join(",") }
-          : {}),
-        ...(params.title ? { title: params.title } : {}),
-        ...(params.content ? { content: params.content } : {}),
-      }).toString();
+      // URLSearchParams 객체를 생성하고 필수 파라미터 추가
+      const queryParams = new URLSearchParams();
 
-      console.log(
-        `Fetching page ${params.page} with size ${params.size || PAGE_SIZE}`
+      // 필수 파라미터 추가
+      queryParams.append("order", params.order || sortOrder);
+      queryParams.append(
+        "page",
+        params.page !== undefined ? params.page.toString() : "0"
       );
-      const response = await fetch(`${API_URL}/api/v1/curation?${queryParams}`);
+      queryParams.append(
+        "size",
+        params.size !== undefined
+          ? params.size.toString()
+          : PAGE_SIZE.toString()
+      );
+
+      // 조건부 파라미터 추가
+      if (params.tags && params.tags.length > 0) {
+        queryParams.append("tags", params.tags.join(","));
+      }
+
+      if (params.title) {
+        queryParams.append("title", params.title);
+      }
+
+      if (params.content) {
+        queryParams.append("content", params.content);
+      }
+
+      const queryString = queryParams.toString();
+      console.log(`API 요청 URL: ${API_URL}/api/v1/curation?${queryString}`); // 디버깅을 위한 로그 추가
+
+      const response = await fetch(`${API_URL}/api/v1/curation?${queryString}`);
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
@@ -125,7 +140,11 @@ export default function PostList() {
         setTotalPages(paginatedData.totalPages);
 
         // 요청한 사이즈보다 적은 데이터가 왔거나 마지막 페이지인 경우
-        setHasMore(page < paginatedData.totalPages - 1);
+        setHasMore(
+          params.page !== undefined
+            ? params.page < paginatedData.totalPages - 1
+            : false
+        );
 
         if (isLoadMore) {
           // 기존 데이터에 새 데이터 추가
@@ -164,8 +183,6 @@ export default function PostList() {
     if (loadingMore || !hasMore) return;
 
     const nextPage = page + 1;
-    console.log(`Loading more: page ${nextPage}`);
-    setPage(nextPage);
 
     const params: CurationRequestParams = {
       tags: selectedTags,
@@ -176,6 +193,10 @@ export default function PostList() {
       size: PAGE_SIZE,
     };
 
+    console.log(`Loading more with params:`, JSON.stringify(params, null, 2)); // 디버깅을 위한 로그 추가
+    console.log(`Selected tags: ${selectedTags.join(", ")}`); // 태그 확인용 로그
+
+    setPage(nextPage);
     fetchCurations(params, true);
   };
 
@@ -372,7 +393,7 @@ export default function PostList() {
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
-  }, [loadingMore, hasMore, page]);
+  }, [loadingMore, hasMore, page, selectedTags, title, content, sortOrder]); // 의존성 배열에 검색 조건 추가
 
   return (
     <>
@@ -549,6 +570,7 @@ export default function PostList() {
                           src={
                             urlObj.imageUrl ||
                             "/placeholder.svg?height=48&width=48" ||
+                            "/placeholder.svg" ||
                             "/placeholder.svg" ||
                             "/placeholder.svg"
                           }
