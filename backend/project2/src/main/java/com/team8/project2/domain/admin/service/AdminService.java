@@ -17,6 +17,10 @@ import com.team8.project2.global.exception.NotFoundException;
 import com.team8.project2.global.exception.ServiceException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -88,7 +92,8 @@ public class AdminService {
         return new StatsResDto(totalCurationViews, totalCurationLikes, totalPlaylistViews, totalPlaylistLikes);
     }
 
-    public List<Member> getAllMembers(Member member) {
-        return memberRepository.findAll();
+    public List<Member> getAllMembers(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return memberRepository.findAll(pageable).getContent();
     }
 }

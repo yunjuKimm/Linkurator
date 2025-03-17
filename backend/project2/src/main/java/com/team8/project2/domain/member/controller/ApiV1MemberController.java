@@ -198,9 +198,17 @@ public class ApiV1MemberController {
     }
 
     @GetMapping("/members")
-    public RsData<List<MemberResDTO>> findAllMember() {
+    @PreAuthorize("isAuthenticated()")
+    public RsData<List<MemberResDTO>> findAllMember(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size)
+    {
         Member member = rq.getActor();
-        List<Member> members = adminService.getAllMembers(member);
+        if (!member.isAdmin()) {
+            return new RsData<>("403-1", "관리자 권한이 없습니다.");
+        }
+
+        List<Member> members = adminService.getAllMembers(page, size);
         List<MemberResDTO> memberReqDTOList = new ArrayList<>();
         for(Member m : members){
             memberReqDTOList.add(MemberResDTO.fromEntity(m));
