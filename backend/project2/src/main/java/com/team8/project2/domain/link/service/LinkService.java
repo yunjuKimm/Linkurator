@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.team8.project2.domain.link.dto.LinkClickResDto;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.repository.LinkRepository;
@@ -37,7 +38,7 @@ public class LinkService {
      * @return 클릭된 링크 객체
      */
     @Transactional
-    public Link getLinkAndIncrementClick(Long linkId, HttpServletRequest request) {
+    public LinkClickResDto getLinkAndIncrementClick(Long linkId, HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
 
         if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
@@ -94,7 +95,7 @@ public class LinkService {
             System.out.println("클릭수 증가 안 함 (이미 조회된 IP)");
         }
 
-        return link;
+        return LinkClickResDto.fromEntity(link);
     }
 
 

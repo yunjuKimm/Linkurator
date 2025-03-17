@@ -71,16 +71,20 @@ public class CurationDetailResDto {
 	 */
 	@Getter
 	static class LinkResDto {
+		private Long id;
 		private String url;
 		private String title;
 		private String description;
 		private String imageUrl;
+		private int click;
 
 		public LinkResDto(Link link) {
+			this.id = link.getId();
 			this.url = link.getUrl();
 			this.title = link.getTitle();
 			this.description = link.getDescription();
 			this.imageUrl = link.getMetaImageUrl();
+			this.click = link.getClick();
 		}
 	}
 

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.member.dto.AllMemberResDto;
 import com.team8.project2.domain.member.dto.CuratorInfoDto;
 import com.team8.project2.domain.member.dto.FollowResDto;
 import com.team8.project2.domain.member.dto.FollowingResDto;
@@ -198,14 +199,17 @@ public class ApiV1MemberController {
     }
 
     @GetMapping("/members")
-    public RsData<List<MemberResDTO>> findAllMember() {
+    @PreAuthorize("isAuthenticated()")
+    public RsData<AllMemberResDto> findAllMember(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size)
+    {
         Member member = rq.getActor();
-        List<Member> members = adminService.getAllMembers(member);
-        List<MemberResDTO> memberReqDTOList = new ArrayList<>();
-        for(Member m : members){
-            memberReqDTOList.add(MemberResDTO.fromEntity(m));
+        if (!member.isAdmin()) {
+            return new RsData<>("403-1", "관리자 권한이 없습니다.");
         }
-        return RsData.success("멤버 조회 성공",memberReqDTOList);
+        AllMemberResDto allMemberResDto = adminService.getAllMembers(page, size);
+        return RsData.success("멤버 조회 성공", allMemberResDto);
     }
 
     @DeleteMapping("/delete")
