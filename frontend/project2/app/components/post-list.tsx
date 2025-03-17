@@ -6,6 +6,7 @@ import { stripHtml } from "@/lib/htmlutils";
 import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
 import ReportModal from "./report-modal";
 import ShareButton from "@/app/components/share-button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // API URL을 하드코딩된 값에서 환경 변수로 변경합니다.
 // 파일 상단에 다음 상수를 추가합니다:
@@ -479,11 +480,26 @@ export default function PostList() {
             <>
               {curations.map((curation) => (
                 <div key={curation.id} className="space-y-4 border-b pb-6">
+                  {/* 작성자 정보 추가 */}
                   <div className="flex items-center space-x-2">
-                    <p className="text-xs text-gray-500">{`작성된 날짜 : ${formatDate(
-                      curation.createdAt
-                    )}`}</p>
-                    <p className="text-xs text-gray-500">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={curation.memberImgUrl}
+                        alt={curation.authorName}
+                      />
+                      <AvatarFallback>
+                        {curation.authorName.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {curation.authorName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatDate(curation.createdAt)}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500 ml-auto">
                       조회수 {curation.viewCount}
                     </p>
                   </div>

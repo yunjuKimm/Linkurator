@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Heart, MessageSquare, Bookmark, Share2, LinkIcon } from "lucide-react";
 import CurationSkeleton from "@/app/components/skeleton/curation-skeleton";
 import { stripHtml } from "@/lib/htmlutils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Curation 데이터 인터페이스 정의
 interface Curation {
@@ -226,10 +227,30 @@ export default function FollowingCurations() {
             <>
               {curations.map((curation) => (
                 <div key={curation.id} className="space-y-4 border-b pb-6">
+                  {/* 작성자 정보 추가 */}
                   <div className="flex items-center space-x-2">
-                    <p className="text-xs text-gray-500">{`작성된 날짜 : ${formatDate(
-                      curation.createdAt
-                    )}`}</p>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={curation.memberImgUrl}
+                        alt={curation.authorName}
+                      />
+                      <AvatarFallback>
+                        {curation.authorName.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {curation.authorName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatDate(curation.createdAt)}
+                      </p>
+                    </div>
+                    {curation.viewCount !== undefined && (
+                      <p className="text-xs text-gray-500 ml-auto">
+                        조회수 {curation.viewCount}
+                      </p>
+                    )}
                   </div>
 
                   <div>

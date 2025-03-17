@@ -142,7 +142,7 @@ export default function Header() {
   useEffect(() => {
     if (!isBrowser) return; // 서버 사이드에서는 실행하지 않음
 
-    console.log("헤더 컴포넌트 마운트 - 로그인 상태 확인 시작");
+    console.log("헤더 컴포넌트 마운�� - 로그인 상태 확인 시작");
     const savedLoginStatus = sessionStorage.getItem("isLoggedIn");
     if (savedLoginStatus === "true") {
       setIsLoggedIn(true);
