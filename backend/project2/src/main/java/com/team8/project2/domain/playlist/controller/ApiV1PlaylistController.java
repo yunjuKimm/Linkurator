@@ -4,10 +4,7 @@ import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
-import com.team8.project2.domain.playlist.dto.PlaylistCreateDto;
-import com.team8.project2.domain.playlist.dto.PlaylistDto;
-import com.team8.project2.domain.playlist.dto.PlaylistItemOrderUpdateDto;
-import com.team8.project2.domain.playlist.dto.PlaylistUpdateDto;
+import com.team8.project2.domain.playlist.dto.*;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.repository.PlaylistLikeRepository;
@@ -253,4 +250,14 @@ public class ApiV1PlaylistController {
         return RsData.success("좋아요한 플레이리스트 조회 성공", likedPlaylists);
     }
 
+    /** 플레이리스트 아이템 정보 수정 API */
+    @PatchMapping("/{id}/items/{itemId}")
+    public RsData<PlaylistDto> updatePlaylistItem(
+            @PathVariable("id") Long id,
+            @PathVariable("itemId") Long itemId,
+            @RequestBody PlaylistItemUpdateDto updateDto
+    ) {
+        PlaylistDto updatePlaylistItem = playlistService.updatePlaylistItem(id, itemId, updateDto);
+        return RsData.success("플레이리스트 링크가 수정되었습니다.", updatePlaylistItem);
+    }
 }

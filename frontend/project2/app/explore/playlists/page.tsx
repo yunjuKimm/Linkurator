@@ -76,6 +76,10 @@ export default function ExplorePlaylists() {
         const res = await fetch(
           "http://localhost:8080/api/v1/playlists/explore",
           {
+            // 로그인한 경우에만 credentials 포함
+            ...(sessionStorage.getItem("isLoggedIn") === "true"
+              ? { credentials: "include" }
+              : {}),
             cache: "no-store",
           }
         );
@@ -101,6 +105,16 @@ export default function ExplorePlaylists() {
   const clonePlaylist = async (playlistId: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // 로그인 상태 확인
+    if (sessionStorage.getItem("isLoggedIn") !== "true") {
+      toast.error("플레이리스트를 추가하려면 로그인이 필요합니다.");
+
+      // 현재 URL을 저장하고 로그인 페이지로 이동
+      sessionStorage.setItem("loginRedirectPath", window.location.pathname);
+      router.push("/auth/login");
+      return;
+    }
 
     if (!playlistId) return;
 

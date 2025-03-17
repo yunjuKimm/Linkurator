@@ -1,5 +1,7 @@
 package com.team8.project2.domain.playlist.service;
 
+import com.team8.project2.domain.link.entity.Link;
+import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.MemberRepository;
 import com.team8.project2.domain.playlist.dto.*;
@@ -40,6 +42,7 @@ public class PlaylistService {
     private static final String LIKE_COUNT_KEY = "playlist:like_count:"; // 좋아요 수 저장
     private static final String RECOMMEND_KEY = "playlist:recommend:"; // 추천 캐싱
     private final Rq rq;
+    private final LinkService linkService;
 
     /**
      * ✅ 플레이리스트 추천 로직
@@ -55,6 +58,7 @@ public class PlaylistService {
                         .map(Long::parseLong)
                         .collect(Collectors.toList());
                 System.out.println("Redis 캐시 HIT Playlist ID " + playlistId + " | 추천 리스트: " + cachedRecommendations);
+
                 return getPlaylistsByIds(cachedRecommendations);
             } catch (NumberFormatException e) {
                 // 캐시 데이터 오류 발생 시 캐시 삭제 후 재계산
@@ -160,6 +164,7 @@ public class PlaylistService {
      */
     private List<PlaylistDto> getSortedPlaylists(List<Long> playlistIds, String sortType) {
         List<Playlist> playlists = new ArrayList<>(playlistRepository.findAllById(playlistIds));
+        Member actor = rq.getActor();
 
         switch (sortType) {
             case "likes":
@@ -175,7 +180,9 @@ public class PlaylistService {
                 break;
         }
 
-        return playlists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
+        return playlists.stream()
+                .map(playlist -> PlaylistDto.fromEntity(playlist, actor))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -183,7 +190,11 @@ public class PlaylistService {
      */
     private List<PlaylistDto> getPlaylistsByIds(List<Long> playlistIds) {
         List<Playlist> playlists = playlistRepository.findAllById(playlistIds);
-        return playlists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
+        Member actor = rq.isLogin() ? rq.getActor() : null;
+
+        return playlists.stream()
+                .map(playlist -> PlaylistDto.fromEntity(playlist, actor))
+                .collect(Collectors.toList());
     }
 
 //    /**
@@ -296,16 +307,16 @@ public class PlaylistService {
         // 아래 validatePlaylistData 호출을 제거합니다.
         // validatePlaylistData(request.getTitle(), request.getDescription()); // 삭제됨
 
-        Member currentMember = rq.getActor();
+        Member actor = rq.getActor();
 
         Playlist playlist = Playlist.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .isPublic(request.getIsPublic())
-                .member(currentMember)
+                .member(actor)
                 .build();
 
-        return PlaylistDto.fromEntity(playlistRepository.save(playlist));
+        return PlaylistDto.fromEntity(playlistRepository.save(playlist), actor);
     }
 
     /**
@@ -330,7 +341,9 @@ public class PlaylistService {
         redisTemplate.opsForZSet().incrementScore(VIEW_COUNT_KEY, id.toString(), 1);
         System.out.println("조회수 증가: Playlist ID " + id + " | 현재 조회수: " + redisTemplate.opsForZSet().score(VIEW_COUNT_KEY, id.toString()));
 
-        return PlaylistDto.fromEntity(playlist);
+        Member actor = rq.isLogin() ? rq.getActor() : null;
+
+        return PlaylistDto.fromEntity(playlist, actor);
     }
 
     /**
@@ -376,11 +389,11 @@ public class PlaylistService {
      * 예외 대신 빈 리스트 반환
      */
     public List<PlaylistDto> getAllPlaylists() {
-        Member currentMember = rq.getActor();
-        List<Playlist> playlists = playlistRepository.findByMember(currentMember);
+        Member actor = rq.getActor();
+        List<Playlist> playlists = playlistRepository.findByMember(actor);
 
         return playlists.stream()
-                .map(PlaylistDto::fromEntity)
+                .map(playlist -> PlaylistDto.fromEntity(playlist, actor))
                 .collect(Collectors.toList());
     }
 
@@ -390,8 +403,10 @@ public class PlaylistService {
     public List<PlaylistDto> getAllPublicPlaylists() {
         List<Playlist> playlists = playlistRepository.findAllByIsPublicTrue();
 
+        Member actor = rq.isLogin() ? rq.getActor() : null;
+
         return playlists.stream()
-                .map(PlaylistDto::fromEntity)
+                .map(playlist -> PlaylistDto.fromEntity(playlist, actor))
                 .collect(Collectors.toList());
     }
 
@@ -402,13 +417,13 @@ public class PlaylistService {
         Playlist publicPlaylist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
 
-        Member currentMember = rq.getActor();
+        Member actor = rq.getActor();
 
         Playlist copiedPlaylist = new Playlist();
         copiedPlaylist.setTitle(publicPlaylist.getTitle());
         copiedPlaylist.setDescription(publicPlaylist.getDescription());
         copiedPlaylist.setPublic(false);
-        copiedPlaylist.setMember(currentMember);
+        copiedPlaylist.setMember(actor);
 
         Playlist savedPlaylist = playlistRepository.save(copiedPlaylist);
 
@@ -421,7 +436,7 @@ public class PlaylistService {
             savedPlaylist.getItems().add(copiedItem);
         }
 
-        return PlaylistDto.fromEntity(playlistRepository.save(savedPlaylist));
+        return PlaylistDto.fromEntity(savedPlaylist, actor);
     }
 
     /**
@@ -435,12 +450,13 @@ public class PlaylistService {
         Playlist playlist = playlistRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
 
-        // 부분 업데이트 적용
+        Member actor = rq.getActor();
+
         if (request.getTitle() != null) playlist.setTitle(request.getTitle());
         if (request.getDescription() != null) playlist.setDescription(request.getDescription());
         if (request.getIsPublic() != null) playlist.setPublic(request.getIsPublic());
 
-        return PlaylistDto.fromEntity(playlistRepository.save(playlist));
+        return PlaylistDto.fromEntity(playlistRepository.save(playlist), actor);
     }
 
     /**
@@ -449,9 +465,14 @@ public class PlaylistService {
      * @param id 삭제할 플레이리스트 ID
      */
     public void deletePlaylist(Long id) {
-        if (!playlistRepository.existsById(id)) {
-            throw new NotFoundException("해당 플레이리스트를 찾을 수 없습니다.");
+        Playlist playlist = playlistRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        Member actor = rq.getActor();
+        if (!playlist.getMember().getId().equals(actor.getId())) {
+            throw new BadRequestException("자신이 소유한 플레이리스트만 삭제할 수 있습니다.");
         }
+
         if (playlistLikeRepository.existsById_PlaylistId(id)) {
             playlistLikeRepository.deleteById_PlaylistId(id);
         }
@@ -467,6 +488,11 @@ public class PlaylistService {
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
 
         int newDisplayOrder = playlist.getItems().size();
+        Member actor = rq.getActor();
+
+        if (!playlist.getMember().getId().equals(actor.getId())) {
+            throw new BadRequestException("자신의 플레이리스트에만 아이템을 추가할 수 있습니다.");
+        }
 
         PlaylistItem newItem = PlaylistItem.builder()
                 .itemId(itemId)
@@ -478,7 +504,7 @@ public class PlaylistService {
         playlist.getItems().add(newItem);
         playlistRepository.save(playlist);
 
-        return PlaylistDto.fromEntity(playlist);
+        return PlaylistDto.fromEntity(playlist, actor);
     }
 
     /**
@@ -492,6 +518,11 @@ public class PlaylistService {
         boolean removed = playlist.getItems().removeIf(item -> item.getId().equals(itemId));
         if (!removed) {
             throw new NotFoundException("해당 플레이리스트 아이템을 찾을 수 없습니다.");
+        }
+
+        Member actor = rq.getActor();
+        if (!playlist.getMember().getId().equals(actor.getId())) {
+            throw new BadRequestException("자신이 소유한 플레이리스트 아이템만 삭제할 수 있습니다.");
         }
 
         playlistRepository.save(playlist);
@@ -550,9 +581,10 @@ public class PlaylistService {
             }
             mainIndex++;
         }
+        Member actor = rq.getActor();
 
         playlistRepository.save(playlist);
-        return PlaylistDto.fromEntity(playlist);
+        return PlaylistDto.fromEntity(playlist, actor);
     }
 
     /**
@@ -561,12 +593,15 @@ public class PlaylistService {
     @Transactional(readOnly = true)
     public List<PlaylistDto> getLikedPlaylists(Long memberId) {
         List<PlaylistLike> likedEntities = playlistLikeRepository.findByIdMemberId(memberId);
+        Member actor = rq.getActor();
 
         List<Playlist> likedPlaylists = likedEntities.stream()
                 .map(PlaylistLike::getPlaylist)
                 .collect(Collectors.toList());
 
-        return likedPlaylists.stream().map(PlaylistDto::fromEntity).collect(Collectors.toList());
+        return likedPlaylists.stream()
+                .map(playlist -> PlaylistDto.fromEntity(playlist, actor))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -574,9 +609,43 @@ public class PlaylistService {
      */
     public List<PlaylistDto> getPlaylistsByMemberAndCuration(Member member, Long curationId) {
         List<Playlist> playlists = playlistRepository.findByMemberAndCuration(member, curationId);
+        Member actor = rq.getActor();
+
         return playlists.stream()
-                .map(PlaylistDto::fromEntity)
+                .map(playlist -> PlaylistDto.fromEntity(playlist, actor))
                 .collect(Collectors.toList());
+    }
+
+
+    /**
+     * 특정 플레이리스트의 아이템을 수정
+     * LinkService를 통해 제목, URL, 설명 업데이트
+     */
+    @Transactional
+    public PlaylistDto updatePlaylistItem(Long playlistId, Long playlistItemId, PlaylistItemUpdateDto updateDto) {
+        Playlist playlist = playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+
+        Member actor = rq.getActor();
+
+        PlaylistItem itemToUpdate = playlist.getItems().stream()
+                .filter(item -> item.getId().equals(playlistItemId))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("해당 플레이리스트 아이템을 찾을 수 없습니다."));
+
+        if (itemToUpdate.getItemType() == PlaylistItem.PlaylistItemType.LINK) {
+            Link updatedLink = linkService.updateLinkDetails(
+                    itemToUpdate.getLink().getId(),
+                    updateDto.getTitle(),
+                    updateDto.getUrl(),
+                    updateDto.getDescription()
+            );
+            itemToUpdate.setLink(updatedLink);
+        } else {
+            throw new BadRequestException("현재 아이템은 수정할 수 없습니다.");
+        }
+
+        return PlaylistDto.fromEntity(playlist, actor);
     }
 
 }
