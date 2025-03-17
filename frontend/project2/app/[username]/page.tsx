@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { ClipLoader } from "react-spinners";
 import { stripHtml } from "@/lib/htmlutils";
-// Add the import for the stripHtml function
 
 // Curator 데이터 인터페이스 정의
 interface Curator {
@@ -45,6 +44,7 @@ interface Curation {
 
 // API_URL 변수를 직접 설정하여 환경 변수 문제 해결
 const API_URL = "http://localhost:8080";
+const PAGE_SIZE = 20;
 
 export default function CuratorProfile({
   params,
@@ -54,7 +54,12 @@ export default function CuratorProfile({
   const [curator, setCurator] = useState<Curator | null>(null);
   const [curations, setCurations] = useState<Curation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState<number>(0);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // 큐레이터 정보 가져오기
   const fetchCuratorInfo = async (username: string) => {
@@ -78,27 +83,64 @@ export default function CuratorProfile({
   };
 
   // 큐레이터의 큐레이션 목록 가져오기
-  const fetchCuratorCurations = async (username: string) => {
+  const fetchCuratorCurations = async (
+    username: string,
+    pageNum: number,
+    isLoadMore = false
+  ) => {
     try {
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      console.log(`Fetching curations for page ${pageNum}`);
       const response = await fetch(
-        `${API_URL}/api/v1/curation/author/${username}`
+        `${API_URL}/api/v1/curation/author/${username}?page=${pageNum}&size=${PAGE_SIZE}`
       );
       if (!response.ok) {
         throw new Error("큐레이션 목록을 불러오는 데 실패했습니다.");
       }
+
       const data = await response.json();
       if (data && data.data) {
-        setCurations(data.data);
+        console.log(`Received ${data.data.length} curations`);
+        if (isLoadMore) {
+          setCurations((prev) => [...prev, ...data.data]);
+        } else {
+          setCurations(data.data);
+        }
+
+        // 받아온 데이터가 PAGE_SIZE보다 적으면 더 이상 데이터가 없는 것으로 판단
+        setHasMore(data.data.length === PAGE_SIZE);
       } else {
         console.error("No curation data found in the response");
-        setCurations([]);
+        if (!isLoadMore) {
+          setCurations([]);
+        }
+        setHasMore(false);
       }
     } catch (error) {
       console.error("Error fetching curator curations:", error);
       setError((error as Error).message);
     } finally {
-      setLoading(false);
+      if (isLoadMore) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
+  };
+
+  // 더 많은 큐레이션 로드
+  const loadMore = () => {
+    if (loadingMore || !hasMore) return;
+
+    const nextPage = page + 1;
+    console.log(`Loading more curations, page ${nextPage}`);
+    setPage(nextPage);
+    fetchCuratorCurations(params.username, nextPage, true);
   };
 
   // Add follow/unfollow functions
@@ -142,10 +184,38 @@ export default function CuratorProfile({
     }
   };
 
+  // 스크롤 이벤트 처리
+  useEffect(() => {
+    const handleScroll = () => {
+      if (loadingMore || !hasMore || !loadMoreRef.current) return;
+
+      // 현재 스크롤 위치
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      // 화면에 보이는 높이
+      const windowHeight = window.innerHeight;
+      // 문서 전체 높이
+      const documentHeight = document.documentElement.scrollHeight;
+
+      // 스크롤이 하단에 도달했는지 확인 (하단에서 100px 위에 도달했을 때 로드)
+      if (scrollTop + windowHeight >= documentHeight - 100) {
+        console.log("Bottom reached, loading more...");
+        loadMore();
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [loadingMore, hasMore, page]);
+
   // 컴포넌트 마운트 시 API 호출
   useEffect(() => {
+    console.log("Component mounted, fetching initial data");
     fetchCuratorInfo(params.username);
-    fetchCuratorCurations(params.username);
+    fetchCuratorCurations(params.username, 0);
+
+    // 페이지 초기화
+    setPage(0);
+    setHasMore(true);
   }, [params.username]);
 
   // 날짜 형식화 함수
@@ -172,7 +242,7 @@ export default function CuratorProfile({
         </Link>
       </div>
 
-      {loading ? (
+      {loading && curations.length === 0 ? (
         <div className="flex justify-center items-center py-10">
           <ClipLoader size={50} color="#3498db" />
         </div>
@@ -259,7 +329,6 @@ export default function CuratorProfile({
                         {curation.title}
                       </h2>
                     </Link>
-                    {/* Replace the content rendering in the curations.map section with: */}
                     <p className="mt-2 text-gray-600">
                       {curation.content ? stripHtml(curation.content, 100) : ""}
                     </p>
@@ -344,6 +413,23 @@ export default function CuratorProfile({
                   </div>
                 </div>
               ))}
+
+              {/* 로딩 더 보기 영역 */}
+              <div ref={loadMoreRef} className="py-4 text-center">
+                {loadingMore ? (
+                  <div className="flex justify-center items-center py-4">
+                    <ClipLoader size={30} color="#3498db" />
+                  </div>
+                ) : hasMore ? (
+                  <p className="text-sm text-gray-500">
+                    스크롤하여 더 많은 큐레이션 보기
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    더 이상 큐레이션이 없습니다
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </>
