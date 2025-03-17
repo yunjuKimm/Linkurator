@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Share2, LinkIcon } from "lucide-react";
+import { Heart, MessageSquare, Bookmark, Share2, LinkIcon } from "lucide-react";
 import CurationSkeleton from "@/app/components/skeleton/curation-skeleton";
 import { stripHtml } from "@/lib/htmlutils";
 
@@ -260,7 +260,6 @@ export default function FollowingCurations() {
                     </Link>
                   ))}
 
-<<<<<<< HEAD
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <button
@@ -283,26 +282,6 @@ export default function FollowingCurations() {
                         <Share2 className="h-4 w-4 text-gray-500" />
                       </button>
                     </div>
-=======
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <button
-                      className="flex items-center space-x-1 text-sm text-gray-500"
-                      onClick={() => likeCuration(curation.id)}
-                    >
-                      <Heart className="h-4 w-4" />
-                      <span>{curation.likeCount}</span>
-                    </button>
-                    <button className="flex items-center space-x-1 text-sm text-gray-500">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>12</span>
-                    </button>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button>
-                      <Share2 className="h-4 w-4 text-gray-500" />
-                    </button>
->>>>>>> main
                   </div>
                 </div>
               ))}

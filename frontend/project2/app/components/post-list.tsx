@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Flag, LinkIcon, Bookmark } from "lucide-react";
+import { Heart, MessageSquare, Bookmark, Flag } from "lucide-react";
 import { stripHtml } from "@/lib/htmlutils";
 import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
 import ReportModal from "./report-modal";
@@ -107,7 +107,7 @@ export default function PostList() {
         const newCurations = data.data;
         console.log(`Received ${newCurations.length} items`);
 
-        // 요청한 사이즈보다 적은 데이터가 왔다면 더 이상 데이터가 없는 것
+        // 요청한 사이즈보다 적은 데이터가 왔다면 ��� 이상 데이터가 없는 것
         setHasMore(newCurations.length === (params.size || PAGE_SIZE));
 
         if (isLoadMore) {
@@ -374,7 +374,7 @@ export default function PostList() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="mt-1 p-2 w-full border rounded-md"
-                placeholder="제목 입���"
+                placeholder="제목 입력"
               />
             </div>
             <div className="mb-4">
