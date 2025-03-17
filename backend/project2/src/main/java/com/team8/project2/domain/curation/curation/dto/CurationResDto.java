@@ -56,12 +56,14 @@ public class CurationResDto {
     @Getter
     @Setter
     static class LinkResDto {
+        private Long id;
         private String url;
         private String title;
         private String description;
         private String imageUrl;
 
         public LinkResDto(Link link) {
+            this.id = link.getId();
             this.url = link.getUrl();
             this.title = link.getTitle();
             this.description = link.getDescription();

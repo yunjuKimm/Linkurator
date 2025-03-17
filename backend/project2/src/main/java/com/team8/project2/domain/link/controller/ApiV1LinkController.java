@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.team8.project2.domain.link.dto.LinkClickResDto;
 import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.link.entity.Link;
-import com.team8.project2.domain.link.service.LinkClickService;
 import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.global.dto.RsData;
 
