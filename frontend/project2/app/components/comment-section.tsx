@@ -4,7 +4,7 @@ import type React from "react";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Heart, Edit, Trash2, X, Check } from "lucide-react";
+import { Edit, Trash2, X, Check } from "lucide-react";
 import CommentSkeleton from "./skeleton/comment-skeleton";
 
 // 댓글 데이터 타입 정의를 API 응답 구조에 맞게 수정
@@ -653,17 +653,6 @@ export default function CommentSection({ postId }: { postId: string }) {
               )}
 
               <div className="mt-3 flex items-center space-x-4">
-                <button
-                  onClick={() => handleLikeComment(index.toString())}
-                  className="flex items-center space-x-1 text-xs text-gray-500 hover:text-gray-700"
-                >
-                  <Heart
-                    className={`h-4 w-4 ${
-                      comment.isLiked ? "fill-red-500 text-red-500" : ""
-                    }`}
-                  />
-                  <span>{comment.isLiked ? 1 : 0}</span>
-                </button>
                 <button
                   className="text-xs text-gray-500 hover:text-gray-700"
                   onClick={() => {
