@@ -1,145 +1,120 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Bookmark, Share2, LinkIcon } from "lucide-react";
-import CurationSkeleton from "@/app/components/skeleton/curation-skeleton";
-import { stripHtml } from "@/lib/htmlutils";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
-// Curation 데이터 인터페이스 정의
-interface Curation {
-  id: number;
-  title: string;
-  content: string;
-  createdAt: string;
-  modifiedAt: string;
-  likeCount: number;
-  commentCount: number;
-  urls: {
-    url: string;
-    title: string;
-    description: string;
-    imageUrl: string;
-  }[];
-  tags: { name: string }[];
+// 팔로잉 사용자 인터페이스
+interface FollowingUser {
+  followee: string;
+  profileImage: string;
+  followedAt: string;
+  isFollowing: boolean;
 }
 
-// API URL 상수
-const API_URL = "http://localhost:8080";
-const PAGE_SIZE = 20;
-
-export default function FollowingCurations() {
-  const [curations, setCurations] = useState<Curation[]>([]);
+export default function FollowingPage() {
+  const [followingUsers, setFollowingUsers] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState<number>(0);
-  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const router = useRouter();
 
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-
-  // API 요청 함수
-  const fetchFollowingCurations = async (pageNum = 0, isLoadMore = false) => {
+  // 팔로잉 목록 가져오기
+  const fetchFollowingUsers = async () => {
     try {
-      if (isLoadMore) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-      }
-
-      console.log(`Fetching following curations page ${pageNum}`);
-
+      setLoading(true);
       const response = await fetch(
-        `${API_URL}/api/v1/curation/following?page=${pageNum}&size=${PAGE_SIZE}`,
+        "http://localhost:8080/api/v1/members/following",
         {
           credentials: "include",
         }
       );
 
       if (!response.ok) {
-        throw new Error(
-          "팔로우 중인 큐레이터의 큐레이션을 불러오지 못했습니다."
-        );
+        if (response.status === 401) {
+          setIsLoggedIn(false);
+          return;
+        }
+        throw new Error("팔로우 중인 사용자 목록을 불러오지 못했습니다.");
       }
 
       const data = await response.json();
-      if (data && data.data) {
-        console.log(`Received ${data.data.length} curations`);
-
-        if (isLoadMore) {
-          setCurations((prev) => [...prev, ...data.data]);
-        } else {
-          setCurations(data.data);
-        }
-
-        // 받아온 데이터가 PAGE_SIZE보다 적으면 더 이상 데이터가 없는 것
-        setHasMore(data.data.length === PAGE_SIZE);
+      if (data && data.data && data.data.following) {
+        setFollowingUsers(
+          data.data.following.map((user: any) => ({
+            ...user,
+            isFollowing: true,
+          }))
+        );
+        setIsLoggedIn(true);
       } else {
-        console.error("No data found in the response");
-        if (!isLoadMore) {
-          setCurations([]);
-        }
-        setHasMore(false);
+        setFollowingUsers([]);
       }
     } catch (error) {
-      console.error("Error fetching following curations:", error);
+      console.error("Error fetching following users:", error);
       setError((error as Error).message);
     } finally {
-      if (isLoadMore) {
-        setLoadingMore(false);
-      } else {
-        // 스켈레톤 UI가 잠시 보이도록 약간의 지연 추가 (실제 환경에서는 제거 가능)
-        setTimeout(() => {
-          setLoading(false);
-        }, 500);
-      }
+      setLoading(false);
     }
   };
 
-  // 더 불러오기 함수
-  const loadMore = useCallback(() => {
-    if (!loadingMore && hasMore) {
-      const nextPage = page + 1;
-      console.log(`Loading more: page ${nextPage}`);
-      setPage(nextPage);
-      fetchFollowingCurations(nextPage, true);
-    }
-  }, [page, loadingMore, hasMore]);
-
-  // 스크롤 이벤트 핸들러
-  const handleScroll = useCallback(() => {
-    if (loadingMore || !hasMore) return;
-
-    const scrollPosition = window.innerHeight + window.scrollY;
-    const documentHeight = document.documentElement.scrollHeight;
-    const buffer = 100; // 하단에서 100px 위에 도달하면 로드
-
-    if (scrollPosition >= documentHeight - buffer) {
-      console.log("Reached bottom of page, loading more...");
-      loadMore();
-    }
-  }, [loadMore, loadingMore, hasMore]);
-
-  // 좋아요 추가 API 호출 함수
-  const likeCuration = async (id: number) => {
+  // 언팔로우 함수
+  const handleUnfollow = async (username: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
-        method: "POST",
-      });
+      const response = await fetch(
+        `http://localhost:8080/api/v1/members/${username}/unfollow`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+
       if (!response.ok) {
-        throw new Error("Failed to like the post");
+        throw new Error("언팔로우에 실패했습니다.");
       }
 
-      // 좋아요를 추가한 후, 좋아요 카운트만 업데이트
-      setCurations((prev) =>
-        prev.map((curation) =>
-          curation.id === id
-            ? { ...curation, likeCount: curation.likeCount + 1 }
-            : curation
+      // 성공적으로 언팔로우한 경우, 해당 사용자의 상태만 변경
+      setFollowingUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.followee === username
+            ? { ...user, isFollowing: false, followedAt: "" }
+            : user
         )
       );
     } catch (error) {
-      console.error("Error liking the post:", error);
+      console.error("Error unfollowing user:", error);
+    }
+  };
+
+  // 팔로우 함수
+  const handleFollow = async (username: string) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/v1/members/${username}/follow`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("팔로우에 실패했습니다.");
+      }
+
+      // 현재 날짜를 ISO 문자열로 생성
+      const currentDate = new Date().toISOString();
+
+      // 해당 사용자의 상태만 변경
+      setFollowingUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.followee === username
+            ? { ...user, isFollowing: true, followedAt: currentDate }
+            : user
+        )
+      );
+    } catch (error) {
+      console.error("Error following user:", error);
     }
   };
 
@@ -149,156 +124,130 @@ export default function FollowingCurations() {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
+    return `${year}년 ${month}월 ${day}일`;
   };
 
-  // 초기 데이터 로드
+  // 컴포넌트 마운트 시 팔로잉 목록 가져오기
   useEffect(() => {
-    setPage(0);
-    setHasMore(true);
-    fetchFollowingCurations(0);
+    fetchFollowingUsers();
   }, []);
 
-  // 스크롤 이벤트 리스너 등록
+  // 로그인 상태 확인
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
+    const checkLoginStatus = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:8080/api/v1/members/me",
+          {
+            credentials: "include",
+          }
+        );
+
+        if (response.ok) {
+          setIsLoggedIn(true);
+        } else {
+          setIsLoggedIn(false);
+          router.push("/auth/login");
+        }
+      } catch (error) {
+        console.error("Error checking login status:", error);
+        setIsLoggedIn(false);
+        router.push("/auth/login");
+      }
     };
-  }, [handleScroll]);
+
+    checkLoginStatus();
+  }, [router]);
+
+  if (!isLoggedIn) {
+    return null; // 로그인하지 않은 경우 아무것도 표시하지 않음 (리다이렉트 처리됨)
+  }
 
   return (
-    <>
-      {/* 로딩 상태 표시 - 스켈레톤 UI로 대체 */}
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="mb-6 text-2xl font-bold">팔로잉</h1>
+
       {loading ? (
-        <div className="space-y-6 pt-4">
+        <div className="space-y-4">
           {[...Array(3)].map((_, index) => (
-            <CurationSkeleton key={index} />
+            <div
+              key={index}
+              className="flex animate-pulse items-center rounded-lg border p-4"
+            >
+              <div className="h-12 w-12 rounded-full bg-gray-200"></div>
+              <div className="ml-4 flex-1">
+                <div className="h-4 w-24 rounded bg-gray-200"></div>
+                <div className="mt-2 h-3 w-32 rounded bg-gray-200"></div>
+              </div>
+              <div className="h-8 w-20 rounded bg-gray-200"></div>
+            </div>
           ))}
         </div>
+      ) : error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-600">
+          <p>{error}</p>
+        </div>
+      ) : followingUsers.length === 0 ? (
+        <div className="rounded-lg border p-8 text-center">
+          <p className="text-gray-500">아직 팔로우한 큐레이터가 없습니다.</p>
+          <Link
+            href="/home"
+            className="mt-4 inline-block text-blue-500 hover:underline"
+          >
+            큐레이터 찾아보기
+          </Link>
+        </div>
       ) : (
-        /* 게시글 목록 */
-        <div className="space-y-6 pt-4">
-          {curations.length === 0 ? (
-            <p>팔로우 중인 큐레이터의 글이 없습니다.</p>
-          ) : (
-            <>
-              {curations.map((curation) => (
-                <div key={curation.id} className="space-y-4 border-b pb-6">
-                  <div className="flex items-center space-x-2">
-                    <p className="text-xs text-gray-500">{`작성된 날짜 : ${formatDate(
-                      curation.createdAt
-                    )}`}</p>
-                  </div>
-
-                  <div>
-                    <Link href={`/curation/${curation.id}`} className="group">
-                      <h2 className="text-xl font-bold group-hover:text-blue-600">
-                        {curation.title}
-                      </h2>
-                    </Link>
-                    <p className="mt-2 text-gray-600">
-                      {curation.content ? stripHtml(curation.content, 100) : ""}
-                    </p>
-                    <button className="mt-2 text-sm font-medium text-blue-600">
-                      더보기
-                    </button>
-                  </div>
-
-                  {/* 태그 표시 */}
-                  <div className="flex flex-wrap space-x-2 mt-2">
-                    {curation.tags.map((tag, index) => (
-                      <span
-                        key={`${tag.name}-${index}`}
-                        className="px-3 py-1 text-sm font-medium rounded-full bg-gray-200 text-gray-600 mb-2"
-                      >
-                        {tag.name}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* 메타 데이터 카드 */}
-                  {curation.urls.map((urlObj, index) => (
-                    <Link
-                      key={`${urlObj.url}-${index}`}
-                      href={urlObj.url}
-                      passHref
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <div className="mt-4 rounded-lg border p-4 cursor-pointer hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center space-x-3">
-                          {urlObj.imageUrl ? (
-                            <img
-                              src={urlObj.imageUrl || "/placeholder.svg"}
-                              alt="Preview"
-                              className="h-12 w-12 rounded-lg object-cover"
-                            />
-                          ) : (
-                            <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <LinkIcon className="h-6 w-6 text-gray-400" />
-                            </div>
-                          )}
-                          <div>
-                            <h3 className="font-medium">
-                              {urlObj.title || "링크"}
-                            </h3>
-                            <p className="text-sm text-gray-600 line-clamp-1">
-                              {urlObj.description || urlObj.url}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <button
-                        className="flex items-center space-x-1 text-sm text-gray-500"
-                        onClick={() => likeCuration(curation.id)}
-                      >
-                        <Heart className="h-4 w-4" />
-                        <span>{curation.likeCount}</span>
-                      </button>
-                      <button className="flex items-center space-x-1 text-sm text-gray-500">
-                        <MessageSquare className="h-4 w-4" />
-                        <span>{curation.commentCount || 0}</span>
-                      </button>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button>
-                        <Bookmark className="h-4 w-4 text-gray-500" />
-                      </button>
-                      <button>
-                        <Share2 className="h-4 w-4 text-gray-500" />
-                      </button>
-                    </div>
-                  </div>
+        <div className="space-y-4">
+          {followingUsers.map((user) => (
+            <div
+              key={user.followee}
+              className="flex items-center rounded-lg border p-4"
+            >
+              <Link href={`/${user.followee}`} className="flex items-center">
+                <div className="h-12 w-12 overflow-hidden rounded-full">
+                  <Image
+                    src={
+                      user.profileImage || "/placeholder.svg?height=48&width=48"
+                    }
+                    alt={`${user.followee}의 프로필 이미지`}
+                    width={48}
+                    height={48}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
-              ))}
-
-              {/* 더 불러오기 로딩 표시 */}
-              <div ref={loadMoreRef} className="py-4 text-center">
-                {loadingMore ? (
-                  <div className="flex justify-center items-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-                    <span className="ml-2">불러오는 중...</span>
-                  </div>
-                ) : hasMore ? (
-                  <p className="text-sm text-gray-500">
-                    스크롤하여 더 불러오기
-                  </p>
+                <div className="ml-4">
+                  <h3 className="font-medium text-blue-600 hover:underline">
+                    {user.followee}
+                  </h3>
+                  {user.isFollowing && user.followedAt && (
+                    <p className="text-sm text-gray-500">
+                      {formatDate(user.followedAt)}부터 팔로우 중
+                    </p>
+                  )}
+                </div>
+              </Link>
+              <div className="ml-auto">
+                {user.isFollowing ? (
+                  <button
+                    onClick={() => handleUnfollow(user.followee)}
+                    className="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300"
+                  >
+                    팔로우중
+                  </button>
                 ) : (
-                  <p className="text-sm text-gray-500">더 이상 글이 없습니다</p>
+                  <button
+                    onClick={() => handleFollow(user.followee)}
+                    className="rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"
+                  >
+                    팔로우
+                  </button>
                 )}
               </div>
-            </>
-          )}
+            </div>
+          ))}
         </div>
       )}
-    </>
+    </div>
   );
 }
