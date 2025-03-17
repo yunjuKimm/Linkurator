@@ -70,7 +70,7 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 	 */
 	@Query("SELECT c FROM Curation c WHERE " +
 			"(SELECT COUNT(r) FROM Report r WHERE r.curation.id = c.id) >= :minReports")
-	List<Curation> findReportedCurations(int minReports);
+	List<Curation> findReportedCurations(int minReports, Pageable pageable);
 
 	/**
 	 * 전체 큐레이션의 조회수를 합산하는 메서드입니다.

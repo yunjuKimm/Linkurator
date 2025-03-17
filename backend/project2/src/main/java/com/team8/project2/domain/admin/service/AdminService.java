@@ -78,8 +78,9 @@ public class AdminService {
      * @param minReports 최소 신고 개수
      * @return 신고된 큐레이션 ID 목록
      */
-    public List<Long> getReportedCurations(int minReports) {
-        List<Curation> reportedCurations = curationRepository.findReportedCurations(minReports);
+    public List<Long> getReportedCurations(int minReports, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt"));
+        List<Curation> reportedCurations = curationRepository.findReportedCurations(minReports, pageable);
 
         // 신고된 큐레이션의 ID 리스트를 반환
         return reportedCurations.stream()
