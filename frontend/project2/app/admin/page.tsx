@@ -63,30 +63,6 @@ export default function AdminPage() {
                     </Card>
                 </Link>
 
-                <Link href="/admin/members">
-                    <Card className="h-full cursor-pointer hover:shadow-md transition-shadow">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-lg font-medium">멤버 관리</CardTitle>
-                            <Users className="h-5 w-5 text-blue-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <CardDescription>사이트 멤버를 관리하고 권한을 설정합니다.</CardDescription>
-                        </CardContent>
-                    </Card>
-                </Link>
-
-                <Link href="/admin/curations">
-                    <Card className="h-full cursor-pointer hover:shadow-md transition-shadow">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-lg font-medium">큐레이션 관리</CardTitle>
-                            <FileText className="h-5 w-5 text-blue-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <CardDescription>큐레이션 콘텐츠를 관리하고 모니터링합니다.</CardDescription>
-                        </CardContent>
-                    </Card>
-                </Link>
-
                 <Link href="/admin/reported-curations">
                     <Card className="h-full cursor-pointer hover:shadow-md transition-shadow">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
