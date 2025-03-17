@@ -6,16 +6,22 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Trash2, ExternalLink, AlertCircle } from "lucide-react"
+import { ArrowLeft, Trash2, ExternalLink, AlertCircle, RefreshCw } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
+// API URL
+const API_URL = "http://localhost:8080/api/v1"
 
 // 댓글 타입 정의
 interface Comment {
     id: number
+    authorName: string
+    authorProfileImageUrl: string
     content: string
-    curationId: number
-    curationTitle: string
     createdAt: string
+    modifiedAt: string
+    curationId?: number // 큐레이션 ID는 API에서 제공되지 않을 수 있음
 }
 
 export default function UserCommentsPage() {
@@ -24,6 +30,48 @@ export default function UserCommentsPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [comments, setComments] = useState<Comment[]>([])
     const [error, setError] = useState<string | null>(null)
+    const [isDeleting, setIsDeleting] = useState(false)
+
+    // 댓글 데이터 가져오기
+    const fetchComments = async () => {
+        setIsLoading(true)
+        setError(null)
+
+        try {
+            console.log("내 댓글 데이터 조회 시작:", new Date().toISOString())
+
+            const response = await fetch(`${API_URL}/comments/mycomments`, {
+                method: "GET",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+
+            console.log("API 응답 상태:", response.status)
+
+            if (!response.ok) {
+                throw new Error(`댓글 데이터 로드 실패: ${response.status} ${response.statusText}`)
+            }
+
+            const data = await response.json()
+            console.log("API 응답 데이터:", data)
+
+            if (data && data.code === "200-1" && data.data) {
+                console.log("댓글 데이터 개수:", data.data.length)
+                setComments(data.data)
+            } else {
+                console.error("댓글 데이터가 없습니다:", data)
+                setComments([])
+            }
+        } catch (err) {
+            console.error("댓글 데이터 로드 오류:", err)
+            setError((err as Error).message || "댓글 목록을 불러오는데 실패했습니다.")
+        } finally {
+            console.log("댓글 데이터 조회 완료:", new Date().toISOString())
+            setIsLoading(false)
+        }
+    }
 
     useEffect(() => {
         // 로그인 확인
@@ -40,40 +88,7 @@ export default function UserCommentsPage() {
                 return
             }
 
-            try {
-                // 댓글 데이터 가져오기 (실제 API 연동 시 수정 필요)
-                // 현재는 예시 데이터를 사용합니다
-                const mockComments: Comment[] = [
-                    {
-                        id: 1,
-                        content: "정말 유익한 글이네요!",
-                        curationId: 101,
-                        curationTitle: "최신 개발 트렌드",
-                        createdAt: new Date().toISOString(),
-                    },
-                    {
-                        id: 2,
-                        content: "이 부분에 대해 더 자세히 알고 싶어요.",
-                        curationId: 102,
-                        curationTitle: "웹 디자인 팁",
-                        createdAt: new Date(Date.now() - 86400000).toISOString(),
-                    },
-                    {
-                        id: 3,
-                        content: "좋은 정보 감사합니다.",
-                        curationId: 103,
-                        curationTitle: "프로그래밍 언어 비교",
-                        createdAt: new Date(Date.now() - 172800000).toISOString(),
-                    },
-                ]
-
-                setComments(mockComments)
-            } catch (err) {
-                console.error("댓글 데이터 로드 오류:", err)
-                setError("댓글 목록을 불러오는데 실패했습니다.")
-            } finally {
-                setIsLoading(false)
-            }
+            await fetchComments()
         }
 
         checkAuthAndFetchData()
@@ -86,16 +101,20 @@ export default function UserCommentsPage() {
             return
         }
 
-        try {
-            // 실제 API 연동 시 수정 필요
-            // const response = await fetch(`http://localhost:8080/api/v1/comments/${id}`, {
-            //   method: "DELETE",
-            //   credentials: "include",
-            // })
+        setIsDeleting(true)
 
-            // if (!response.ok) {
-            //   throw new Error("댓글 삭제에 실패했습니다.")
-            // }
+        try {
+            const response = await fetch(`${API_URL}/comments/${id}`, {
+                method: "DELETE",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+
+            if (!response.ok) {
+                throw new Error("댓글 삭제에 실패했습니다.")
+            }
 
             // 삭제 성공 시 목록에서 제거
             setComments(comments.filter((comment) => comment.id !== id))
@@ -111,6 +130,8 @@ export default function UserCommentsPage() {
                 description: "댓글을 삭제하는데 실패했습니다.",
                 variant: "destructive",
             })
+        } finally {
+            setIsDeleting(false)
         }
     }
 
@@ -123,6 +144,15 @@ export default function UserCommentsPage() {
             day: "2-digit",
             hour: "2-digit",
             minute: "2-digit",
+        })
+    }
+
+    // 새로고침 함수
+    const handleRefresh = () => {
+        fetchComments()
+        toast({
+            title: "새로고침",
+            description: "댓글 목록을 새로고침했습니다.",
         })
     }
 
@@ -141,7 +171,13 @@ export default function UserCommentsPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     대시보드로 돌아가기
                 </Link>
-                <h1 className="text-3xl font-bold mb-2">내 댓글 관리</h1>
+                <div className="flex justify-between items-center">
+                    <h1 className="text-3xl font-bold mb-2">내 댓글 관리</h1>
+                    <Button onClick={handleRefresh} variant="outline" size="sm" className="flex items-center gap-1">
+                        <RefreshCw className="h-4 w-4" />
+                        새로고침
+                    </Button>
+                </div>
                 <p className="text-gray-500">내가 작성한 댓글을 확인하고 관리할 수 있습니다.</p>
             </div>
 
@@ -161,26 +197,45 @@ export default function UserCommentsPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>작성자</TableHead>
                                     <TableHead>내용</TableHead>
-                                    <TableHead>큐레이션</TableHead>
                                     <TableHead>작성일</TableHead>
+                                    <TableHead>수정일</TableHead>
                                     <TableHead className="text-right">작업</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {comments.map((comment) => (
                                     <TableRow key={comment.id}>
-                                        <TableCell className="font-medium max-w-md truncate">{comment.content}</TableCell>
-                                        <TableCell>{comment.curationTitle}</TableCell>
+                                        <TableCell>{comment.id}</TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <Avatar className="h-6 w-6">
+                                                    <AvatarImage src={comment.authorProfileImageUrl} alt={comment.authorName} />
+                                                    <AvatarFallback>{comment.authorName.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <span>{comment.authorName}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="max-w-md truncate">{comment.content}</TableCell>
                                         <TableCell>{formatDate(comment.createdAt)}</TableCell>
+                                        <TableCell>{formatDate(comment.modifiedAt)}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end space-x-2">
-                                                <Link href={`/curation/${comment.curationId}`} target="_blank">
-                                                    <Button variant="outline" size="sm">
-                                                        <ExternalLink className="h-4 w-4" />
-                                                    </Button>
-                                                </Link>
-                                                <Button variant="destructive" size="sm" onClick={() => handleDeleteComment(comment.id)}>
+                                                {comment.curationId && (
+                                                    <Link href={`/curation/${comment.curationId}`} target="_blank">
+                                                        <Button variant="outline" size="sm">
+                                                            <ExternalLink className="h-4 w-4" />
+                                                        </Button>
+                                                    </Link>
+                                                )}
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() => handleDeleteComment(comment.id)}
+                                                    disabled={isDeleting}
+                                                >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>

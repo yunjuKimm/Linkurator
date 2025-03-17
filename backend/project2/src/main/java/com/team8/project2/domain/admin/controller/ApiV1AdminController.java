@@ -1,5 +1,6 @@
 package com.team8.project2.domain.admin.controller;
 
+import com.team8.project2.domain.comment.entity.Comment;
 import com.team8.project2.domain.curation.report.dto.ReportedCurationsDetailResDto;
 import com.team8.project2.domain.admin.dto.StatsResDto;
 import com.team8.project2.domain.admin.service.AdminService;
@@ -66,4 +67,5 @@ public class ApiV1AdminController {
     public RsData<StatsResDto> getStats() {
         return RsData.success("트래픽 통계 조회 성공", adminService.getCurationAndPlaylistStats());
     }
+
 }

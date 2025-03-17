@@ -1,7 +1,10 @@
 package com.team8.project2.domain.comment.controller;
 
+import com.team8.project2.domain.admin.dto.StatsResDto;
 import com.team8.project2.domain.comment.dto.CommentDto;
 import com.team8.project2.domain.comment.dto.ReplyCommentDto;
+import com.team8.project2.domain.comment.entity.Comment;
+import com.team8.project2.domain.comment.repository.CommentRepository;
 import com.team8.project2.domain.comment.repository.ReplyCommentRepository;
 import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.member.entity.Member;
@@ -30,6 +33,7 @@ public class ApiV1CommentController {
 
 	private final Rq rq;
 	private final ReplyCommentRepository replyCommentRepository;
+	private final CommentRepository commentRepository;
 
 	/**
 	 * 새로운 댓글을 생성합니다.
@@ -125,5 +129,6 @@ public class ApiV1CommentController {
 		commentService.deleteReply(replyId);
 		return new RsData<>("200-1", "답글이 삭제되었습니다.");
 	}
+
 }
 
