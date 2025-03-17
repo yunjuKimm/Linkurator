@@ -276,25 +276,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-<<<<<<< HEAD
-=======
-    "/api/v1/link/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["getLinkPreview"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
->>>>>>> 5d324ff (feat: 스키마)
     "/api/v1/images/upload": {
         parameters: {
             query?: never;
@@ -391,7 +372,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-<<<<<<< HEAD
     "/api/v1/playlists/{id}/items/{itemId}": {
         parameters: {
             query?: never;
@@ -408,8 +388,6 @@ export interface paths {
         patch: operations["updatePlaylistItem"];
         trace?: never;
     };
-=======
->>>>>>> 5d324ff (feat: 스키마)
     "/api/v1/playlists/{id}/items/order": {
         parameters: {
             query?: never;
@@ -650,7 +628,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-<<<<<<< HEAD
     "/api/v1/curation/author/{username}": {
         parameters: {
             query?: never;
@@ -667,8 +644,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-=======
->>>>>>> 5d324ff (feat: 스키마)
     "/api/v1/admin/stats": {
         parameters: {
             query?: never;
@@ -701,25 +676,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-<<<<<<< HEAD
-=======
-    "/api/v1/playlists/{id}/items/{itemId}": {
+    "/api/v1/admin/reported-curations-detail": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getReportedCurationsDetail"];
         put?: never;
         post?: never;
-        delete: operations["deletePlaylistItem"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
->>>>>>> 5d324ff (feat: 스키마)
     "/api/v1/members/delete": {
         parameters: {
             query?: never;
@@ -821,10 +793,10 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             modifiedAt?: string;
-            authorImgUrl?: string;
             authorName?: string;
             /** Format: int64 */
             authorId?: number;
+            authorImgUrl?: string;
         };
         Curation: {
             /** Format: int64 */
@@ -844,21 +816,12 @@ export interface components {
             tags?: components["schemas"]["CurationTag"][];
             comments?: components["schemas"]["Comment"][];
             memberName?: string;
-<<<<<<< HEAD
-            memberImgUrl?: string;
-            /** Format: int32 */
-            commentCount?: number;
-            /** Format: int64 */
-            memberId?: number;
-            imageNames?: string[];
-=======
             /** Format: int64 */
             memberId?: number;
             imageNames?: string[];
             memberImgUrl?: string;
             /** Format: int32 */
             commentCount?: number;
->>>>>>> 5d324ff (feat: 스키마)
         };
         CurationLink: {
             id?: components["schemas"]["CurationLinkId"];
@@ -896,10 +859,7 @@ export interface components {
             curationLinks?: components["schemas"]["CurationLink"][];
             title?: string;
             description?: string;
-<<<<<<< HEAD
             metaImageUrl?: string;
-=======
->>>>>>> 5d324ff (feat: 스키마)
         };
         Member: {
             /** Format: int64 */
@@ -916,16 +876,10 @@ export interface components {
             profileImage?: string;
             email?: string;
             introduce?: string;
-<<<<<<< HEAD
-            authorities?: components["schemas"]["GrantedAuthority"][];
-            admin?: boolean;
-            member?: boolean;
-=======
-            member?: boolean;
-            admin?: boolean;
-            authorities?: components["schemas"]["GrantedAuthority"][];
->>>>>>> 5d324ff (feat: 스키마)
             memberAuthoritesAsString?: string[];
+            authorities?: components["schemas"]["GrantedAuthority"][];
+            admin?: boolean;
+            member?: boolean;
         };
         ReplyComment: {
             /** Format: int64 */
@@ -938,8 +892,8 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             modifiedAt?: string;
-            authorName?: string;
             authorProfileImageUrl?: string;
+            authorName?: string;
         };
         RsDataLink: {
             code?: string;
@@ -1014,13 +968,12 @@ export interface components {
             commentCount?: number;
         };
         LinkResDto: {
+            /** Format: int64 */
+            id?: number;
             url?: string;
-<<<<<<< HEAD
             title?: string;
             description?: string;
             imageUrl?: string;
-=======
->>>>>>> 5d324ff (feat: 스키마)
         };
         RsDataCurationResDto: {
             code?: string;
@@ -1049,10 +1002,7 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             public?: boolean;
-<<<<<<< HEAD
             owner?: boolean;
-=======
->>>>>>> 5d324ff (feat: 스키마)
         };
         PlaylistItemDto: {
             /** Format: int64 */
@@ -1115,24 +1065,6 @@ export interface components {
             /** @enum {string} */
             role?: "ADMIN" | "USER" | "MEMBER";
         };
-<<<<<<< HEAD
-=======
-        LinkResDTO: {
-            url?: string;
-            title?: string;
-            description?: string;
-            image?: string;
-            /** Format: int32 */
-            click?: number;
-            /** Format: int64 */
-            linkId?: number;
-        };
-        RsDataLinkResDTO: {
-            code?: string;
-            msg?: string;
-            data?: components["schemas"]["LinkResDTO"];
-        };
->>>>>>> 5d324ff (feat: 스키마)
         CurationReportReqDto: {
             reportType: string;
         };
@@ -1141,14 +1073,11 @@ export interface components {
             description?: string;
             isPublic?: boolean;
         };
-<<<<<<< HEAD
         PlaylistItemUpdateDto: {
             title: string;
             url: string;
             description?: string;
         };
-=======
->>>>>>> 5d324ff (feat: 스키마)
         PlaylistItemOrderUpdateDto: {
             /** Format: int64 */
             id?: number;
@@ -1176,23 +1105,29 @@ export interface components {
             introduce?: string;
             /** Format: int64 */
             curationCount?: number;
-<<<<<<< HEAD
-            login?: boolean;
-            followed?: boolean;
-=======
             followed?: boolean;
             login?: boolean;
->>>>>>> 5d324ff (feat: 스키마)
         };
         RsDataCuratorInfoDto: {
             code?: string;
             msg?: string;
             data?: components["schemas"]["CuratorInfoDto"];
         };
-        RsDataListMemberResDTO: {
+        AllMemberResDto: {
+            members?: components["schemas"]["MemberResDTO"][];
+            /** Format: int32 */
+            totalPages?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            numberOfElements?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        RsDataAllMemberResDto: {
             code?: string;
             msg?: string;
-            data?: components["schemas"]["MemberResDTO"][];
+            data?: components["schemas"]["AllMemberResDto"];
         };
         FollowingResDto: {
             following?: components["schemas"]["FollowResDto"][];
@@ -1202,15 +1137,43 @@ export interface components {
             msg?: string;
             data?: components["schemas"]["FollowingResDto"];
         };
+        LinkClickResDto: {
+            /** Format: int64 */
+            id?: number;
+            url?: string;
+            title?: string;
+            description?: string;
+            metaImageUrl?: string;
+            /** Format: int32 */
+            click?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        RsDataLinkClickResDto: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["LinkClickResDto"];
+        };
         RsDataListCommentDto: {
             code?: string;
             msg?: string;
             data?: components["schemas"]["CommentDto"][];
         };
-        RsDataListCurationResDto: {
+        CurationSearchResDto: {
+            curations?: components["schemas"]["CurationResDto"][];
+            /** Format: int32 */
+            totalPages?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            numberOfElements?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        RsDataCurationSearchResDto: {
             code?: string;
             msg?: string;
-            data?: components["schemas"]["CurationResDto"][];
+            data?: components["schemas"]["CurationSearchResDto"];
         };
         CommentResDto: {
             /** Format: int64 */
@@ -1246,15 +1209,9 @@ export interface components {
             likeCount?: number;
             /** Format: int64 */
             viewCount?: number;
-<<<<<<< HEAD
             liked?: boolean;
             login?: boolean;
             followed?: boolean;
-=======
-            followed?: boolean;
-            login?: boolean;
-            liked?: boolean;
->>>>>>> 5d324ff (feat: 스키마)
         };
         RsDataCurationDetailResDto: {
             code?: string;
@@ -1282,6 +1239,11 @@ export interface components {
         TrendingCurationResDto: {
             curations?: components["schemas"]["CurationSummaryResDto"][];
         };
+        RsDataListCurationResDto: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["CurationResDto"][];
+        };
         RsDataStatsResDto: {
             code?: string;
             msg?: string;
@@ -1301,6 +1263,24 @@ export interface components {
             code?: string;
             msg?: string;
             data?: number[];
+        };
+        ReportCountResDto: {
+            /** @enum {string} */
+            reportType?: "ABUSE" | "SPAM" | "FALSE_INFO" | "INAPPROPRIATE";
+            /** Format: int64 */
+            count?: number;
+        };
+        ReportedCurationsDetailResDto: {
+            /** Format: int64 */
+            curationId?: number;
+            curationTitle?: string;
+            authorName?: string;
+            reportTypeCounts?: components["schemas"]["ReportCountResDto"][];
+        };
+        RsDataListReportedCurationsDetailResDto: {
+            code?: string;
+            msg?: string;
+            data?: components["schemas"]["ReportedCurationsDetailResDto"][];
         };
         RsDataString: {
             code?: string;
@@ -1368,7 +1348,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataLink"];
+                    "*/*": components["schemas"]["RsDataLinkClickResDto"];
                 };
             };
             /** @description Internal Server Error */
@@ -2229,42 +2209,6 @@ export interface operations {
             };
         };
     };
-<<<<<<< HEAD
-=======
-    getLinkPreview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LinkReqDTO"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RsDataLinkResDTO"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RsDataVoid"];
-                };
-            };
-        };
-    };
->>>>>>> 5d324ff (feat: 스키마)
     uploadCurationImage: {
         parameters: {
             query?: never;
@@ -2411,6 +2355,8 @@ export interface operations {
                 content?: string;
                 author?: string;
                 order?: "LATEST" | "OLDEST" | "LIKECOUNT";
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -2424,7 +2370,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataListCurationResDto"];
+                    "*/*": components["schemas"]["RsDataCurationSearchResDto"];
                 };
             };
             /** @description Internal Server Error */
@@ -2537,7 +2483,6 @@ export interface operations {
             };
         };
     };
-<<<<<<< HEAD
     deletePlaylistItem: {
         parameters: {
             query?: never;
@@ -2606,8 +2551,6 @@ export interface operations {
             };
         };
     };
-=======
->>>>>>> 5d324ff (feat: 스키마)
     updatePlaylistItemOrder: {
         parameters: {
             query?: never;
@@ -2829,7 +2772,10 @@ export interface operations {
     };
     findAllMember: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                size?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2842,7 +2788,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataListMemberResDTO"];
+                    "*/*": components["schemas"]["RsDataAllMemberResDto"];
                 };
             };
             /** @description Internal Server Error */
@@ -3036,7 +2982,10 @@ export interface operations {
     };
     followingCuration: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                size?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3063,10 +3012,12 @@ export interface operations {
             };
         };
     };
-<<<<<<< HEAD
     searchCurationByUserName: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                size?: number;
+            };
             header?: never;
             path: {
                 username: string;
@@ -3095,8 +3046,6 @@ export interface operations {
             };
         };
     };
-=======
->>>>>>> 5d324ff (feat: 스키마)
     getStats: {
         parameters: {
             query?: never;
@@ -3130,6 +3079,8 @@ export interface operations {
         parameters: {
             query?: {
                 minReports?: number;
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -3157,16 +3108,15 @@ export interface operations {
             };
         };
     };
-<<<<<<< HEAD
-=======
-    deletePlaylistItem: {
+    getReportedCurationsDetail: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-                itemId: number;
+            query?: {
+                minReports?: number;
+                page?: number;
+                size?: number;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -3177,7 +3127,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataVoid"];
+                    "*/*": components["schemas"]["RsDataListReportedCurationsDetailResDto"];
                 };
             };
             /** @description Internal Server Error */
@@ -3191,7 +3141,6 @@ export interface operations {
             };
         };
     };
->>>>>>> 5d324ff (feat: 스키마)
     deleteMember: {
         parameters: {
             query?: never;

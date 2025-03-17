@@ -30,6 +30,8 @@ interface Curation {
     description: string;
     imageUrl: string;
     linkId?: number;
+    id?: number; // Add this to support both naming conventions
+    click?: number; // Add click count
   }[];
   tags: { name: string }[];
 }
@@ -224,6 +226,34 @@ export default function PostList() {
     } catch (error) {
       console.error("Error toggling like:", error);
     }
+  };
+
+  // 링크 클릭 처리 함수
+  const handleLinkClick = async (url: string, linkId?: number) => {
+    if (!linkId && !url) return;
+
+    // Use either linkId or id property
+    const id = linkId;
+    if (!id) return;
+
+    try {
+      // 링크 클릭 시 백엔드에 조회수 증가 요청
+      const response = await fetch(`${API_URL}/api/v1/link/${id}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Link click recorded:", result);
+        // 여기서 필요하다면 UI 업데이트 가능
+      }
+    } catch (error) {
+      console.error("링크 클릭 처리 중 오류:", error);
+    }
+
+    // 링크 클릭 후 새 탭에서 URL 열기
+    window.open(url, "_blank");
   };
 
   // 신고 모달 열기 함수 추가
@@ -491,35 +521,39 @@ export default function PostList() {
 
                   {/* 메타 데이터 카드 */}
                   {curation.urls.map((urlObj, index) => (
-                    <Link
+                    <div
                       key={`${urlObj.url}-${index}`}
-                      href={urlObj.url}
-                      passHref
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      onClick={() =>
+                        handleLinkClick(urlObj.url, urlObj.linkId || urlObj.id)
+                      }
+                      className="mt-4 rounded-lg border p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                     >
-                      <div className="mt-4 rounded-lg border p-4 cursor-pointer hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center space-x-3">
-                          <img
-                            src={
-                              urlObj.imageUrl ||
-                              "/placeholder.svg?height=48&width=48" ||
-                              "/placeholder.svg"
-                            }
-                            alt="Preview"
-                            className="h-12 w-12 rounded-lg object-cover"
-                          />
-                          <div>
-                            <h3 className="font-medium">
-                              {urlObj.title || "링크"}
-                            </h3>
-                            <p className="text-sm text-gray-600 line-clamp-1">
-                              {urlObj.description || urlObj.url}
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={
+                            urlObj.imageUrl ||
+                            "/placeholder.svg?height=48&width=48" ||
+                            "/placeholder.svg" ||
+                            "/placeholder.svg"
+                          }
+                          alt="Preview"
+                          className="h-12 w-12 rounded-lg object-cover"
+                        />
+                        <div>
+                          <h3 className="font-medium">
+                            {urlObj.title || "링크"}
+                          </h3>
+                          <p className="text-sm text-gray-600 line-clamp-1">
+                            {urlObj.description || urlObj.url}
+                          </p>
+                          {urlObj.click !== undefined && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              조회수: {urlObj.click}
                             </p>
-                          </div>
+                          )}
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   ))}
 
                   <div className="flex items-center justify-between">

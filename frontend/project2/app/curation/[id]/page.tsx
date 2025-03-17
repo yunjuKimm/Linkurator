@@ -26,7 +26,7 @@ import AddToPlaylistModal from "@/app/components/add-to-playlist-modal";
 // 파일 상단에 다음 상수를 추가합니다:
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-// 큐레이션 데이터 타입
+// Update the CurationData interface to ensure the click property is included
 interface CurationData {
   id: number;
   title: string;
@@ -42,6 +42,8 @@ interface CurationData {
     description: string;
     imageUrl: string;
     linkId?: number;
+    id?: number;
+    click?: number; // Make sure this is included
   }[];
   tags: { name: string }[];
   likeCount: number;
@@ -235,7 +237,7 @@ export default function PostDetail() {
   // URL 배열이 있는지 확인
   const hasUrls = post.urls && post.urls.length > 0;
 
-  // 링크 클릭 처리 함수 추가
+  // 링크 클릭 처리 함수 수정
   const handleLinkClick = async (url: string, linkId?: number) => {
     if (!linkId) return;
 
@@ -252,11 +254,33 @@ export default function PostDetail() {
 
       if (response.ok) {
         const result = await response.json();
+        console.log("Link click recorded:", result);
+
+        // 링크 클릭 후 새 탭에서 URL 열기
+        window.open(url, "_blank");
+
+        // 필요하다면 UI 업데이트를 위해 post 상태 업데이트
+        if (result.data && result.data.click !== undefined) {
+          // 해당 링크의 클릭 수 업데이트
+          setPost((prev) => {
+            if (!prev) return prev;
+
+            const updatedUrls = prev.urls.map((urlItem) => {
+              if (urlItem.linkId === linkId || urlItem.id === linkId) {
+                return { ...urlItem, click: result.data.click };
+              }
+              return urlItem;
+            });
+
+            return { ...prev, urls: updatedUrls };
+          });
+        }
       }
     } catch (error) {
       console.error("링크 클릭 처리 중 오류:", error);
+      // 에러가 발생해도 링크는 열어줌
+      window.open(url, "_blank");
     }
-    window.location.reload();
   };
 
   // Add follow function
@@ -409,7 +433,7 @@ export default function PostDetail() {
             </p>
           </div>
 
-          {/* 링크 카드 섹션 - 여러 URL 지원 */}
+          {/* Update the link card section in the return statement to display the click count */}
           {hasUrls && (
             <div className="my-6 space-y-4">
               <h2 className="text-xl font-semibold">
@@ -417,7 +441,18 @@ export default function PostDetail() {
               </h2>
 
               {post.urls.map(
-                ({ url, title, description, imageUrl, linkId }, index) => {
+                (
+                  {
+                    url,
+                    title,
+                    description,
+                    imageUrl,
+                    linkId,
+                    id: urlId,
+                    click,
+                  },
+                  index
+                ) => {
                   const bgClass =
                     index % 3 === 0
                       ? "from-blue-50 to-indigo-50"
@@ -462,19 +497,19 @@ export default function PostDetail() {
                                 {extractDomain(url)}
                               </span>
                               <span className="mx-2 text-gray-300">|</span>
-                              <a
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault(); // 이벤트 버블링 방지
+                                  handleLinkClick(url, linkId || urlId);
+                                }}
                                 className="text-gray-500 hover:text-gray-700"
-                                onClick={() => handleLinkClick(url, linkId)}
                               >
                                 바로가기
-                              </a>
+                              </button>
                               <span className="mx-2 text-gray-300">|</span>
                               <div className="flex items-center text-gray-500">
                                 <MousePointer className="h-3 w-3 mr-1" />
-                                <span>0</span>
+                                <span>{click !== undefined ? click : 0}</span>
                               </div>
                             </div>
                           </div>

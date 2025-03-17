@@ -20,6 +20,8 @@ interface Curation {
     title: string;
     description: string;
     imageUrl: string;
+    id?: number;
+    click?: number; // Add click count
   }[];
   tags: { name: string }[];
   viewCount?: number;
@@ -156,6 +158,30 @@ export default function FollowingCurations() {
     }
   };
 
+  // 링크 클릭 처리 함수
+  const handleLinkClick = async (url: string, linkId?: number) => {
+    if (!linkId && !url) return;
+
+    try {
+      // 링크 클릭 시 백엔드에 조회수 증가 요청
+      const response = await fetch(`${API_URL}/api/v1/link/${linkId}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Link click recorded:", result);
+        // 여기서 필요하다면 UI 업데이트 가능
+      }
+    } catch (error) {
+      console.error("링크 클릭 처리 중 오류:", error);
+    }
+
+    // 링크 클릭 후 새 탭에서 URL 열기
+    window.open(url, "_blank");
+  };
+
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -179,12 +205,6 @@ export default function FollowingCurations() {
     window.addEventListener("scroll", handleScroll);
     return () => {
       window.removeEventListener("scroll", handleScroll);
-    };
-  }, [handleScroll]);
-
-  return (
-    <>
-      {/* 로딩 상태 표시 - 스켈레톤 UI로  handleScroll);
     };
   }, [handleScroll]);
 
@@ -240,40 +260,42 @@ export default function FollowingCurations() {
 
                   {/* 메타 데이터 카드 */}
                   {curation.urls.map((urlObj, index) => (
-                    <Link
+                    <div
                       key={`${urlObj.url}-${index}`}
-                      href={urlObj.url}
-                      passHref
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      onClick={() => handleLinkClick(urlObj.url, urlObj.id)}
+                      className="mt-4 rounded-lg border p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                     >
-                      <div className="mt-4 rounded-lg border p-4 cursor-pointer hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center space-x-3">
-                          {urlObj.imageUrl ? (
-                            <img
-                              src={
-                                urlObj.imageUrl ||
-                                "/placeholder.svg?height=48&width=48"
-                              }
-                              alt="Preview"
-                              className="h-12 w-12 rounded-lg object-cover"
-                            />
-                          ) : (
-                            <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <LinkIcon className="h-6 w-6 text-gray-400" />
-                            </div>
-                          )}
-                          <div>
-                            <h3 className="font-medium">
-                              {urlObj.title || "링크"}
-                            </h3>
-                            <p className="text-sm text-gray-600 line-clamp-1">
-                              {urlObj.description || urlObj.url}
-                            </p>
+                      <div className="flex items-center space-x-3">
+                        {urlObj.imageUrl ? (
+                          <img
+                            src={
+                              urlObj.imageUrl ||
+                              "/placeholder.svg?height=48&width=48" ||
+                              "/placeholder.svg"
+                            }
+                            alt="Preview"
+                            className="h-12 w-12 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <LinkIcon className="h-6 w-6 text-gray-400" />
                           </div>
+                        )}
+                        <div>
+                          <h3 className="font-medium">
+                            {urlObj.title || "링크"}
+                          </h3>
+                          <p className="text-sm text-gray-600 line-clamp-1">
+                            {urlObj.description || urlObj.url}
+                          </p>
+                          {urlObj.click !== undefined && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              조회수: {urlObj.click}
+                            </p>
+                          )}
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   ))}
 
                   <div className="flex items-center justify-between">
