@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Bookmark, Flag } from "lucide-react";
+import { Heart, MessageSquare, Flag, LinkIcon, Bookmark } from "lucide-react";
 import { stripHtml } from "@/lib/htmlutils";
 import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
 import ReportModal from "./report-modal";

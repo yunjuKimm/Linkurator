@@ -1,9 +1,11 @@
 package com.team8.project2.domain.admin.controller;
 
+import com.team8.project2.domain.curation.report.dto.ReportedCurationsDetailResDto;
 import com.team8.project2.domain.admin.dto.StatsResDto;
 import com.team8.project2.domain.admin.service.AdminService;
 import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.curation.report.service.ReportService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
@@ -24,6 +26,7 @@ public class ApiV1AdminController {
     private final Rq rq;
     private final MemberService memberService;
     private final CommentService commentService;
+    private final ReportService reportService;
 
 
     // ✅ 큐레이션 삭제
@@ -48,6 +51,14 @@ public class ApiV1AdminController {
     @GetMapping("/reported-curations")
     public RsData<List<Long>> getReportedCurations(@RequestParam(defaultValue = "5") int minReports) {
         return RsData.success("신고된 큐레이션 목록 조회 성공", adminService.getReportedCurations(minReports));
+    }
+
+    // ✅ 일정 개수 이상 신고된 큐레이션 상세 조회
+    @GetMapping("/reported-curations-detail")
+    public RsData<List<ReportedCurationsDetailResDto>> getReportedCurationsDetail(@RequestParam(defaultValue = "5") int minReports) {
+        List<Long> reportedcurations = adminService.getReportedCurations(minReports);
+        reportedcurations.forEach(System.out::println);
+        return RsData.success("신고된 큐레이션 목록 조회 성공", reportService.getReportedCurationsDetailResDtos(reportedcurations));
     }
 
     // ✅ 큐레이션 & 플레이리스트 통계 조회

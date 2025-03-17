@@ -99,4 +99,6 @@ public interface CurationRepository extends JpaRepository<Curation, Long> {
 	void deleteByMember(Member member);
 
 	List<Curation> findTop3ByOrderByViewCountDesc();
+
+	List<Curation> findByIdIn(List<Long> reportedcurations);
 }
