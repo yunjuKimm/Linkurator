@@ -1,19 +1,17 @@
 package com.team8.project2.domain.admin.controller;
 
-import com.team8.project2.domain.admin.dto.ReportedCurationsDetailResDto;
+import com.team8.project2.domain.curation.report.dto.ReportedCurationsDetailResDto;
 import com.team8.project2.domain.admin.dto.StatsResDto;
 import com.team8.project2.domain.admin.service.AdminService;
-import com.team8.project2.domain.comment.entity.Comment;
 import com.team8.project2.domain.comment.service.CommentService;
-import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.service.CurationService;
+import com.team8.project2.domain.curation.report.service.ReportService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.service.MemberService;
 import com.team8.project2.global.Rq;
 import com.team8.project2.global.dto.RsData;
 import com.team8.project2.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +26,7 @@ public class ApiV1AdminController {
     private final Rq rq;
     private final MemberService memberService;
     private final CommentService commentService;
+    private final ReportService reportService;
 
 
     // ✅ 큐레이션 삭제
@@ -55,11 +54,11 @@ public class ApiV1AdminController {
     }
 
     // ✅ 일정 개수 이상 신고된 큐레이션 상세 조회
-    @PostMapping("/reported-curations-detail")
+    @GetMapping("/reported-curations-detail")
     public RsData<List<ReportedCurationsDetailResDto>> getReportedCurationsDetail(@RequestParam(defaultValue = "5") int minReports) {
         List<Long> reportedcurations = adminService.getReportedCurations(minReports);
-        adminService.getReportedCurationsDetailResDtos(reportedcurations);
-        return RsData.success("신고된 큐레이션 목록 조회 성공", adminService.getReportedCurationsDetailResDtosminReports));
+        reportedcurations.forEach(System.out::println);
+        return RsData.success("신고된 큐레이션 목록 조회 성공", reportService.getReportedCurationsDetailResDtos(reportedcurations));
     }
 
     // ✅ 큐레이션 & 플레이리스트 통계 조회
