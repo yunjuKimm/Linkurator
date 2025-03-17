@@ -79,23 +79,28 @@ export default function PlaylistDetailPage() {
     }
   }, [params.id]);
 
-  // fetchData 함수 수정 - 재시도 메커니즘 개선 (딱 한 번만 재시도)
   const fetchData = useCallback(
     async (incrementView = true) => {
       setIsLoading(true);
       setError(null); // 오류 상태 초기화
 
       try {
-        // 현재 타임스탬프를 쿼리 파라미터로 추가하여 캐시 방지
+        // 현재 타임스탬프를 가져옵니다.
         const timestamp = new Date().getTime();
 
-        // 플레이리스트 데이터 가져오기 - 로그인 여부와 관계없이 조회 가능하도록 수정
+        // 쿼리 파라미터 배열 생성
+        const queryParams = [];
+        if (!incrementView) {
+          queryParams.push("noIncrement=true");
+        }
+        queryParams.push(`_t=${timestamp}`);
+        const queryString =
+          queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
+
+        // 플레이리스트 데이터 가져오기
         const response = await fetch(
-          `http://localhost:8080/api/v1/playlists/${params.id}${
-            incrementView ? "" : "?noIncrement=true"
-          }&_t=${timestamp}`,
+          `http://localhost:8080/api/v1/playlists/${params.id}${queryString}`,
           {
-            // 로그인한 경우에만 credentials 포함
             ...(sessionStorage.getItem("isLoggedIn") === "true"
               ? { credentials: "include" }
               : {}),
@@ -105,18 +110,15 @@ export default function PlaylistDetailPage() {
               Pragma: "no-cache",
               Expires: "0",
             },
-            // 타임아웃 설정 (10초)
             signal: AbortSignal.timeout(10000),
           }
         );
 
-        // 응답 상태 코드 확인 및 처리 개선
+        // 응답 상태 확인
         if (!response.ok) {
-          // 404 오류인 경우 특별 처리
           if (response.status === 404) {
             throw new Error("플레이리스트를 찾을 수 없습니다.");
           }
-          // 기타 오류 처리
           const errorText = await response.text();
           let errorMessage =
             "플레이리스트 데이터를 불러오는 중 오류가 발생했습니다.";
@@ -126,31 +128,26 @@ export default function PlaylistDetailPage() {
               errorMessage = errorData.message;
             }
           } catch (e) {
-            // JSON 파싱 실패 시 기본 메시지 사용
             console.error("오류 응답 파싱 실패:", e);
           }
           throw new Error(errorMessage);
         }
 
         const result = await response.json();
-
-        // 결과가 없거나 데이터가 없는 경우 처리
         if (!result || !result.data) {
           throw new Error("플레이리스트 데이터가 없습니다.");
         }
 
-        // 디버깅 로그 추가
+        // 디버깅 로그
         console.log("플레이리스트 데이터:", result.data);
         console.log("플레이리스트 소유자 여부:", result.data.owner);
 
-        // 빈 items 배열 초기화 - 링크가 없는 경우를 위해
+        // 아이템이 없을 경우 빈 배열로 초기화
         if (!result.data.items) {
           result.data.items = [];
         }
 
         setPlaylist(result.data);
-        // 재시도 플래그 초기화 (성공 시)
-        setHasRetried(false);
 
         // 로그인 상태인 경우 좋아요 상태 확인 및 세션 스토리지에 저장
         if (sessionStorage.getItem("isLoggedIn") === "true") {
@@ -165,7 +162,7 @@ export default function PlaylistDetailPage() {
                   Pragma: "no-cache",
                   Expires: "0",
                 },
-                signal: AbortSignal.timeout(5000), // 좋아요 상태는 더 짧은 타임아웃
+                signal: AbortSignal.timeout(5000),
               }
             );
 
@@ -178,23 +175,20 @@ export default function PlaylistDetailPage() {
                 String(likeStatus)
               );
             } else {
-              // API 응답이 실패한 경우 세션 스토리지에 false 저장
               console.log("좋아요 상태 확인 API 실패: 기본값 false로 설정");
               sessionStorage.setItem(`playlist_like_${params.id}`, "false");
             }
           } catch (error) {
             console.error("좋아요 상태 확인 오류:", error);
-            // 오류 발생 시 세션 스토리지에 false 저장
             sessionStorage.setItem(`playlist_like_${params.id}`, "false");
           }
         }
 
-        // 추천 플레이리스트 가져오기 - 실패해도 주요 기능에 영향 없도록 try-catch로 분리
+        // 추천 플레이리스트 가져오기 (실패해도 무시)
         try {
           const recResponse = await fetch(
             `http://localhost:8080/api/v1/playlists/${params.id}/recommendation?_t=${timestamp}`,
             {
-              // 로그인한 경우에만 credentials 포함
               ...(sessionStorage.getItem("isLoggedIn") === "true"
                 ? { credentials: "include" }
                 : {}),
@@ -204,7 +198,7 @@ export default function PlaylistDetailPage() {
                 Pragma: "no-cache",
                 Expires: "0",
               },
-              signal: AbortSignal.timeout(5000), // 추천은 더 짧은 타임아웃
+              signal: AbortSignal.timeout(5000),
             }
           );
 
@@ -212,7 +206,6 @@ export default function PlaylistDetailPage() {
             const recResult = await recResponse.json();
             setRecommendedPlaylists(recResult.data || []);
           } else {
-            // 추천 API 실패 시 빈 배열 설정
             setRecommendedPlaylists([]);
           }
         } catch (recError) {
@@ -221,29 +214,16 @@ export default function PlaylistDetailPage() {
         }
       } catch (err) {
         console.error("데이터 로딩 오류:", err);
-
-        // AbortError(타임아웃)인 경우 특별 메시지
         if (err instanceof DOMException && err.name === "AbortError") {
           setError("서버 응답 시간이 너무 오래 걸립니다. 다시 시도해주세요.");
         } else {
           setError((err as Error).message);
         }
-
-        // 자동 재시도 (딱 한 번만)
-        if (!hasRetried) {
-          console.log("자동 재시도 중... (1회만 시도)");
-          setHasRetried(true);
-
-          // 0.5초 후 재시도
-          setTimeout(() => {
-            fetchData(incrementView);
-          }, 500);
-        }
       } finally {
         setIsLoading(false);
       }
     },
-    [params.id, hasRetried]
+    [params.id]
   );
 
   // 소유자 확인 로직을 개선하는 함수 수정
