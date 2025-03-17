@@ -92,4 +92,8 @@ public class ReplyComment {
 	public void updateContent(String content) {
 		this.content = content;
 	}
+
+	public Long getAuthorId() {
+		return this.author.getId();
+	}
 }
