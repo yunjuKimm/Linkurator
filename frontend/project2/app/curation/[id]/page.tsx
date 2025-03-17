@@ -112,6 +112,19 @@ export default function PostDetail() {
 
   // 좋아요 토글 API 호출
   const toggleLike = async () => {
+    // 로그인 상태 확인
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+
+    if (!isLoggedIn) {
+      // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+      alert("좋아요 기능을 사용하려면 로그인해주세요.");
+
+      // 현재 URL을 저장하고 로그인 페이지로 이동
+      sessionStorage.setItem("loginRedirectPath", window.location.pathname);
+      window.location.href = "/auth/login";
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/v1/curation/like/${id}`, {
         method: "POST",
@@ -554,7 +567,12 @@ export default function PostDetail() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={toggleLike}
-                className="flex items-center space-x-1 text-sm"
+                className={`flex items-center space-x-1 text-sm ${
+                  sessionStorage.getItem("isLoggedIn") === "true"
+                    ? "cursor-pointer"
+                    : "cursor-not-allowed opacity-70"
+                }`}
+                disabled={sessionStorage.getItem("isLoggedIn") !== "true"}
               >
                 <Heart
                   className={`h-5 w-5 ${

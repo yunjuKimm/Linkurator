@@ -7,6 +7,7 @@ import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
 import ReportModal from "./report-modal";
 import ShareButton from "@/app/components/share-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "@/components/ui/use-toast";
 
 // API URL을 하드코딩된 값에서 환경 변수로 변경합니다.
 // 파일 상단에 다음 상수를 추가합니다:
@@ -259,8 +260,25 @@ export default function PostList() {
     closeFilterModal();
   };
 
-  // 좋아요 토글 함수
+  // 좋아요 토글 함수를 수정합니다
   const toggleLike = async (id: number) => {
+    // 로그인 상태 확인
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+
+    if (!isLoggedIn) {
+      // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+      toast({
+        title: "로그인이 필요합니다",
+        description: "좋아요 기능을 사용하려면 로그인해주세요.",
+        variant: "destructive",
+      });
+
+      // 현재 URL을 저장하고 로그인 페이지로 이동
+      sessionStorage.setItem("loginRedirectPath", window.location.pathname);
+      window.location.href = "/auth/login";
+      return;
+    }
+
     try {
       await fetch(`${API_URL}/api/v1/curation/like/${id}`, {
         method: "POST",
@@ -636,7 +654,11 @@ export default function PostList() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <button
-                        className="flex items-center space-x-1 text-sm text-gray-500"
+                        className={`flex items-center space-x-1 text-sm ${
+                          sessionStorage.getItem("isLoggedIn") === "true"
+                            ? "text-gray-500 cursor-pointer"
+                            : "text-gray-400 cursor-not-allowed"
+                        }`}
                         onClick={() => toggleLike(curation.id)}
                       >
                         <Heart
