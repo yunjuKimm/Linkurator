@@ -12,7 +12,7 @@ import Link from "next/link";
 type Comment = {
   id?: number;
   commentId?: number; // API 응답에서는 commentId로 제공됨
-  authorId?: number;
+  authorId?: number | null; // null도 허용하도록 수정
   authorName: string;
   authorImgUrl?: string;
   authorProfileImageUrl?: string; // 새로 추가된 필드
@@ -26,6 +26,7 @@ type Comment = {
 // 답글 타입 정의 추가
 type Reply = {
   id: number;
+  authorId?: number | null; // null도 허용하도록 수정
   authorName: string;
   authorProfileImageUrl?: string;
   content: string;
@@ -60,6 +61,7 @@ export default function CommentSection({ postId }: { postId: string }) {
   const [editReplyContent, setEditReplyContent] = useState(""); // 수정 중인 답글 내용
   // Add a login state at the beginning of the component
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null); // 현재 로그인한 사용자 ID 추가
 
   // API에서 커레이션 데이터를 불러오는 함수 수정
   const fetchCurationData = async (id: string) => {
@@ -110,6 +112,13 @@ export default function CommentSection({ postId }: { postId: string }) {
     // Check if user is logged in by checking if userId exists in sessionStorage
     const userId = sessionStorage.getItem("userId");
     setIsLoggedIn(!!userId);
+
+    // 현재 로그인한 사용자 ID 설정
+    if (userId) {
+      setCurrentUserId(Number.parseInt(userId, 10));
+    } else {
+      setCurrentUserId(null);
+    }
   }, []);
 
   // 댓글 좋아요 기능 (미구현)
@@ -162,6 +171,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         const newCommentData: Comment = {
           id: result.data.id,
           commentId: result.data.id,
+          authorId: currentUserId, // 현재 사용자 ID 추가 (null일 수도 있음)
           authorName: result.data.authorName,
           content: result.data.content,
           createdAt: result.data.createdAt,
@@ -371,6 +381,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         // API 응답으로 받은 새 답글 데이터
         const newReplyData: Reply = {
           id: result.data.id,
+          authorId: currentUserId, // 현재 사용자 ID 추가
           authorName: result.data.authorName,
           authorProfileImageUrl: result.data.authorProfileImageUrl,
           content: result.data.content,
@@ -532,6 +543,16 @@ export default function CommentSection({ postId }: { postId: string }) {
     }
   };
 
+  // 사용자가 댓글 작성자인지 확인하는 함수
+  const isCommentAuthor = (authorId?: number | null) => {
+    return (
+      currentUserId !== null &&
+      authorId !== undefined &&
+      authorId !== null &&
+      currentUserId === authorId
+    );
+  };
+
   // 로딩 중일 때 스켈레톤 UI 표시
   if (loading) {
     return <CommentSkeleton />;
@@ -610,50 +631,52 @@ export default function CommentSection({ postId }: { postId: string }) {
                       </div>
                     </div>
 
-                    {/* 댓글 액션 버튼 */}
-                    <div className="flex space-x-1">
-                      {comment.id !== editingCommentId &&
-                      comment.commentId !== editingCommentId ? (
-                        <>
-                          <button
-                            onClick={() => handleEditStart(comment)}
-                            className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleDeleteComment(
-                                comment.commentId || comment.id || 0
-                              )
-                            }
-                            className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() =>
-                              handleEditSave(
-                                comment.commentId || comment.id || 0
-                              )
-                            }
-                            className="p-1 text-green-500 hover:text-green-600 rounded-full hover:bg-gray-100"
-                            disabled={isSubmitting}
-                          >
-                            <Check className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={handleEditCancel}
-                            className="p-1 text-red-500 hover:text-red-600 rounded-full hover:bg-gray-100"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    {/* 댓글 액션 버튼 - 작성자만 볼 수 있도록 수정 */}
+                    {isCommentAuthor(comment.authorId) && (
+                      <div className="flex space-x-1">
+                        {comment.id !== editingCommentId &&
+                        comment.commentId !== editingCommentId ? (
+                          <>
+                            <button
+                              onClick={() => handleEditStart(comment)}
+                              className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDeleteComment(
+                                  comment.commentId || comment.id || 0
+                                )
+                              }
+                              className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() =>
+                                handleEditSave(
+                                  comment.commentId || comment.id || 0
+                                )
+                              }
+                              className="p-1 text-green-500 hover:text-green-600 rounded-full hover:bg-gray-100"
+                              disabled={isSubmitting}
+                            >
+                              <Check className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={handleEditCancel}
+                              className="p-1 text-red-500 hover:text-red-600 rounded-full hover:bg-gray-100"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {comment.id !== editingCommentId &&
@@ -696,6 +719,7 @@ export default function CommentSection({ postId }: { postId: string }) {
                                 src={
                                   reply.authorProfileImageUrl ||
                                   "/placeholder.svg?height=28&width=28" ||
+                                  "/placeholder.svg" ||
                                   "/placeholder.svg"
                                 }
                                 alt={reply.authorName}
@@ -726,59 +750,61 @@ export default function CommentSection({ postId }: { postId: string }) {
                               </div>
                             </div>
 
-                            {/* 답글 액션 버튼 */}
-                            <div className="flex space-x-1">
-                              {!editingReplyInfo ||
-                              editingReplyInfo.commentId !==
-                                (comment.commentId || comment.id || 0) ||
-                              editingReplyInfo.replyId !== reply.id ? (
-                                <>
-                                  <button
-                                    onClick={() =>
-                                      handleEditReplyStart(
-                                        comment.commentId || comment.id || 0,
-                                        reply
-                                      )
-                                    }
-                                    className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteReply(
-                                        comment.commentId || comment.id || 0,
-                                        reply.id
-                                      )
-                                    }
-                                    className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() =>
-                                      handleEditReplySave(
-                                        comment.commentId || comment.id || 0,
-                                        reply.id
-                                      )
-                                    }
-                                    className="p-1 text-green-500 hover:text-green-600 rounded-full hover:bg-gray-100"
-                                    disabled={isSubmitting}
-                                  >
-                                    <Check className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={handleEditReplyCancel}
-                                    className="p-1 text-red-500 hover:text-red-600 rounded-full hover:bg-gray-100"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
+                            {/* 답글 액션 버튼 - 작성자만 볼 수 있도록 수정 */}
+                            {isCommentAuthor(reply.authorId) && (
+                              <div className="flex space-x-1">
+                                {!editingReplyInfo ||
+                                editingReplyInfo.commentId !==
+                                  (comment.commentId || comment.id || 0) ||
+                                editingReplyInfo.replyId !== reply.id ? (
+                                  <>
+                                    <button
+                                      onClick={() =>
+                                        handleEditReplyStart(
+                                          comment.commentId || comment.id || 0,
+                                          reply
+                                        )
+                                      }
+                                      className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteReply(
+                                          comment.commentId || comment.id || 0,
+                                          reply.id
+                                        )
+                                      }
+                                      className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() =>
+                                        handleEditReplySave(
+                                          comment.commentId || comment.id || 0,
+                                          reply.id
+                                        )
+                                      }
+                                      className="p-1 text-green-500 hover:text-green-600 rounded-full hover:bg-gray-100"
+                                      disabled={isSubmitting}
+                                    >
+                                      <Check className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      onClick={handleEditReplyCancel}
+                                      className="p-1 text-red-500 hover:text-red-600 rounded-full hover:bg-gray-100"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           {!editingReplyInfo ||
