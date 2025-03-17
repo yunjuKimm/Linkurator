@@ -5,7 +5,15 @@ import type React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, useRef } from "react";
-import { ChevronDown, LogOut, User, Settings, Shield } from "lucide-react";
+import {
+  ChevronDown,
+  LogOut,
+  User,
+  Settings,
+  Shield,
+  Search,
+  Filter,
+} from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 
 const API_URL = "http://localhost:8080";
@@ -22,6 +30,12 @@ export default function Header() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // 검색 관련 상태 추가
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchType, setSearchType] = useState("title");
+  const [isSearchFilterOpen, setIsSearchFilterOpen] = useState(false);
+  const searchFilterRef = useRef<HTMLDivElement | null>(null);
 
   // 클라이언트 사이드에서만 실행되는 코드를 분리
   const isBrowser = typeof window !== "undefined";
@@ -195,6 +209,14 @@ export default function Header() {
       ) {
         setIsDropdownOpen(false);
       }
+
+      if (
+        searchFilterRef.current &&
+        event.target instanceof Node &&
+        !searchFilterRef.current.contains(event.target)
+      ) {
+        setIsSearchFilterOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -238,6 +260,67 @@ export default function Header() {
     setIsDropdownOpen(false);
   };
 
+  // 검색 처리 함수
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!searchQuery.trim()) return;
+
+    // 검색어에서 태그 추출 (#으로 시작하는 단어)
+    const tags: string[] = [];
+    let title = "";
+    let content = "";
+    let author = "";
+
+    // 검색어 파싱
+    const words = searchQuery.split(" ");
+    const nonTagWords: string[] = [];
+
+    words.forEach((word) => {
+      if (word.startsWith("#")) {
+        // # 제거하고 태그 배열에 추가
+        const tag = word.substring(1);
+        if (tag) tags.push(tag);
+      } else {
+        nonTagWords.push(word);
+      }
+    });
+
+    // 태그가 아닌 단어들은 검색 유형에 따라 처리
+    const nonTagText = nonTagWords.join(" ");
+
+    if (searchType === "title") {
+      title = nonTagText;
+    }
+
+    if (searchType === "content") {
+      content = nonTagText;
+    }
+
+    if (searchType === "author") {
+      author = nonTagText;
+    }
+
+    // 검색 이벤트 발생
+    const searchEvent = new CustomEvent("search", {
+      detail: {
+        tags,
+        title,
+        content,
+        author,
+        searchType,
+        originalQuery: searchQuery,
+      },
+    });
+
+    window.dispatchEvent(searchEvent);
+
+    // 검색 페이지로 이동 (필요한 경우)
+    if (!pathname.includes("/home")) {
+      router.push("/home");
+    }
+  };
+
   return (
     <header className="border-b">
       <div className="container flex h-14 items-center px-4">
@@ -274,6 +357,88 @@ export default function Header() {
             )}
           </nav>
         </div>
+
+        {/* 검색바 추가 */}
+        <div className="mx-auto max-w-md w-full px-4">
+          <form onSubmit={handleSearch} className="relative flex items-center">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="검색어 입력 (#태그 검색 가능)"
+              className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-24 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <Search className="absolute left-3 h-5 w-5 text-gray-400" />
+
+            <div
+              className="absolute right-2 flex items-center"
+              ref={searchFilterRef}
+            >
+              <span className="mr-2 text-sm text-gray-500">
+                {searchType === "title" && "제목"}
+                {searchType === "content" && "내용"}
+                {searchType === "author" && "작성자"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsSearchFilterOpen(!isSearchFilterOpen)}
+                className="p-1 rounded-md hover:bg-gray-100 flex items-center"
+              >
+                <Filter className="h-4 w-4 text-gray-500" />
+              </button>
+
+              {isSearchFilterOpen && (
+                <div className="absolute right-0 top-8 w-32 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                  <div className="py-1" role="menu" aria-orientation="vertical">
+                    <button
+                      type="button"
+                      className={`flex w-full items-center px-4 py-2 text-sm ${
+                        searchType === "title"
+                          ? "bg-gray-100 text-blue-600"
+                          : "text-gray-700"
+                      } hover:bg-gray-100`}
+                      onClick={() => {
+                        setSearchType("title");
+                        setIsSearchFilterOpen(false);
+                      }}
+                    >
+                      제목
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex w-full items-center px-4 py-2 text-sm ${
+                        searchType === "content"
+                          ? "bg-gray-100 text-blue-600"
+                          : "text-gray-700"
+                      } hover:bg-gray-100`}
+                      onClick={() => {
+                        setSearchType("content");
+                        setIsSearchFilterOpen(false);
+                      }}
+                    >
+                      내용
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex w-full items-center px-4 py-2 text-sm ${
+                        searchType === "author"
+                          ? "bg-gray-100 text-blue-600"
+                          : "text-gray-700"
+                      } hover:bg-gray-100`}
+                      onClick={() => {
+                        setSearchType("author");
+                        setIsSearchFilterOpen(false);
+                      }}
+                    >
+                      작성자
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </form>
+        </div>
+
         <div className="ml-auto flex items-center space-x-4">
           {isLoading ? (
             <div className="h-9 w-20 bg-gray-200 rounded-md animate-pulse"></div>

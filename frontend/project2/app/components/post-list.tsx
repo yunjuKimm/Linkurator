@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Flag } from "lucide-react";
+import { Heart, MessageSquare, Flag, ChevronDown } from "lucide-react";
 import { stripHtml } from "@/lib/htmlutils";
 import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
 import ReportModal from "./report-modal";
@@ -51,12 +51,22 @@ interface CurationRequestParams {
   tags?: string[];
   title?: string;
   content?: string;
+  author?: string;
   order?: SortOrder;
   page?: number;
   size?: number;
 }
 
-type SortOrder = "LATEST" | "LIKECOUNT";
+interface SearchParams {
+  tags: string[];
+  title: string;
+  content: string;
+  author: string;
+  searchType: string;
+  originalQuery: string;
+}
+
+type SortOrder = "LATEST" | "OLDEST" | "LIKECOUNT";
 
 // 디바운스 함수 구현
 function debounce<T extends (...args: any[]) => any>(
@@ -75,11 +85,11 @@ export default function PostList() {
   const [curations, setCurations] = useState<Curation[]>([]);
   const [sortOrder, setSortOrder] = useState<SortOrder>("LATEST"); // 기본값: 최신순
   const [loading, setLoading] = useState<boolean>(false);
-  const [filterModalOpen, setFilterModalOpen] = useState(false); // 필터 모달 상태
   const [tags, setTags] = useState<string[]>([]); // 선택된 태그 상태
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 필터링된 태그 상태
   const [title, setTitle] = useState<string>(""); // 제목 필터링
   const [content, setContent] = useState<string>(""); // 내용 필터링
+  const [author, setAuthor] = useState<string>(""); // 작성자 필터링
   const [likedCurations, setLikedCurations] = useState<{
     [key: number]: boolean;
   }>({}); // 좋아요 상태 관리
@@ -87,6 +97,9 @@ export default function PostList() {
   const [selectedCurationId, setSelectedCurationId] = useState<number | null>(
     null
   );
+  const [searchActive, setSearchActive] = useState(false); // 검색 활성화 상태
+  const [lastSearchQuery, setLastSearchQuery] = useState(""); // 마지막 검색어
+  const [showSortOptions, setShowSortOptions] = useState<boolean>(false);
 
   // 페이징을 위한 상태 추가
   const [page, setPage] = useState<number>(0);
@@ -153,6 +166,10 @@ export default function PostList() {
         queryParams.append("content", params.content);
       }
 
+      if (params.author) {
+        queryParams.append("author", params.author);
+      }
+
       const queryString = queryParams.toString();
       console.log(`API 요청 URL: ${API_URL}/api/v1/curation?${queryString}`); // 디버깅을 위한 로그 추가
 
@@ -208,15 +225,6 @@ export default function PostList() {
     }
   };
 
-  // 필터 버튼 클릭 시
-  const openFilterModal = () => {
-    setFilterModalOpen(true);
-  };
-
-  const closeFilterModal = () => {
-    setFilterModalOpen(false);
-  };
-
   // 더 많은 데이터 로드
   const loadMore = useCallback(() => {
     if (loadingMore || !hasMore) return;
@@ -227,6 +235,7 @@ export default function PostList() {
       tags: selectedTags,
       title,
       content,
+      author,
       order: sortOrder,
       page: nextPage,
       size: PAGE_SIZE,
@@ -237,30 +246,82 @@ export default function PostList() {
 
     setPage(nextPage);
     fetchCurations(params, true);
-  }, [loadingMore, hasMore, page, selectedTags, title, content, sortOrder]);
+  }, [
+    loadingMore,
+    hasMore,
+    page,
+    selectedTags,
+    title,
+    content,
+    sortOrder,
+    author,
+  ]);
 
-  // 필터링 조건을 기반으로 API 호출
-  const applyFilter = () => {
-    setSelectedTags(tags); // 입력한 tags를 selectedTags에 동기화
+  // 검색 이벤트 처리 함수
+  const handleSearchEvent = useCallback(
+    (event: Event) => {
+      const searchEvent = event as CustomEvent<SearchParams>;
+      const searchParams = searchEvent.detail;
 
-    // 필터 적용 시 페이지 초기화
+      console.log("검색 이벤트 수신:", searchParams);
+
+      // 검색 상태 업데이트
+      setSearchActive(true);
+      setLastSearchQuery(searchParams.originalQuery);
+
+      // 검색 파라미터 설정
+      setSelectedTags(searchParams.tags);
+      setTitle(searchParams.title);
+      setContent(searchParams.content);
+      setAuthor(searchParams.author);
+
+      // 페이지 초기화
+      setPage(0);
+      setHasMore(true);
+      setCurations([]); // 기존 데이터 초기화
+      currentPageRef.current = 0; // 현재 페이지 초기화
+
+      // 검색 실행
+      const params: CurationRequestParams = {
+        tags: searchParams.tags,
+        title: searchParams.title,
+        content: searchParams.content,
+        author: searchParams.author,
+        order: sortOrder,
+        page: 0,
+        size: PAGE_SIZE,
+      };
+
+      fetchCurations(params);
+    },
+    [sortOrder]
+  );
+
+  // 검색 초기화 함수
+  const resetSearch = () => {
+    setSearchActive(false);
+    setLastSearchQuery("");
+    setSelectedTags([]);
+    setTitle("");
+    setContent("");
+    setAuthor("");
+
+    // 페이지 초기화
     setPage(0);
     setHasMore(true);
+    setCurations([]); // 기존 데이터 초기화
+    currentPageRef.current = 0; // 현재 페이지 초기화
 
+    // 기본 데이터 로드
     const params: CurationRequestParams = {
-      tags: tags, // 여기서는 새로 입력한 tags를 사용
-      title,
-      content,
-      order: sortOrder,
       page: 0,
       size: PAGE_SIZE,
     };
 
     fetchCurations(params);
-    closeFilterModal();
   };
 
-  // 좋아요 토글 함수를 수정합니다
+  // 좋아요 토글 함수
   const toggleLike = async (id: number) => {
     // 로그인 상태 확인
     const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
@@ -353,6 +414,8 @@ export default function PostList() {
 
   // 태그 필터 변경 시 데이터 다시 로드
   useEffect(() => {
+    if (searchActive) return; // 검색 중일 때는 자동 로드 방지
+
     // 페이지 초기화
     setPage(0);
     setHasMore(true);
@@ -363,13 +426,14 @@ export default function PostList() {
       tags: selectedTags,
       title,
       content,
+      author,
       order: sortOrder,
       page: 0,
       size: PAGE_SIZE,
     };
 
     fetchCurations(params);
-  }, [selectedTags, sortOrder]);
+  }, [selectedTags, sortOrder, searchActive, title, content, author]);
 
   const toggleTagFilter = (tag: string) => {
     setSelectedTags((prev) => {
@@ -396,13 +460,16 @@ export default function PostList() {
       toggleTagFilter(tag);
     };
 
+    // 검색 이벤트 리스너 추가
+    window.addEventListener("search", handleSearchEvent as EventListener);
     window.addEventListener("selectTag", handleSelectTag as EventListener);
 
     // 컴포넌트 언마운트 시 이벤트 리스너 제거
     return () => {
+      window.removeEventListener("search", handleSearchEvent as EventListener);
       window.removeEventListener("selectTag", handleSelectTag as EventListener);
     };
-  }, []); // 빈 배열을 의존성으로 두어 처음 한 번만 호출되게 설정
+  }, [handleSearchEvent]); // 검색 이벤트 핸들러 의존성 추가
 
   // 좋아요 상태 확인
   useEffect(() => {
@@ -457,95 +524,92 @@ export default function PostList() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
-        {/* 필터링 버튼 */}
-        <button
-          onClick={openFilterModal}
-          className="inline-flex items-center justify-center rounded-md bg-blue-600 text-white px-3 py-1 text-sm font-medium shadow"
-        >
-          필터링
-        </button>
-      </div>
-
-      {/* 필터링 모달 */}
-      {filterModalOpen && (
-        <div className="fixed inset-0 flex justify-center items-center bg-gray-500 bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h3 className="text-xl font-semibold mb-4">필터링 조건</h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                태그
-              </label>
-              <input
-                type="text"
-                defaultValue={selectedTags.join(", ")}
-                onChange={(e) => {
-                  // 입력값을 스페이스바가 포함되더라도 정상적으로 처리하도록 수정
-                  const inputTags = e.target.value
-                    .split(",")
-                    .map((tag) => tag.trim())
-                    .filter((tag) => tag !== ""); // 빈 태그는 제외
-                  setTags(inputTags); // tags 상태 업데이트
-                }}
-                className="mt-1 p-2 w-full border rounded-md"
-                placeholder="태그 입력 (쉼표로 구분)"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                제목
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="mt-1 p-2 w-full border rounded-md"
-                placeholder="제목 입력"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                내용
-              </label>
-              <input
-                type="text"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="mt-1 p-2 w-full border rounded-md"
-                placeholder="내용 입력"
-              />
-            </div>
-            {/* 정렬 기준 드롭다운 추가 */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                정렬 기준
-              </label>
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as SortOrder)} // value 변경 시 sortOrder 업데이트
-                className="mt-1 p-2 w-full border rounded-md"
-              >
-                <option value="LATEST">최신순</option>
-                <option value="LIKECOUNT">좋아요순</option>
-              </select>
-            </div>
-            <div className="flex justify-between">
-              <button
-                onClick={applyFilter}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md"
-              >
-                적용
-              </button>
-              <button
-                onClick={closeFilterModal}
-                className="bg-gray-300 text-black px-4 py-2 rounded-md"
-              >
-                취소
-              </button>
-            </div>
+      {/* 검색 결과 표시 */}
+      {searchActive && (
+        <div className="flex items-center justify-between mb-4 p-2 bg-gray-100 rounded-md">
+          <div className="flex items-center">
+            <span className="text-sm font-medium mr-2">검색 결과:</span>
+            <span className="text-sm text-gray-600">"{lastSearchQuery}"</span>
+            {selectedTags.length > 0 && (
+              <div className="flex ml-2 gap-1">
+                {selectedTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
+          <button
+            onClick={resetSearch}
+            className="text-xs text-blue-600 hover:text-blue-800"
+          >
+            검색 초기화
+          </button>
         </div>
       )}
+
+      {/* 정렬 옵션 */}
+      <div className="flex justify-end mb-4">
+        <div className="relative">
+          <button
+            onClick={() => setShowSortOptions(!showSortOptions)}
+            className="flex items-center space-x-1 px-3 py-1.5 text-sm font-medium rounded-md border hover:bg-gray-50"
+          >
+            <span>
+              {sortOrder === "LATEST" && "최신순"}
+              {sortOrder === "OLDEST" && "오래된순"}
+              {sortOrder === "LIKECOUNT" && "좋아요순"}
+            </span>
+            <ChevronDown className="h-4 w-4" />
+          </button>
+
+          {showSortOptions && (
+            <div className="absolute right-0 mt-1 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+              <div className="py-1" role="menu">
+                <button
+                  className={`flex w-full items-center px-4 py-2 text-sm ${
+                    sortOrder === "LATEST" ? "text-blue-600" : "text-gray-700"
+                  } hover:bg-gray-100`}
+                  onClick={() => {
+                    setSortOrder("LATEST");
+                    setShowSortOptions(false);
+                  }}
+                >
+                  최신순
+                </button>
+                <button
+                  className={`flex w-full items-center px-4 py-2 text-sm ${
+                    sortOrder === "OLDEST" ? "text-blue-600" : "text-gray-700"
+                  } hover:bg-gray-100`}
+                  onClick={() => {
+                    setSortOrder("OLDEST");
+                    setShowSortOptions(false);
+                  }}
+                >
+                  오래된순
+                </button>
+                <button
+                  className={`flex w-full items-center px-4 py-2 text-sm ${
+                    sortOrder === "LIKECOUNT"
+                      ? "text-blue-600"
+                      : "text-gray-700"
+                  } hover:bg-gray-100`}
+                  onClick={() => {
+                    setSortOrder("LIKECOUNT");
+                    setShowSortOptions(false);
+                  }}
+                >
+                  좋아요순
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* 로딩 상태 표시 */}
       {loading && curations.length === 0 ? (
