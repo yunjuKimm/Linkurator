@@ -1,5 +1,6 @@
 package com.team8.project2.domain.link.service;
 
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
@@ -14,9 +15,16 @@ import com.team8.project2.domain.link.dto.LinkReqDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.repository.LinkRepository;
 import com.team8.project2.global.exception.ServiceException;
-
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.time.Duration;
+import java.util.Optional;
 
 /**
  * 링크(Link) 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.

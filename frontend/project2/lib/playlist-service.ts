@@ -96,26 +96,49 @@ export async function addItemToPlaylist(
   return updatedPlaylist;
 }
 
-// 플레이리스트 아이템 삭제
+// 플레이리스트 아이템 삭제 함수 수정 - URL 구성 방식 변경 및 로깅 추가
 export async function deletePlaylistItem(
   playlistId: number,
-  itemId: number
+  itemId: number,
+  deleteChildren = true // 기본값으로 하위 아이템도 함께 삭제
 ): Promise<void> {
   const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
   if (!isLoggedIn) {
     throw new Error("로그인이 필요합니다.");
   }
 
-  const response = await fetch(
-    `http://localhost:8080/api/v1/playlists/${playlistId}/items/${itemId}`,
-    {
-      method: "DELETE",
-      credentials: "include",
-    }
+  // 쿼리 파라미터로 하위 아이템 삭제 여부 전달
+  // URL 구성 방식 변경 및 로깅 추가
+  const url = `http://localhost:8080/api/v1/playlists/${playlistId}/items/${itemId}?deleteChildren=${deleteChildren}`;
+  console.log(
+    `아이템 삭제 요청 URL: ${url}, deleteChildren: ${deleteChildren}`
   );
 
-  if (!response.ok) {
-    throw new Error("플레이리스트 아이템 삭제에 실패했습니다.");
+  try {
+    const response = await fetch(url, {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Unknown error");
+      console.error(`아이템 삭제 실패 (${response.status}): ${errorText}`);
+      throw new Error(
+        `플레이리스트 아이템 삭제에 실패했습니다. 상태: ${response.status}`
+      );
+    }
+
+    console.log(
+      `아이템 ${itemId} 삭제 성공 (하위 아이템 삭제: ${deleteChildren})`
+    );
+  } catch (error) {
+    console.error("아이템 삭제 중 오류 발생:", error);
+    throw error;
   }
 }
 
@@ -213,7 +236,7 @@ export async function updatePlaylistItemOrder(
   }
 }
 
-// 추천 플레이���스트 가져오기
+// 추천 플레이리스트 가져오기
 export async function recommendPlaylist(
   playlistId: number,
   sortType = "combined"
@@ -279,19 +302,18 @@ export async function getLikedPlaylists(): Promise<Playlist[]> {
   }
 }
 
-// 플레이리스트 좋아요 수 가져오기 함수 수정 - 캐시 방지 강화
+// 플레이리스트 좋아요 수 가져오기 함수 수정 - 오류 처리 개선
 export async function getPlaylistLikeCount(
   playlistId: number
 ): Promise<number> {
   try {
-    // 현재 타임스탬프를 쿼리 파라미터로 추가하여 캐시 방지
+    // 캐시 방지를 위한 타임스탬프 추가
     const timestamp = new Date().getTime();
-
     const response = await fetch(
       `http://localhost:8080/api/v1/playlists/${playlistId}/like/count?_t=${timestamp}`,
       {
-        credentials: "include",
         cache: "no-store",
+        credentials: "include", // credentials 추가 - 중요!
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
           Pragma: "no-cache",
@@ -301,46 +323,37 @@ export async function getPlaylistLikeCount(
     );
 
     if (!response.ok) {
-      throw new Error("좋아요 수 조회 실패");
+      console.error(
+        `좋아요 수 API 응답 오류: ${response.status} ${response.statusText}`
+      );
+      return 0; // 오류 시 0 반환
     }
 
     const data = await response.json();
-    return data.data || 0; // 데이터가 없는 경우 0 반환
+    return data.data || 0; // null/undefined 체크
   } catch (error) {
-    console.error("좋아요 수 조회 오류:", error);
-    // 에러 발생 시 초기값 사용
-    return 0;
+    console.error("좋아요 수 가져오기 오류:", error);
+    return 0; // 오류 시 0 반환
   }
 }
 
-// 플레이리스트 좋아요 상태 확인 함수 수정 - 캐시 방지 강화
+// getPlaylistLikeStatus 함수 수정 - 캐시 관련 문제 해결
 export async function getPlaylistLikeStatus(
   playlistId: number
 ): Promise<boolean> {
   try {
-    // 강제 새로고침 파라미터가 있는 경우 캐시 무시
-    const forceRefresh = sessionStorage.getItem(
-      `force_refresh_like_${playlistId}`
-    );
-
-    // 세션 스토리지에서 먼저 확인 (캐싱)
-    const cachedStatus = sessionStorage.getItem(`playlist_like_${playlistId}`);
-    if (cachedStatus !== null && forceRefresh !== "true") {
-      return cachedStatus === "true";
+    // 로그인 상태 확인
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+    if (!isLoggedIn) {
+      console.log("로그인 상태 아님: 좋아요 상태 false 반환");
+      return false;
     }
 
-    // 강제 새로고침 플래그 제거
-    if (forceRefresh === "true") {
-      sessionStorage.removeItem(`force_refresh_like_${playlistId}`);
-    }
-
-    // 현재 타임스탬프를 쿼리 파라미터로 추가하여 캐시 방지
+    // 캐시 방지를 위한 타임스탬프 추가
     const timestamp = new Date().getTime();
-
     const response = await fetch(
       `http://localhost:8080/api/v1/playlists/${playlistId}/like/status?_t=${timestamp}`,
       {
-        method: "GET",
         credentials: "include",
         cache: "no-store",
         headers: {
@@ -352,107 +365,97 @@ export async function getPlaylistLikeStatus(
     );
 
     if (!response.ok) {
-      // 401 에러는 로그인이 필요한 경우이므로 false 반환
+      // 401 오류는 로그인이 필요한 경우이므로 false 반환
       if (response.status === 401) {
+        console.log("좋아요 상태 확인: 로그인 필요 (401)");
         return false;
       }
-      throw new Error("좋아요 상태 조회 실패");
+      console.error(
+        `좋아요 상태 API 응답 오류: ${response.status} ${response.statusText}`
+      );
+      throw new Error("좋아요 상태 확인 실패");
     }
 
     const data = await response.json();
-    const likeStatus = data.data;
-
-    // 세션 스토리지에 상태 저장 (캐싱)
-    sessionStorage.setItem(
-      `playlist_like_${playlistId}`,
-      likeStatus.toString()
-    );
+    const likeStatus = Boolean(data.data);
+    console.log(`API에서 가져온 좋아요 상태: ${likeStatus}`);
 
     return likeStatus;
   } catch (error) {
-    console.error("좋아요 상태 조회 오류:", error);
-    return false;
+    console.error("좋아요 상태 확인 오류:", error);
+    return false; // 오류 발생 시 기본값으로 false 반환
   }
 }
 
 // 플레이리스트 좋아요 추가 함수 수정 - 캐시 방지 강화
 export async function likePlaylist(playlistId: number): Promise<void> {
-  const response = await fetch(
-    `http://localhost:8080/api/v1/playlists/${playlistId}/like`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
-      },
-      credentials: "include",
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/v1/playlists/${playlistId}/like`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "좋아요 추가 실패");
     }
-  );
 
-  if (!response.ok) {
-    throw new Error("좋아요 추가 실패");
+    // 좋아요 추가 성공 시 세션 스토리지 업데이트
+    sessionStorage.setItem(`playlist_like_${playlistId}`, "true");
+    console.log(
+      `좋아요 추가 성공: 세션 스토리지 업데이트 (playlist_like_${playlistId} = true)`
+    );
+  } catch (error) {
+    console.error("좋아요 추가 오류:", error);
+    throw error;
   }
-
-  // 좋아요 상태 캐시 업데이트
-  sessionStorage.setItem(`playlist_like_${playlistId}`, "true");
-
-  // 강제 새로고침 플래그 설정
-  sessionStorage.setItem(`force_refresh_like_${playlistId}`, "true");
 }
 
 // 플레이리스트 좋아요 취소 함수 수정 - 캐시 방지 강화
 export async function unlikePlaylist(playlistId: number): Promise<void> {
-  const response = await fetch(
-    `http://localhost:8080/api/v1/playlists/${playlistId}/like`,
-    {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
-      },
-      credentials: "include",
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/v1/playlists/${playlistId}/like`,
+      {
+        method: "DELETE",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "좋아요 취소 실패");
     }
-  );
 
-  if (!response.ok) {
-    throw new Error("좋아요 취소 실패");
+    // 좋아요 취소 성공 시 세션 스토리지 업데이트
+    sessionStorage.setItem(`playlist_like_${playlistId}`, "false");
+    console.log(
+      `좋아요 취소 성공: 세션 스토리지 업데이트 (playlist_like_${playlistId} = false)`
+    );
+  } catch (error) {
+    console.error("좋아요 취소 오류:", error);
+    throw error;
   }
-
-  // 좋아요 상태 캐시 업데이트
-  sessionStorage.setItem(`playlist_like_${playlistId}`, "false");
-
-  // 강제 새로고침 플래그 설정
-  sessionStorage.setItem(`force_refresh_like_${playlistId}`, "true");
 }
 
 // 로그인 상태 확인
 export async function checkLoginStatus(): Promise<boolean> {
-  try {
-    // 세션 스토리지에서 로그인 상태 확인
-    const savedLoginStatus = sessionStorage.getItem("isLoggedIn");
-
-    if (savedLoginStatus === "true") {
-      return true;
-    }
-
-    const response = await fetch("http://localhost:8080/api/v1/members/me", {
-      credentials: "include",
-    });
-
-    if (response.ok) {
-      sessionStorage.setItem("isLoggedIn", "true");
-      return true;
-    } else {
-      sessionStorage.removeItem("isLoggedIn");
-      return false;
-    }
-  } catch (error) {
-    console.error("로그인 상태 확인 오류:", error);
-    sessionStorage.removeItem("isLoggedIn");
-    return false;
-  }
+  // 세션 스토리지에서 로그인 상태 확인
+  const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+  return isLoggedIn;
 }

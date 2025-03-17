@@ -21,6 +21,10 @@ interface LikeButtonProps {
   onUnlike?: () => void;
 }
 
+// 전역 좋아요 상태 캐시 - 페이지 간 이동 시에도 유지됨
+const LIKE_STATUS_CACHE: Record<number, boolean> = {};
+const LIKE_COUNT_CACHE: Record<number, number> = {};
+
 export default function LikeButton({
   playlistId,
   initialLikes,
@@ -28,40 +32,101 @@ export default function LikeButton({
   onUnlike,
 }: LikeButtonProps) {
   const { toast } = useToast();
-  const [likes, setLikes] = useState(initialLikes);
-  const [isLiked, setIsLiked] = useState(false);
+  const [likes, setLikes] = useState(
+    // 캐시된 좋아요 수가 있으면 사용, 없으면 initialLikes 사용
+    LIKE_COUNT_CACHE[playlistId] !== undefined
+      ? LIKE_COUNT_CACHE[playlistId]
+      : initialLikes
+  );
+
+  // 캐시된 좋아요 상태가 있으면 사용, 없으면 false로 초기화
+  const [isLiked, setIsLiked] = useState(
+    LIKE_STATUS_CACHE[playlistId] || false
+  );
   const [isLoading, setIsLoading] = useState(true);
 
-  // useEffect 수정 - 전역 이벤트 리스너 추가
+  // 좋아요 상태 변경 시 전역 캐시 업데이트
+  useEffect(() => {
+    LIKE_STATUS_CACHE[playlistId] = isLiked;
+    LIKE_COUNT_CACHE[playlistId] = likes;
+
+    // 세션 스토리지에도 저장 (새로고침 대비)
+    sessionStorage.setItem(`playlist_like_${playlistId}`, String(isLiked));
+    sessionStorage.setItem(`playlist_like_count_${playlistId}`, String(likes));
+
+    console.log(
+      `좋아요 상태 업데이트 - playlistId: ${playlistId}, isLiked: ${isLiked}, likes: ${likes}`
+    );
+  }, [playlistId, isLiked, likes]);
+
   useEffect(() => {
     async function fetchLikeData() {
       try {
         setIsLoading(true);
 
-        // 초기 좋아요 수는 props에서 받은 값으로 설정
-        setLikes(initialLikes);
-
         // 로그인 상태 확인
         const loggedIn = await checkLoginStatus();
-
         if (!loggedIn) {
           setIsLoading(false);
           return;
         }
 
-        // 좋아요 상태 확인 - 캐시 방지 헤더 추가
-        const likeStatus = await getPlaylistLikeStatus(playlistId);
-        setIsLiked(likeStatus);
+        // 1. 세션 스토리지에서 먼저 확인 (새로고침 대비)
+        const cachedLikeStatus = sessionStorage.getItem(
+          `playlist_like_${playlistId}`
+        );
+        const cachedLikeCount = sessionStorage.getItem(
+          `playlist_like_count_${playlistId}`
+        );
 
-        // 좋아요 수 가져오기 - API 호출이 실패하면 initialLikes 유지
+        if (cachedLikeStatus !== null) {
+          const parsedStatus = cachedLikeStatus === "true";
+          console.log(`세션 스토리지에서 가져온 좋아요 상태: ${parsedStatus}`);
+          setIsLiked(parsedStatus);
+          LIKE_STATUS_CACHE[playlistId] = parsedStatus;
+        }
+
+        if (cachedLikeCount !== null) {
+          const parsedCount = Number.parseInt(cachedLikeCount, 10);
+          console.log(`세션 스토리지에서 가져온 좋아요 수: ${parsedCount}`);
+          setLikes(parsedCount);
+          LIKE_COUNT_CACHE[playlistId] = parsedCount;
+        }
+
+        // 2. API에서 최신 데이터 가져오기 (백그라운드에서 업데이트)
         try {
-          const likeCount = await getPlaylistLikeCount(playlistId);
-          if (likeCount !== undefined && likeCount !== null) {
-            setLikes(likeCount);
+          const [likeStatus, likeCount] = await Promise.all([
+            getPlaylistLikeStatus(playlistId),
+            getPlaylistLikeCount(playlistId),
+          ]);
+
+          console.log(
+            `API에서 가져온 좋아요 상태: ${likeStatus}, 좋아요 수: ${likeCount}`
+          );
+
+          // 사용자가 최근에 좋아요 상태를 변경하지 않은 경우에만 API 값으로 업데이트
+          const recentlyChanged = sessionStorage.getItem(
+            `playlist_like_recently_changed_${playlistId}`
+          );
+          if (!recentlyChanged) {
+            setIsLiked(likeStatus);
+            LIKE_STATUS_CACHE[playlistId] = likeStatus;
+            sessionStorage.setItem(
+              `playlist_like_${playlistId}`,
+              String(likeStatus)
+            );
           }
+
+          // 좋아요 수는 항상 최신 값으로 업데이트
+          setLikes(likeCount);
+          LIKE_COUNT_CACHE[playlistId] = likeCount;
+          sessionStorage.setItem(
+            `playlist_like_count_${playlistId}`,
+            String(likeCount)
+          );
         } catch (error) {
-          console.error("좋아요 수 조회 실패, 초기값 사용:", error);
-          // 초기값 유지
+          console.error("API 데이터 조회 실패:", error);
+          // API 실패 시 캐시된 값 유지 (이미 위에서 설정됨)
         }
       } catch (error) {
         console.error("좋아요 데이터 로딩 실패", error);
@@ -80,10 +145,29 @@ export default function LikeButton({
         likeCount: changedLikeCount,
       } = event.detail;
 
-      // 현재 컴포넌트의 플레이리스트 ID와 일치하는 경우에만 상태 업데이트
-      if (changedPlaylistId === playlistId) {
+      // 숫자로 변환하여 비교 (문자열 비교 방지)
+      if (Number(changedPlaylistId) === Number(playlistId)) {
+        console.log(
+          `좋아요 이벤트 수신 및 적용: playlistId=${changedPlaylistId}, isLiked=${changedIsLiked}, count=${changedLikeCount}`
+        );
+
+        // 상태 업데이트
         setIsLiked(changedIsLiked);
         setLikes(changedLikeCount);
+
+        // 전역 캐시 업데이트
+        LIKE_STATUS_CACHE[playlistId] = changedIsLiked;
+        LIKE_COUNT_CACHE[playlistId] = changedLikeCount;
+
+        // 세션 스토리지 업데이트
+        sessionStorage.setItem(
+          `playlist_like_${playlistId}`,
+          String(changedIsLiked)
+        );
+        sessionStorage.setItem(
+          `playlist_like_count_${playlistId}`,
+          String(changedLikeCount)
+        );
       }
     };
 
@@ -100,7 +184,7 @@ export default function LikeButton({
     };
   }, [playlistId, initialLikes]);
 
-  // 좋아요 상태 변경 시 전역 이벤트 발생 추가
+  // 좋아요 상태 변경 함수
   const handleToggleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -125,51 +209,91 @@ export default function LikeButton({
     setIsLoading(true);
 
     try {
+      // 현재 상태의 반대로 변경
       const newLikeStatus = !isLiked;
+      const newLikeCount = newLikeStatus ? likes + 1 : likes - 1;
 
-      if (isLiked) {
-        // 좋아요 취소
-        await unlikePlaylist(playlistId);
-        setLikes((prev) => prev - 1);
-        setIsLiked(false); // 즉시 상태 업데이트
+      console.log(`좋아요 상태 변경 시작: ${isLiked} -> ${newLikeStatus}`);
 
-        // 좋아요 취소 시 콜백 호출
-        if (onUnlike) {
-          onUnlike();
-        }
+      // UI 즉시 업데이트 (낙관적 업데이트)
+      setIsLiked(newLikeStatus);
+      setLikes(newLikeCount);
 
-        toast({
-          title: "좋아요가 취소되었습니다",
-        });
-      } else {
+      // 전역 캐시 업데이트
+      LIKE_STATUS_CACHE[playlistId] = newLikeStatus;
+      LIKE_COUNT_CACHE[playlistId] = newLikeCount;
+
+      // 세션 스토리지에 상태 저장
+      sessionStorage.setItem(
+        `playlist_like_${playlistId}`,
+        String(newLikeStatus)
+      );
+      sessionStorage.setItem(
+        `playlist_like_count_${playlistId}`,
+        String(newLikeCount)
+      );
+
+      // 최근 변경 플래그 설정 (5초 동안 유지)
+      sessionStorage.setItem(
+        `playlist_like_recently_changed_${playlistId}`,
+        "true"
+      );
+      setTimeout(() => {
+        sessionStorage.removeItem(
+          `playlist_like_recently_changed_${playlistId}`
+        );
+      }, 5000);
+
+      // API 호출
+      if (newLikeStatus) {
         // 좋아요 추가
         await likePlaylist(playlistId);
-        setLikes((prev) => prev + 1);
-        setIsLiked(true); // 즉시 상태 업데이트
-
         toast({
           title: "좋아요가 추가되었습니다",
         });
+      } else {
+        // 좋아요 취소
+        await unlikePlaylist(playlistId);
+
+        if (onUnlike) {
+          onUnlike();
+        }
+        toast({
+          title: "좋아요가 취소되었습니다",
+        });
       }
 
-      // 세션 스토리지에 좋아요 상태 직접 업데이트
-      sessionStorage.setItem(
-        `playlist_like_${playlistId}`,
-        newLikeStatus.toString()
-      );
-
       // 전역 이벤트 발생 - 다른 컴포넌트에 좋아요 상태 변경을 알림
+      console.log(
+        `전역 이벤트 발생: playlistId=${playlistId}, isLiked=${newLikeStatus}, count=${newLikeCount}`
+      );
       window.dispatchEvent(
         new CustomEvent("playlist-like-changed", {
           detail: {
             playlistId,
             isLiked: newLikeStatus,
-            likeCount: newLikeStatus ? likes + 1 : likes - 1,
+            likeCount: newLikeCount,
           },
         })
       );
     } catch (error) {
       console.error("좋아요 요청 처리 실패", error);
+
+      // 실패 시 UI 롤백
+      setIsLiked(!isLiked);
+      setLikes(isLiked ? likes + 1 : likes - 1);
+
+      // 전역 캐시 롤백
+      LIKE_STATUS_CACHE[playlistId] = !isLiked;
+      LIKE_COUNT_CACHE[playlistId] = isLiked ? likes + 1 : likes - 1;
+
+      // 세션 스토리지 롤백
+      sessionStorage.setItem(`playlist_like_${playlistId}`, String(!isLiked));
+      sessionStorage.setItem(
+        `playlist_like_count_${playlistId}`,
+        String(isLiked ? likes + 1 : likes - 1)
+      );
+
       toast({
         title: "오류 발생",
         description: (error as Error).message,

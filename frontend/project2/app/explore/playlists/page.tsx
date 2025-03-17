@@ -190,7 +190,7 @@ export default function ExplorePlaylists() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => (
-            <Card key={i}>
+            <Card key={i} className="h-[180px]">
               <CardContent className="p-4">
                 <Skeleton className="h-6 w-full mb-2" />
                 <Skeleton className="h-4 w-1/2" />
@@ -305,10 +305,13 @@ export default function ExplorePlaylists() {
           {filteredPlaylists.map((playlist) => (
             <Card
               key={playlist.id}
-              className="relative hover:shadow-md transition-all duration-200 overflow-hidden border-l-4 border-l-blue-500"
+              className="relative hover:shadow-md transition-all duration-200 overflow-hidden border-l-4 border-l-blue-500 flex flex-col h-[180px]"
             >
-              <Link href={`/playlists/${playlist.id}`} className="block">
-                <CardContent className="p-4 pb-2">
+              <Link
+                href={`/playlists/${playlist.id}`}
+                className="block flex-1 flex flex-col"
+              >
+                <CardContent className="p-4 pb-2 flex-1 flex flex-col">
                   <h3 className="font-bold text-lg truncate">
                     {playlist.title}
                   </h3>
@@ -319,7 +322,7 @@ export default function ExplorePlaylists() {
                     </p>
                   )}
 
-                  <div className="flex items-center flex-wrap gap-2 mt-3 text-xs text-muted-foreground">
+                  <div className="flex items-center flex-wrap gap-2 mt-auto text-xs text-muted-foreground">
                     <Badge
                       variant="secondary"
                       className="flex items-center gap-1 font-normal"
@@ -344,23 +347,24 @@ export default function ExplorePlaylists() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="px-4 py-2 bg-muted/10 border-t flex justify-between items-center">
+                <CardFooter className="px-4 py-2 bg-muted/10 border-t text-xs text-muted-foreground flex justify-between items-center mt-auto">
                   <span className="text-xs opacity-70">
                     {playlist.createdAt
                       ? formatDate(playlist.createdAt)
                       : "날짜 정보 없음"}
                   </span>
-
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs"
-                    onClick={(e) => clonePlaylist(playlist.id, e)}
-                    disabled={isAddingToPlaylist}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    추가
-                  </Button>
+                  <div className="flex items-center">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-xs"
+                      onClick={(e) => clonePlaylist(playlist.id, e)}
+                      disabled={isAddingToPlaylist}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      추가
+                    </Button>
+                  </div>
                 </CardFooter>
               </Link>
             </Card>
