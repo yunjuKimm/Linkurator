@@ -52,7 +52,7 @@ public class Comment {
     @JoinColumn(name = "curation_id", nullable = false)
     private Curation curation;
 
-    @OneToMany(mappedBy = "comment")
+    @OneToMany(mappedBy = "comment", orphanRemoval = true)
     private List<ReplyComment> replyComments = new ArrayList<>();
 
     /**
