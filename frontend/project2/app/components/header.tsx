@@ -13,6 +13,7 @@ import {
   Shield,
   Search,
   Filter,
+  Bookmark,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -334,13 +335,12 @@ export default function Header() {
       <div className="container flex h-14 items-center px-4">
         <div className="flex items-center space-x-4">
           <Link href="/home" className="flex items-center space-x-2">
-            <Image
-              src="/placeholder.svg?height=32&width=32"
-              alt="Logo"
-              width={32}
-              height={32}
-              className="rounded"
-            />
+            <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md text-white">
+              <Bookmark className="w-5 h-5" />
+            </div>
+            <span className="font-semibold text-sm hidden sm:inline-block">
+              LinkCuration
+            </span>
           </Link>
           <nav className="flex items-center space-x-4 text-sm font-medium">
             <Link
