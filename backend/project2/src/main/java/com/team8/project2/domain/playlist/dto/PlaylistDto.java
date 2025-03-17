@@ -1,5 +1,6 @@
 package com.team8.project2.domain.playlist.dto;
 
+import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.playlist.entity.Playlist;
 import lombok.Builder;
 import lombok.Data;
@@ -52,12 +53,16 @@ public class PlaylistDto {
     private Set<String> tags;
     private LocalDateTime createdAt;
 
+    private boolean isOwner;
+
     /**
      * 플레이리스트 엔티티를 DTO로 변환합니다.
      * @param playlist 변환할 플레이리스트 엔티티
      * @return 변환된 PlaylistDto 객체
      */
-    public static PlaylistDto fromEntity(Playlist playlist) {
+    public static PlaylistDto fromEntity(Playlist playlist, Member actor) {
+        boolean isOwner = (actor != null && playlist.getMember().getId().equals(actor.getId()));
+
         return PlaylistDto.builder()
                 .id(playlist.getId())
                 .title(playlist.getTitle())
@@ -71,6 +76,7 @@ public class PlaylistDto {
                         .collect(Collectors.toList()))
                 .tags(playlist.getTagNames()) // ✅ 태그 가져오기
                 .createdAt(playlist.getCreatedAt())
+                .isOwner(isOwner)
                 .build();
     }
 

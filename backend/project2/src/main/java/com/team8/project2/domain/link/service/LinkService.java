@@ -1,23 +1,21 @@
 package com.team8.project2.domain.link.service;
 
-import com.team8.project2.domain.link.dto.LinkReqDTO;
-import com.team8.project2.domain.link.dto.LinkResDTO;
-import com.team8.project2.domain.link.entity.Link;
-import com.team8.project2.domain.link.repository.LinkRepository;
-import com.team8.project2.global.exception.ServiceException;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.time.Duration;
+import java.util.Optional;
+
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.time.Duration;
+import com.team8.project2.domain.link.dto.LinkReqDTO;
+import com.team8.project2.domain.link.entity.Link;
+import com.team8.project2.domain.link.repository.LinkRepository;
+import com.team8.project2.global.exception.ServiceException;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 링크(Link) 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
@@ -106,13 +104,6 @@ public class LinkService {
      * @param linkReqDTO 링크 추가 요청 데이터 객체
      * @return 생성된 링크 객체
      */
-//    @Transactional
-//    public Link addLink(String url) {
-//        Link link = new Link();
-//        link.setUrl(url);
-//        link.setClick(0); // 초기 클릭수
-//        return linkRepository.save(link);
-//    }
     @Transactional
     public Link addLink(LinkReqDTO linkReqDTO) {
         Link link = Link.builder()
@@ -160,52 +151,35 @@ public class LinkService {
      */
     @Transactional
     public Link getLink(String url) {
-        return linkRepository.findByUrl(url)
-                .orElseGet(() -> linkRepository.save(Link.builder().url(url).build()));
+        Optional<Link> opLink = linkRepository.findByUrl(url);
+        if (opLink.isPresent()) {
+            return opLink.get();
+        }
+        Link link = Link.builder()
+            .url(url)
+            .build();
+        link.loadMetadata();
+        return linkRepository.save(link);
     }
 
+
     /**
-     * 링크 URL을 입력받아 해당 링크의 메타 데이터를 추출합니다.
+     * 링크의 제목, URL, 설명을 수정합니다.
      *
-     * @param url 링크 URL
-     * @return 링크 메타 데이터 DTO
+     * @param linkId      수정할 링크 ID
+     * @param title       새로운 링크 제목
+     * @param url         새로운 링크 URL
+     * @param description 새로운 링크 설명
+     * @return 수정된 링크 객체
      */
     @Transactional
-    public LinkResDTO getLinkMetaData(String url) {
-        try {
-            // Jsoup을 사용하여 URL의 HTML을 파싱
-            Document doc = Jsoup.connect(url).get();
-
-            // 메타 데이터 추출
-            String title = getMetaTagContent(doc, "og:title");
-            String description = getMetaTagContent(doc, "og:description");
-            String image = getMetaTagContent(doc, "og:image");
-
-            // DTO에 메타 데이터 설정
-            LinkResDTO linkResDTO = new LinkResDTO();
-            linkResDTO.setUrl(url);
-            linkResDTO.setTitle(title);
-            linkResDTO.setDescription(description);
-            linkResDTO.setImage(image);
-            linkResDTO.setClick(getLink(url).getClick());
-            linkResDTO.setLinkId(getLink(url).getId());
-
-            return linkResDTO;
-        } catch (IOException e) {
-            // 예외 발생 시 커스텀 예외 던지기
-            throw new ServiceException("500-1", "메타 데이터 추출 중 오류가 발생했습니다.");
-        }
+    public Link updateLinkDetails(Long linkId, String title, String url, String description) {
+        Link link = linkRepository.findById(linkId)
+                .orElseThrow(() -> new ServiceException("404", "해당 링크를 찾을 수 없습니다."));
+        link.setTitle(title);
+        link.setUrl(url);
+        link.setDescription(description);
+        return linkRepository.save(link);
     }
 
-    /**
-     * Jsoup Document에서 메타 태그의 content 속성을 추출합니다.
-     *
-     * @param doc      Jsoup Document
-     * @param property 메타 태그 property 속성
-     * @return 메타 태그 content 속성 값
-     */
-    private String getMetaTagContent(Document doc, String property) {
-        Element metaTag = doc.select("meta[property=" + property + "]").first();
-        return metaTag != null ? metaTag.attr("content") : "";
-    }
 }

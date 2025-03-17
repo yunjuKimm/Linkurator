@@ -39,7 +39,6 @@ public class ApiV1CurationController {
     private final CurationService curationService;
 
     private final Rq rq;
-    private final MemberService memberService;
     private final PlaylistService playlistService;
     private final TagService tagService;
 
@@ -132,6 +131,12 @@ public class ApiV1CurationController {
                 .collect(Collectors.toUnmodifiableList());
 
         return new RsData<>("200-1", "글이 검색되었습니다.", result);
+    }
+
+    @GetMapping("/author/{username}")
+    public RsData<List<CurationResDto>> searchCurationByUserName(@PathVariable String username) {
+        List<CurationResDto> result = curationService.searchCurationByUserName(username);
+        return new RsData<>("200-1", "작성자로 큐레이션이 검색되었습니다.", result);
     }
 
     /**

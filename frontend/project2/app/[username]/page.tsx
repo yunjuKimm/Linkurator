@@ -23,20 +23,18 @@ interface Curation {
   id: number;
   title: string;
   content: string;
-  createdBy?: string;
+  authorName: string;
+  memberImgUrl: string;
   createdAt: string;
   modifiedAt: string;
   likeCount: number;
-  urls: { url: string }[];
+  urls: {
+    url: string;
+    title: string;
+    description: string;
+    imageUrl: string;
+  }[];
   tags: { name: string }[];
-}
-
-// Link 메타 데이터 인터페이스 정의
-interface LinkMetaData {
-  url: string;
-  title: string;
-  description: string;
-  image: string;
 }
 
 // API_URL 변수를 직접 설정하여 환경 변수 문제 해결
@@ -51,9 +49,6 @@ export default function CuratorProfile({
   const [curations, setCurations] = useState<Curation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [linkMetaDataList, setLinkMetaDataList] = useState<{
-    [key: number]: LinkMetaData[];
-  }>({});
 
   // 큐레이터 정보 가져오기
   const fetchCuratorInfo = async (username: string) => {
@@ -80,7 +75,7 @@ export default function CuratorProfile({
   const fetchCuratorCurations = async (username: string) => {
     try {
       const response = await fetch(
-        `${API_URL}/api/v1/curation?author=${username}`
+        `${API_URL}/api/v1/curation/author/${username}`
       );
       if (!response.ok) {
         throw new Error("큐레이션 목록을 불러오는 데 실패했습니다.");
@@ -97,37 +92,6 @@ export default function CuratorProfile({
       setError((error as Error).message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // 메타 데이터 추출 함수
-  const fetchLinkMetaData = async (url: string, curationId: number) => {
-    try {
-      const response = await fetch(`${API_URL}/api/v1/link/preview`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: url }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch link metadata");
-      }
-
-      const data = await response.json();
-      setLinkMetaDataList((prev) => {
-        const existingMetaData = prev[curationId] || [];
-        const newMetaData = existingMetaData.filter(
-          (meta) => meta.url !== data.data.url
-        );
-        return {
-          ...prev,
-          [curationId]: [...newMetaData, data.data],
-        };
-      });
-    } catch (error) {
-      console.error("Error fetching link metadata:", error);
     }
   };
 
@@ -172,22 +136,11 @@ export default function CuratorProfile({
     }
   };
 
-  // 큐레이션마다 메타 데이터 추출
+  // 컴포넌트 마운트 시 API 호출
   useEffect(() => {
-    curations.forEach((curation) => {
-      if (curation.urls && curation.urls.length > 0) {
-        curation.urls.forEach((urlObj) => {
-          if (
-            !linkMetaDataList[curation.id]?.some(
-              (meta) => meta.url === urlObj.url
-            )
-          ) {
-            fetchLinkMetaData(urlObj.url, curation.id);
-          }
-        });
-      }
-    });
-  }, [curations, linkMetaDataList]);
+    fetchCuratorInfo(params.username);
+    fetchCuratorCurations(params.username);
+  }, [params.username]);
 
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
@@ -199,12 +152,6 @@ export default function CuratorProfile({
     const minutes = String(date.getMinutes()).padStart(2, "0");
     return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
   };
-
-  // 컴포넌트 마운트 시 API 호출
-  useEffect(() => {
-    fetchCuratorInfo(params.username);
-    fetchCuratorCurations(params.username);
-  }, [params.username]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -343,19 +290,25 @@ export default function CuratorProfile({
                   </div>
 
                   {/* 메타 데이터 카드 */}
-                  {linkMetaDataList[curation.id]?.map((metaData, index) => (
-                    <Link key={index} href={metaData.url} passHref>
+                  {curation.urls?.map((urlObj, index) => (
+                    <Link
+                      key={index}
+                      href={urlObj.url}
+                      passHref
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <div className="mt-4 rounded-lg border p-4 cursor-pointer hover:bg-gray-50 transition-colors">
                         <div className="flex items-center space-x-3">
                           <img
-                            src={metaData.image || "/placeholder.svg"}
+                            src={urlObj.imageUrl || "/placeholder.svg"}
                             alt="Preview"
                             className="h-12 w-12 rounded-lg object-cover"
                           />
                           <div>
-                            <h3 className="font-medium">{metaData.title}</h3>
+                            <h3 className="font-medium">{urlObj.title}</h3>
                             <p className="text-sm text-gray-600 line-clamp-1">
-                              {metaData.description}
+                              {urlObj.description}
                             </p>
                           </div>
                         </div>
