@@ -132,8 +132,9 @@ public class ApiV1CurationController {
 	}
 
 	@GetMapping("/author/{username}")
-	public RsData<List<CurationResDto>> searchCurationByUserName(@PathVariable String username) {
-		List<CurationResDto> result = curationService.searchCurationByUserName(username);
+	public RsData<List<CurationResDto>> searchCurationByUserName(@PathVariable String username,
+		@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+		List<CurationResDto> result = curationService.searchCurationByUserName(username, page, size);
 		return new RsData<>("200-1", "작성자로 큐레이션이 검색되었습니다.", result);
 	}
 

@@ -495,10 +495,11 @@ public class CurationService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<CurationResDto> searchCurationByUserName(String username) {
+	public List<CurationResDto> searchCurationByUserName(String username, int page, int size) {
+		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 		Member author = memberRepository.findByUsername(username)
 			.orElseThrow(() -> new ServiceException("404-1", "작성자가 존재하지 않습니다."));
-		return curationRepository.findAllByMember(author).stream()
+		return curationRepository.findAllByMember(author, pageable).stream()
 			.map(CurationResDto::new)
 			.collect(Collectors.toUnmodifiableList());
 	}
