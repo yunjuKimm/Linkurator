@@ -1,13 +1,14 @@
 package com.team8.project2.domain.admin.service;
 
+import com.team8.project2.domain.curation.report.dto.ReportedCurationsDetailResDto;
 import com.team8.project2.domain.admin.dto.StatsResDto;
-import com.team8.project2.domain.comment.entity.Comment;
 import com.team8.project2.domain.comment.repository.CommentRepository;
 import com.team8.project2.domain.comment.service.CommentService;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.repository.CurationRepository;
 import com.team8.project2.domain.curation.curation.service.CurationService;
-import com.team8.project2.domain.member.entity.Follow;
+import com.team8.project2.domain.curation.report.entity.ReportType;
+import com.team8.project2.domain.curation.report.repository.ReportRepository;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.member.repository.FollowRepository;
 import com.team8.project2.domain.member.repository.MemberRepository;
@@ -20,7 +21,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +39,7 @@ public class AdminService {
     private final CommentService commentService;
     private final FollowRepository followRepository;
     private final CommentRepository commentRepository;
+    private final ReportRepository reportRepository;
 
     @Transactional(noRollbackFor = ServiceException.class)
     public void deleteMember(Member member) {
@@ -91,4 +96,5 @@ public class AdminService {
     public List<Member> getAllMembers(Member member) {
         return memberRepository.findAll();
     }
+
 }
