@@ -3,6 +3,7 @@ package com.team8.project2.domain.curation.curation.controller;
 import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.dto.CurationReqDTO;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
+import com.team8.project2.domain.curation.curation.dto.CurationSearchResDto;
 import com.team8.project2.domain.curation.curation.dto.TrendingCurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.SearchOrder;
@@ -116,19 +117,15 @@ public class ApiV1CurationController {
 	 */
 	@GetMapping
 	@Transactional(readOnly = true)
-	public RsData<List<CurationResDto>> searchCuration(@RequestParam(required = false) List<String> tags,
+	public RsData<CurationSearchResDto> searchCuration(@RequestParam(required = false) List<String> tags,
 		@RequestParam(required = false) String title, @RequestParam(required = false) String content,
 		@RequestParam(required = false) String author,
 		@RequestParam(required = false, defaultValue = "LATEST") SearchOrder order,
 		@RequestParam(defaultValue = "0") int page,  // 기본값 0
 		@RequestParam(defaultValue = "20") int size // 기본값 20
 	) {
-		List<CurationResDto> result = curationService.searchCurations(tags, title, content, author, order, page, size)
-			.stream()
-			.map(CurationResDto::new)
-			.collect(Collectors.toUnmodifiableList());
-
-		return new RsData<>("200-1", "글이 검색되었습니다.", result);
+		CurationSearchResDto curationSearchResDto = curationService.searchCurations(tags, title, content, author, order, page, size);
+		return new RsData<>("200-1", "글이 검색되었습니다.", curationSearchResDto);
 	}
 
 	@GetMapping("/author/{username}")

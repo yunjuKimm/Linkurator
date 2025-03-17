@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.team8.project2.domain.curation.curation.dto.CurationDetailResDto;
 import com.team8.project2.domain.curation.curation.dto.CurationResDto;
+import com.team8.project2.domain.curation.curation.dto.CurationSearchResDto;
 import com.team8.project2.domain.curation.curation.dto.TrendingCurationResDto;
 import com.team8.project2.domain.curation.curation.entity.Curation;
 import com.team8.project2.domain.curation.curation.entity.CurationLink;
@@ -323,7 +325,7 @@ public class CurationService {
 	 * @param order 정렬 기준
 	 * @return 검색된 큐레이션 목록
 	 */
-	public List<Curation> searchCurations(List<String> tags, String title, String content, String author,
+	public CurationSearchResDto searchCurations(List<String> tags, String title, String content, String author,
 		SearchOrder order, int page, int size) {
 		Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
 		if (order.equals(SearchOrder.OLDEST)) {
@@ -333,11 +335,13 @@ public class CurationService {
 				sort = Sort.by(Sort.Direction.DESC, "likeCount");
 		}
 		Pageable pageable = PageRequest.of(page, size, sort);
-
 		List<Curation> curations;
+		Page<Curation> curationPage;
+
 		if (tags == null || tags.isEmpty()) {
 			// 태그가 없을 경우 필터 없이 검색
-			curations = curationRepository.searchByFiltersWithoutTags(tags, title, content, author, pageable).getContent().stream()
+			curationPage = curationRepository.searchByFiltersWithoutTags(tags, title, content, author, pageable);
+			curations = curationPage.getContent().stream()
 				.map(curation -> {
 					String redisKey = "curation_like:" + curation.getId();
 					curation.setLikeCount(redisTemplate.opsForSet().size(redisKey));
@@ -345,21 +349,17 @@ public class CurationService {
 				}).collect(Collectors.toList());
 		} else {
 			// 태그가 있을 경우 태그 필터 적용
-			curations = curationRepository.searchByFilters(tags, tags.size(), title, content, author, pageable).getContent().stream()
+			curationPage = curationRepository.searchByFilters(tags, tags.size(), title, content, author, pageable);
+				curations = curationPage.getContent().stream()
 				.map(curation -> {
 					String redisKey = "curation_like:" + curation.getId();
 					curation.setLikeCount(redisTemplate.opsForSet().size(redisKey));
 					return curation;
 				}).collect(Collectors.toList());
 		}
-		// 좋아요순 검색일 경우 검색 결과를 Redis의 실제 좋아요 순으로 정렬
-		if (order.equals(SearchOrder.LIKECOUNT)) {
-			curations.sort(Comparator.comparing(curation -> {
-				String redisKey = "curation_like:" + curation.getId();
-				return redisTemplate.opsForSet().size(redisKey);
-			}, Comparator.reverseOrder()));
-		}
-		return curations;
+
+		return CurationSearchResDto.of(curations,curationPage.getTotalPages(), curationPage.getTotalElements(),
+			curationPage.getNumberOfElements(), curationPage.getSize());
 	}
 
 	@Transactional
