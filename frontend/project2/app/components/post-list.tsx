@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Bookmark, Flag } from "lucide-react";
+import { Heart, MessageSquare, Flag } from "lucide-react";
 import { stripHtml } from "@/lib/htmlutils";
 import { ClipLoader } from "react-spinners"; // 로딩 애니메이션
 import ReportModal from "./report-modal";
@@ -676,9 +676,6 @@ export default function PostList() {
                       </button>
                     </div>
                     <div className="flex space-x-2">
-                      <button>
-                        <Bookmark className="h-4 w-4 text-gray-500" />
-                      </button>
                       <ShareButton id={curation.id} variant="icon" />
                       <button onClick={() => openReportModal(curation.id)}>
                         <Flag className="h-4 w-4 text-gray-500 hover:text-red-500" />

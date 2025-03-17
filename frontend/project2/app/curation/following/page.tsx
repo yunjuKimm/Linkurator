@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Bookmark, Share2, LinkIcon } from "lucide-react";
+import { Heart, MessageSquare, Share2, LinkIcon } from "lucide-react";
 import CurationSkeleton from "@/app/components/skeleton/curation-skeleton";
 import { stripHtml } from "@/lib/htmlutils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -420,9 +420,6 @@ export default function FollowingCurations() {
                       </button>
                     </div>
                     <div className="flex space-x-2">
-                      <button>
-                        <Bookmark className="h-4 w-4 text-gray-500" />
-                      </button>
                       <button>
                         <Share2 className="h-4 w-4 text-gray-500" />
                       </button>
