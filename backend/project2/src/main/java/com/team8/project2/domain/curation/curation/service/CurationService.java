@@ -211,6 +211,7 @@ public class CurationService {
 		if (!curation.getMember().getId().equals(member.getId()) && !member.isAdmin()) {
 			throw new ServiceException("403-1", "권한이 없습니다."); // 권한 없음
 		}
+		reportRepository.deleteByCurationId(curationId);
 		curationLinkRepository.deleteByCurationId(curationId);
 		curationTagRepository.deleteByCurationId(curationId);
 		curationRepository.deleteById(curationId);
