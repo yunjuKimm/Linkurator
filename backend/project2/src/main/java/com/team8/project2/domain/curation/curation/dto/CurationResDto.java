@@ -55,9 +55,15 @@ public class CurationResDto {
     @Setter
     static class LinkResDto {
         private String url;
+        private String title;
+        private String description;
+        private String imageUrl;
 
         public LinkResDto(Link link) {
             this.url = link.getUrl();
+            this.title = link.getTitle();
+            this.description = link.getDescription();
+            this.imageUrl = link.getMetaImageUrl();
         }
     }
 

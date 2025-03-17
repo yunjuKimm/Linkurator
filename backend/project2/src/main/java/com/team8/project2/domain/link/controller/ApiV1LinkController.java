@@ -1,14 +1,22 @@
 package com.team8.project2.domain.link.controller;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.team8.project2.domain.link.dto.LinkReqDTO;
-import com.team8.project2.domain.link.dto.LinkResDTO;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.global.dto.RsData;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 
 /**
  * 링크(Link) 관련 API 컨트롤러 클래스입니다.
@@ -53,18 +61,6 @@ public class ApiV1LinkController {
     public RsData<Void> deleteLink(@PathVariable Long linkId) {
         linkService.deleteLink(linkId);
         return new RsData<>("204-1", "링크가 성공적으로 삭제되었습니다.");
-    }
-
-    /**
-     * 링크 URL을 입력받아 해당 링크의 메타 데이터를 추출합니다.
-     * @param linkDTO 링크 URL
-     * @return 링크 메타 데이터 응답
-     */
-    @PostMapping("/preview")
-    public RsData<LinkResDTO> getLinkPreview(@RequestBody @Valid LinkReqDTO linkDTO)  {
-        System.out.println("linkDTO.getUrl() = " + linkDTO.getUrl());
-        LinkResDTO linkResDTO = linkService.getLinkMetaData(linkDTO.getUrl());
-        return new RsData<>("200","메타 데이터가 성공적으로 추출되었습니다.",linkResDTO);
     }
 
     /**
