@@ -45,7 +45,7 @@ export default function NewPlaylistPage() {
 
         const curationData = await curationResponse.json();
 
-        // 콘솔에 큐레이션 데이터 구조 출력 (디버깅용)
+        // 콘��에 큐레이션 데이터 구조 출력 (��버깅용)
         console.log("큐레이션 데이터:", curationData.data);
 
         // urls 배열이 없거나 비어있는 경우 확인

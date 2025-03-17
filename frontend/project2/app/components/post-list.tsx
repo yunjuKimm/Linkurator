@@ -29,8 +29,18 @@ interface Curation {
     title: string;
     description: string;
     imageUrl: string;
+    linkId?: number;
   }[];
   tags: { name: string }[];
+}
+
+// 페이지네이션 응답 인터페이스 추가
+interface PaginatedResponse {
+  curations: Curation[];
+  totalPages: number;
+  totalElements: number;
+  numberOfElements: number;
+  size: number;
 }
 
 interface CurationRequestParams {
@@ -65,6 +75,7 @@ export default function PostList() {
   const [page, setPage] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [totalPages, setTotalPages] = useState<number>(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // API 요청 함수
@@ -103,12 +114,15 @@ export default function PostList() {
 
       const data = await response.json();
       if (data && data.data) {
-        // 새로운 데이터가 있는지 확인
-        const newCurations = data.data;
-        console.log(`Received ${newCurations.length} items`);
+        // 새로운 API 응답 구조 처리
+        const paginatedData = data.data as PaginatedResponse;
+        const newCurations = paginatedData.curations;
 
-        // 요청한 사이즈보다 적은 데이터가 왔다면 ��� 이상 데이터가 없는 것
-        setHasMore(newCurations.length === (params.size || PAGE_SIZE));
+        console.log(`Received ${newCurations.length} items`);
+        setTotalPages(paginatedData.totalPages);
+
+        // 요청한 사이즈보다 적은 데이터가 왔거나 마지막 페이지인 경우
+        setHasMore(page < paginatedData.totalPages - 1);
 
         if (isLoadMore) {
           // 기존 데이터에 새 데이터 추가
@@ -489,7 +503,8 @@ export default function PostList() {
                           <img
                             src={
                               urlObj.imageUrl ||
-                              "/placeholder.svg?height=48&width=48"
+                              "/placeholder.svg?height=48&width=48" ||
+                              "/placeholder.svg"
                             }
                             alt="Preview"
                             className="h-12 w-12 rounded-lg object-cover"

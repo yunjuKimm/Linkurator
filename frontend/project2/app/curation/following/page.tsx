@@ -15,9 +15,6 @@ interface Curation {
   modifiedAt: string;
   likeCount: number;
   commentCount: number;
-  viewCount: number;
-  authorName: string;
-  memberImgUrl: string;
   urls: {
     url: string;
     title: string;
@@ -25,6 +22,16 @@ interface Curation {
     imageUrl: string;
   }[];
   tags: { name: string }[];
+  viewCount?: number;
+  authorName: string;
+  memberImgUrl: string;
+}
+
+// API 응답 인터페이스 정의
+interface ApiResponse {
+  code: string;
+  msg: string;
+  data: Curation[];
 }
 
 // API URL 상수
@@ -65,18 +72,21 @@ export default function FollowingCurations() {
         );
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as ApiResponse;
       if (data && data.data) {
-        console.log(`Received ${data.data.length} curations`);
+        // API 응답에서 큐레이션 배열 직접 추출
+        const newCurations = data.data;
+
+        console.log(`Received ${newCurations.length} curations`);
+
+        // 더 불러올 데이터가 있는지 확인 (받은 데이터가 PAGE_SIZE보다 적으면 더 이상 없음)
+        setHasMore(newCurations.length === PAGE_SIZE);
 
         if (isLoadMore) {
-          setCurations((prev) => [...prev, ...data.data]);
+          setCurations((prev) => [...prev, ...newCurations]);
         } else {
-          setCurations(data.data);
+          setCurations(newCurations);
         }
-
-        // 받아온 데이터가 PAGE_SIZE보다 적으면 더 이상 데이터가 없는 것
-        setHasMore(data.data.length === PAGE_SIZE);
       } else {
         console.error("No data found in the response");
         if (!isLoadMore) {
@@ -169,6 +179,12 @@ export default function FollowingCurations() {
     window.addEventListener("scroll", handleScroll);
     return () => {
       window.removeEventListener("scroll", handleScroll);
+    };
+  }, [handleScroll]);
+
+  return (
+    <>
+      {/* 로딩 상태 표시 - 스켈레톤 UI로  handleScroll);
     };
   }, [handleScroll]);
 
