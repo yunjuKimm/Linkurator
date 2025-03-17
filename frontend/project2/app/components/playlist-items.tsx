@@ -86,6 +86,7 @@ export default function PlaylistItems({
   >({});
   const [singleItems, setSingleItems] = useState<PlaylistItem[]>([]);
   const [draggableItems, setDraggableItems] = useState<DraggableItem[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false); // 삭제 중 상태 추가
 
   // 편집 관련 상태 추가
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -101,14 +102,17 @@ export default function PlaylistItems({
   const handleLinkAdded = (newItem: PlaylistItem) => {
     setItems((prevItems) => [...prevItems, newItem]);
 
-    // 부모 컴포넌트에 변경 알림
+    // 부모 컴포넌트에 변경 알림 - 한 번만 호출
     if (onItemsChanged) {
       onItemsChanged();
     }
   };
 
-  // handleDelete 함수를 수정하여 그룹 삭제 시 UI에서 하위 링크들을 확실히 제거하도록 합니다
+  // handleDelete 함수를 수정하여 새로고침 횟수 최소화
   const handleDelete = async (itemId: number, isGroup = false) => {
+    // 이미 삭제 중인 경우 중복 실행 방지
+    if (isDeleting) return;
+
     // 로그인 상태 확인
     if (sessionStorage.getItem("isLoggedIn") !== "true") {
       toast({
@@ -126,6 +130,8 @@ export default function PlaylistItems({
 
     if (window.confirm(confirmMessage)) {
       try {
+        setIsDeleting(true); // 삭제 중 상태 설정
+
         // 삭제 전에 그룹 정보 저장 (UI 업데이트용)
         let groupLinksToRemove: number[] = [];
 
@@ -163,18 +169,10 @@ export default function PlaylistItems({
           setItems(updatedItems);
         }
 
-        // 부모 컴포넌트에 변경 알림
+        // 부모 컴포넌트에 변경 알림 - 한 번만 호출
         if (onItemsChanged) {
           onItemsChanged();
         }
-
-        // 모든 아이템이 삭제된 경우 추가 처리
-        setTimeout(() => {
-          if (onItemsChanged) {
-            onItemsChanged(); // 약간의 지연 후 한 번 더 호출하여 UI 갱신 보장
-          }
-          router.refresh();
-        }, 300);
 
         toast({
           title: isGroup ? "큐레이션 그룹 삭제 완료" : "링크 삭제 완료",
@@ -189,6 +187,8 @@ export default function PlaylistItems({
           description: "아이템 삭제 중 오류가 발생했습니다.",
           variant: "destructive",
         });
+      } finally {
+        setIsDeleting(false); // 삭제 중 상태 해제
       }
     }
   };
