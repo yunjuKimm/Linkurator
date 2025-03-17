@@ -191,8 +191,9 @@ export default function LikeButton({
 
     if (isLoading) return;
 
-    // 로그인 상태 확인
-    const isLoggedIn = await checkLoginStatus();
+    // 로그인 상태 확인 - sessionStorage에서 먼저 확인
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+
     if (!isLoggedIn) {
       toast({
         title: "로그인이 필요합니다",
@@ -305,14 +306,18 @@ export default function LikeButton({
   };
 
   if (size === "sm") {
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+
     return (
       <button
         onClick={handleToggleLike}
-        disabled={isLoading}
+        disabled={isLoading || !isLoggedIn}
         className={`flex items-center gap-1 text-xs ${
           isLiked
             ? "text-rose-500"
-            : "text-muted-foreground hover:text-rose-500"
+            : isLoggedIn
+            ? "text-muted-foreground hover:text-rose-500"
+            : "text-muted-foreground opacity-60"
         } transition-colors`}
       >
         <Heart className={`h-3.5 w-3.5 ${isLiked ? "fill-rose-500" : ""}`} />
@@ -321,13 +326,18 @@ export default function LikeButton({
     );
   }
 
+  // 기본 버튼 렌더링 부분
+  const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+
   return (
     <Button
       variant="outline"
       size="sm"
-      className={`gap-2 ${isLiked ? "text-rose-500" : ""}`}
+      className={`gap-2 ${isLiked ? "text-rose-500" : ""} ${
+        !isLoggedIn ? "opacity-70" : ""
+      }`}
       onClick={handleToggleLike}
-      disabled={isLoading}
+      disabled={isLoading || !isLoggedIn}
     >
       <Heart className={`h-4 w-4 ${isLiked ? "fill-rose-500" : ""}`} />
       <span>{likes.toLocaleString()}</span>

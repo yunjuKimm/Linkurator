@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Heart, MessageSquare, Bookmark, Share2, LinkIcon } from "lucide-react";
+import { Heart, MessageSquare, Share2, LinkIcon } from "lucide-react";
 import CurationSkeleton from "@/app/components/skeleton/curation-skeleton";
 import { stripHtml } from "@/lib/htmlutils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -192,6 +192,19 @@ export default function FollowingCurations() {
 
   // 좋아요 추가 API 호출 함수
   const likeCuration = async (id: number) => {
+    // 로그인 상태 확인
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
+
+    if (!isLoggedIn) {
+      // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+      alert("좋아요 기능을 사용하려면 로그인해주세요.");
+
+      // 현재 URL을 저장하고 로그인 페이지로 이동
+      sessionStorage.setItem("loginRedirectPath", window.location.pathname);
+      window.location.href = "/auth/login";
+      return;
+    }
+
     try {
       console.log(`좋아요 요청: 큐레이션 ID ${id}`);
       const response = await fetch(`${API_URL}/api/v1/curation/like/${id}`, {
@@ -388,8 +401,15 @@ export default function FollowingCurations() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <button
-                        className="flex items-center space-x-1 text-sm text-gray-500"
+                        className={`flex items-center space-x-1 text-sm ${
+                          sessionStorage.getItem("isLoggedIn") === "true"
+                            ? "text-gray-500 cursor-pointer"
+                            : "text-gray-400 cursor-not-allowed"
+                        }`}
                         onClick={() => likeCuration(curation.id)}
+                        disabled={
+                          sessionStorage.getItem("isLoggedIn") !== "true"
+                        }
                       >
                         <Heart className="h-4 w-4" />
                         <span>{curation.likeCount}</span>
@@ -400,9 +420,6 @@ export default function FollowingCurations() {
                       </button>
                     </div>
                     <div className="flex space-x-2">
-                      <button>
-                        <Bookmark className="h-4 w-4 text-gray-500" />
-                      </button>
                       <button>
                         <Share2 className="h-4 w-4 text-gray-500" />
                       </button>
