@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Heart, MessageSquare, Bookmark, Flag } from "lucide-react";
 import { stripHtml } from "@/lib/htmlutils";
@@ -57,6 +57,19 @@ interface CurationRequestParams {
 
 type SortOrder = "LATEST" | "LIKECOUNT";
 
+// 디바운스 함수 구현
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null;
+
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
 export default function PostList() {
   const [curations, setCurations] = useState<Curation[]>([]);
   const [sortOrder, setSortOrder] = useState<SortOrder>("LATEST"); // 기본값: 최신순
@@ -80,12 +93,29 @@ export default function PostList() {
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [totalPages, setTotalPages] = useState<number>(0);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const currentPageRef = useRef<number>(0); // 현재 페이지를 추적하기 위한 ref 추가
 
   // API 요청 함수
   const fetchCurations = async (
     params: CurationRequestParams,
     isLoadMore = false
   ) => {
+    // 이미 로딩 중이면 중복 요청 방지
+    if ((isLoadMore && loadingMore) || (!isLoadMore && loading)) {
+      console.log("이미 로딩 중입니다. 요청 무시됨.");
+      return;
+    }
+
+    // 페이지 번호가 현재 페이지와 같으면 중복 요청 방지 (무한 스크롤 시)
+    if (
+      isLoadMore &&
+      params.page !== undefined &&
+      params.page <= currentPageRef.current
+    ) {
+      console.log(`이미 로드된 페이지(${params.page})입니다. 요청 무시됨.`);
+      return;
+    }
+
     if (isLoadMore) {
       setLoadingMore(true);
     } else {
@@ -136,7 +166,9 @@ export default function PostList() {
         const paginatedData = data.data as PaginatedResponse;
         const newCurations = paginatedData.curations;
 
-        console.log(`Received ${newCurations.length} items`);
+        console.log(
+          `Received ${newCurations.length} items for page ${params.page}`
+        );
         setTotalPages(paginatedData.totalPages);
 
         // 요청한 사이즈보다 적은 데이터가 왔거나 마지막 페이지인 경우
@@ -149,9 +181,15 @@ export default function PostList() {
         if (isLoadMore) {
           // 기존 데이터에 새 데이터 추가
           setCurations((prev) => [...prev, ...newCurations]);
+          // 현재 페이지 업데이트
+          if (params.page !== undefined) {
+            currentPageRef.current = params.page;
+          }
         } else {
           // 새로운 필터링 등의 경우 데이터 교체
           setCurations(newCurations);
+          // 페이지 초기화
+          currentPageRef.current = params.page !== undefined ? params.page : 0;
         }
       } else {
         console.error("No data found in the response");
@@ -179,7 +217,7 @@ export default function PostList() {
   };
 
   // 더 많은 데이터 로드
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     if (loadingMore || !hasMore) return;
 
     const nextPage = page + 1;
@@ -198,7 +236,7 @@ export default function PostList() {
 
     setPage(nextPage);
     fetchCurations(params, true);
-  };
+  }, [loadingMore, hasMore, page, selectedTags, title, content, sortOrder]);
 
   // 필터링 조건을 기반으로 API 호출
   const applyFilter = () => {
@@ -301,6 +339,7 @@ export default function PostList() {
     setPage(0);
     setHasMore(true);
     setCurations([]); // 기존 데이터 초기화
+    currentPageRef.current = 0; // 현재 페이지 초기화
 
     const params: CurationRequestParams = {
       tags: selectedTags,
@@ -371,10 +410,9 @@ export default function PostList() {
     }
   };
 
-  // 스크롤 이벤트 핸들러 설정
-  useEffect(() => {
-    // 스크롤 이벤트 핸들러
-    const handleScroll = () => {
+  // 디바운스된 스크롤 핸들러 생성
+  const debouncedHandleScroll = useCallback(
+    debounce(() => {
       if (!loadMoreRef.current || loadingMore || !hasMore) return;
 
       const rect = loadMoreRef.current.getBoundingClientRect();
@@ -384,16 +422,20 @@ export default function PostList() {
         console.log("Bottom reached, loading more...");
         loadMore();
       }
-    };
+    }, 200), // 200ms 디바운스
+    [loadMore, loadingMore, hasMore]
+  );
 
+  // 스크롤 이벤트 핸들러 설정
+  useEffect(() => {
     // 스크롤 이벤트 리스너 추가
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", debouncedHandleScroll);
 
     // 컴포넌트 언마운트 시 이벤트 리스너 제거
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", debouncedHandleScroll);
     };
-  }, [loadingMore, hasMore, page, selectedTags, title, content, sortOrder]); // 의존성 배열에 검색 조건 추가
+  }, [debouncedHandleScroll]);
 
   return (
     <>
@@ -569,10 +611,7 @@ export default function PostList() {
                         <img
                           src={
                             urlObj.imageUrl ||
-                            "/placeholder.svg?height=48&width=48" ||
-                            "/placeholder.svg" ||
-                            "/placeholder.svg" ||
-                            "/placeholder.svg"
+                            "/placeholder.svg?height=48&width=48"
                           }
                           alt="Preview"
                           className="h-12 w-12 rounded-lg object-cover"

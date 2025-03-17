@@ -91,7 +91,7 @@ export default function AdminDashboardPage() {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true";
 
         if (!isLoggedIn) {
-          // 로그인되지 않은 경우 로그인 페이지로 리디렉션
+          // ��그인되지 않은 경우 로그인 페이지로 리디렉션
           toast({
             title: "로그인이 필요합니다",
             description: "로그인 페이지로 이동합니다.",

@@ -41,6 +41,19 @@ interface ApiResponse {
 const API_URL = "http://localhost:8080";
 const PAGE_SIZE = 20;
 
+// 디바운스 함수 구현
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null;
+
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
 export default function FollowingCurations() {
   const [curations, setCurations] = useState<Curation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -48,11 +61,23 @@ export default function FollowingCurations() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(true);
-
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const currentPageRef = useRef<number>(0); // 현재 페이지를 추적하기 위한 ref 추가
 
   // API 요청 함수
   const fetchFollowingCurations = async (pageNum = 0, isLoadMore = false) => {
+    // 이미 로딩 중이면 중복 요청 방지
+    if ((isLoadMore && loadingMore) || (!isLoadMore && loading)) {
+      console.log("이미 로딩 중입니다. 요청 무시됨.");
+      return;
+    }
+
+    // 페이지 번호가 현재 페이지와 같으면 중복 요청 방지 (무한 스크롤 시)
+    if (isLoadMore && pageNum <= currentPageRef.current) {
+      console.log(`이미 로드된 페이지(${pageNum})입니다. 요청 무시됨.`);
+      return;
+    }
+
     try {
       if (isLoadMore) {
         setLoadingMore(true);
@@ -80,15 +105,21 @@ export default function FollowingCurations() {
         // API 응답에서 큐레이션 배열 직접 추출
         const newCurations = data.data;
 
-        console.log(`Received ${newCurations.length} curations`);
+        console.log(
+          `Received ${newCurations.length} curations for page ${pageNum}`
+        );
 
         // 더 불러올 데이터가 있는지 확인 (받은 데이터가 PAGE_SIZE보다 적으면 더 이상 없음)
         setHasMore(newCurations.length === PAGE_SIZE);
 
         if (isLoadMore) {
           setCurations((prev) => [...prev, ...newCurations]);
+          // 현재 페이지 업데이트
+          currentPageRef.current = pageNum;
         } else {
           setCurations(newCurations);
+          // 페이지 초기화
+          currentPageRef.current = pageNum;
         }
       } else {
         console.error("No data found in the response");
@@ -114,50 +145,13 @@ export default function FollowingCurations() {
 
   // 더 불러오기 함수
   const loadMore = useCallback(() => {
-    if (!loadingMore && hasMore) {
-      const nextPage = page + 1;
-      console.log(`Loading more: page ${nextPage}`);
-      setPage(nextPage);
-      fetchFollowingCurations(nextPage, true);
-    }
-  }, [page, loadingMore, hasMore]);
-
-  // 스크롤 이벤트 핸들러
-  const handleScroll = useCallback(() => {
     if (loadingMore || !hasMore) return;
 
-    const scrollPosition = window.innerHeight + window.scrollY;
-    const documentHeight = document.documentElement.scrollHeight;
-    const buffer = 100; // 하단에서 100px 위에 도달하면 로드
-
-    if (scrollPosition >= documentHeight - buffer) {
-      console.log("Reached bottom of page, loading more...");
-      loadMore();
-    }
-  }, [loadMore, loadingMore, hasMore]);
-
-  // 좋아요 추가 API 호출 함수
-  const likeCuration = async (id: number) => {
-    try {
-      const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
-        method: "POST",
-      });
-      if (!response.ok) {
-        throw new Error("Failed to like the post");
-      }
-
-      // 좋아요를 추가한 후, 좋아요 카운트만 업데이트
-      setCurations((prev) =>
-        prev.map((curation) =>
-          curation.id === id
-            ? { ...curation, likeCount: curation.likeCount + 1 }
-            : curation
-        )
-      );
-    } catch (error) {
-      console.error("Error liking the post:", error);
-    }
-  };
+    const nextPage = page + 1;
+    console.log(`Loading more: page ${nextPage}`);
+    setPage(nextPage);
+    fetchFollowingCurations(nextPage, true);
+  }, [page, loadingMore, hasMore]);
 
   // 링크 클릭 처리 함수
   const handleLinkClick = async (url: string, linkId?: number) => {
@@ -183,6 +177,29 @@ export default function FollowingCurations() {
     window.open(url, "_blank");
   };
 
+  // 좋아요 추가 API 호출 함수
+  const likeCuration = async (id: number) => {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to like the post");
+      }
+
+      // 좋아요를 추가한 후, 좋아요 카운트만 업데이트
+      setCurations((prev) =>
+        prev.map((curation) =>
+          curation.id === id
+            ? { ...curation, likeCount: curation.likeCount + 1 }
+            : curation
+        )
+      );
+    } catch (error) {
+      console.error("Error liking the post:", error);
+    }
+  };
+
   // 날짜 형식화 함수
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -198,16 +215,34 @@ export default function FollowingCurations() {
   useEffect(() => {
     setPage(0);
     setHasMore(true);
+    currentPageRef.current = 0; // 현재 페이지 초기화
     fetchFollowingCurations(0);
   }, []);
 
+  // 디바운스된 스크롤 핸들러 생성
+  const debouncedHandleScroll = useCallback(
+    debounce(() => {
+      if (loadingMore || !hasMore) return;
+
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const documentHeight = document.documentElement.scrollHeight;
+      const buffer = 100; // 하단에서 100px 위에 도달하면 로드
+
+      if (scrollPosition >= documentHeight - buffer) {
+        console.log("Reached bottom of page, loading more...");
+        loadMore();
+      }
+    }, 200), // 200ms 디바운스
+    [loadMore, loadingMore, hasMore]
+  );
+
   // 스크롤 이벤트 리스너 등록
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", debouncedHandleScroll);
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", debouncedHandleScroll);
     };
-  }, [handleScroll]);
+  }, [debouncedHandleScroll]);
 
   return (
     <>
@@ -291,8 +326,7 @@ export default function FollowingCurations() {
                           <img
                             src={
                               urlObj.imageUrl ||
-                              "/placeholder.svg?height=48&width=48" ||
-                              "/placeholder.svg"
+                              "/placeholder.svg?height=48&width=48"
                             }
                             alt="Preview"
                             className="h-12 w-12 rounded-lg object-cover"
