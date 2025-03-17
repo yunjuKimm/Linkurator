@@ -374,7 +374,7 @@ export default function PostList() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="mt-1 p-2 w-full border rounded-md"
-                placeholder="제목 입력"
+                placeholder="제목 입���"
               />
             </div>
             <div className="mb-4">
