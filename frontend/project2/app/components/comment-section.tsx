@@ -41,8 +41,13 @@ type CurationData = {
   comments: Comment[];
 };
 
+// 댓글 섹션 컴포넌트 props 타입 정의
+interface CommentSectionProps {
+  postId: string;
+}
+
 // 댓글 섹션 컴포넌트
-export default function CommentSection({ postId }: { postId: string }) {
+export default function CommentSection({ postId }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]); // 댓글 상태
   const [newComment, setNewComment] = useState(""); // 새 댓글 상태
   const [isSubmitting, setIsSubmitting] = useState(false); // 제출 중 상태
@@ -719,6 +724,7 @@ export default function CommentSection({ postId }: { postId: string }) {
                                 src={
                                   reply.authorProfileImageUrl ||
                                   "/placeholder.svg?height=28&width=28" ||
+                                  "/placeholder.svg" ||
                                   "/placeholder.svg" ||
                                   "/placeholder.svg"
                                 }

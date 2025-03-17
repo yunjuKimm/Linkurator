@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation"; // `useParams`를 사용하여 params를 받아옵니다.
 import Image from "next/image";
 import Link from "next/link";
+// Bookmark 아이콘 import 추가
 import {
   Heart,
   MessageSquare,
@@ -26,7 +27,7 @@ import AddToPlaylistModal from "@/app/components/add-to-playlist-modal";
 // 파일 상단에 다음 상수를 추가합니다:
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-// 큐레이션 데이터 타입
+// 큐레이션 데이�� 타입
 interface CurationData {
   id: number;
   title: string;
@@ -57,8 +58,16 @@ interface LinkMetaData {
   linkId?: number;
 }
 
+// useParams 타입 정의
+interface Params {
+  id?: string;
+}
+
 export default function PostDetail() {
-  const { id } = useParams(); // useParams로 id 값을 받습니다.
+  // useParams 타입 지정 및 id 추출
+  const params = useParams();
+  const postId = params.id as string;
+
   const [post, setPost] = useState<CurationData | null>(null);
   const [linksMetaData, setLinksMetaData] = useState<Map<string, LinkMetaData>>(
     new Map()
@@ -78,7 +87,7 @@ export default function PostDetail() {
       setContentLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
+      const response = await fetch(`${API_URL}/api/v1/curation/${postId}`, {
         method: "GET",
         credentials: "include",
         headers: {
@@ -105,7 +114,7 @@ export default function PostDetail() {
   // 최초 데이터 불러오기
   useEffect(() => {
     fetchData();
-  }, [id]);
+  }, [postId]);
 
   // 모든 링크의 메타데이터 가져오기 - 글 내용과 분리
   useEffect(() => {
@@ -181,14 +190,17 @@ export default function PostDetail() {
   // 좋아요 토글 API 호출
   const toggleLike = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/curation/like/${id}`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "X-Forwarded-For": "127.0.0.1",
-          "X-Real-IP": "127.0.0.1",
-        },
-      });
+      const response = await fetch(
+        `${API_URL}/api/v1/curation/like/${postId}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("좋아요 처리 실패");
@@ -214,7 +226,7 @@ export default function PostDetail() {
     if (!confirm("정말로 이 큐레이션을 삭제하시겠습니까?")) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/v1/curation/${id}`, {
+      const response = await fetch(`${API_URL}/api/v1/curation/${postId}`, {
         method: "DELETE",
         credentials: "include", // 쿠키를 포함하여 요청
         headers: {
@@ -420,7 +432,7 @@ export default function PostDetail() {
               <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
                 <div className="py-1" role="menu" aria-orientation="vertical">
                   <Link
-                    href={`/curation/${id}/edit`}
+                    href={`/curation/${postId}/edit`}
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     <Edit className="mr-2 h-4 w-4" />
@@ -630,7 +642,7 @@ export default function PostDetail() {
             </div>
             <div className="flex space-x-2">
               <ShareButton
-                id={Number(id)}
+                id={Number(postId)}
                 className="rounded-md border p-2 hover:bg-gray-50"
               />
               <button
@@ -643,7 +655,7 @@ export default function PostDetail() {
           </div>
 
           {/* 댓글 섹션 */}
-          <CommentSection postId={id} />
+          <CommentSection postId={postId} />
         </article>
       </div>
 
@@ -693,13 +705,13 @@ export default function PostDetail() {
       <ReportModal
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
-        curationId={Number(id)}
+        curationId={Number(postId)}
       />
       {/* 플레이리스트 추가 모달 */}
       <AddToPlaylistModal
         isOpen={showAddToPlaylistModal}
         onClose={() => setShowAddToPlaylistModal(false)}
-        curationId={Number(id)}
+        curationId={Number(postId)}
       />
     </main>
   );
