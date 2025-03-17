@@ -5,9 +5,15 @@ import "./globals.css";
 import ClientLayout from "./client-layout";
 
 export const metadata: Metadata = {
-  title: "개발자 커뮤니티",
-  description: "함께 성장하는 개발자 커뮤니티입니다.",
-  keywords: ["개발자", "커뮤니티", "질문답변", "스터디"],
+  title: "Linkurator",
+  description: "링크 큐레이션과 콘텐츠 공유를 위한 마이크로 블로그 서비스",
+  keywords: [
+    "링크 큐레이션",
+    "마이크로 블로그",
+    "콘텐츠 공유",
+    "북마크",
+    "플레이리스트",
+  ],
   generator: "v0.dev",
   icons: {
     icon: [

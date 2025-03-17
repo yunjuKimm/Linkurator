@@ -339,7 +339,7 @@ export default function Header() {
               <Bookmark className="w-5 h-5" />
             </div>
             <span className="font-semibold text-sm hidden sm:inline-block">
-              LinkCuration
+              Linkurator
             </span>
           </Link>
           <nav className="flex items-center space-x-4 text-sm font-medium">

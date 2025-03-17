@@ -626,26 +626,29 @@ export default function PostList() {
               {curations.map((curation) => (
                 <div key={curation.id} className="space-y-4 border-b pb-6">
                   {/* 작성자 정보 추가 */}
-                  <div className="flex items-center space-x-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={curation.memberImgUrl}
-                        alt={curation.authorName}
-                      />
-                      <AvatarFallback>
-                        {curation.authorName.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {curation.authorName}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatDate(curation.createdAt)}
-                      </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={curation.memberImgUrl}
+                          alt={curation.authorName}
+                        />
+                        <AvatarFallback>
+                          {curation.authorName.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {curation.authorName}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatDate(curation.createdAt)}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500 ml-auto">
-                      조회수 {curation.viewCount}
+                    <p className="text-xs text-gray-500 flex items-center">
+                      <span className="inline-block mr-1">조회수</span>
+                      <span className="font-medium">{curation.viewCount}</span>
                     </p>
                   </div>
 
