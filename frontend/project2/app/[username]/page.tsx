@@ -3,13 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  Heart,
-  MessageSquare,
-  Bookmark,
-  Share2,
-  ArrowLeft,
-} from "lucide-react";
+import { Heart, MessageSquare, Share2, ArrowLeft } from "lucide-react";
 import { ClipLoader } from "react-spinners";
 import { stripHtml } from "@/lib/htmlutils";
 // Add the import for the stripHtml function
@@ -334,9 +328,6 @@ export default function CuratorProfile({
                       </div>
                     </div>
                     <div className="flex space-x-2">
-                      <button>
-                        <Bookmark className="h-4 w-4 text-gray-500" />
-                      </button>
                       <button>
                         <Share2 className="h-4 w-4 text-gray-500" />
                       </button>

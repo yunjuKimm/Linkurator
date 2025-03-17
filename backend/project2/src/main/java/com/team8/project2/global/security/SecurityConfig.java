@@ -57,7 +57,7 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.POST, "/h2-console/**").permitAll()
 
 
-				// 권한 설정
+				// 권한 설정u
 				.requestMatchers("/api/v1/posts/statistics").hasRole("ADMIN")
 				// 🔹 h2-console 접근 허용
 				.requestMatchers(HttpMethod.GET, "/h2-console/**").permitAll()
