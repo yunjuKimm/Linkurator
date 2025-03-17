@@ -15,7 +15,6 @@ import {
 import type { Playlist } from "@/types/playlist";
 import LikeButton from "@/app/components/like-button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 const formatDate = (dateString: string): string => {
@@ -39,9 +38,15 @@ export default function PlaylistGrid() {
   useEffect(() => {
     async function fetchPlaylists() {
       try {
+        setIsLoading(true);
         const res = await fetch("http://localhost:8080/api/v1/playlists", {
           cache: "no-store",
           credentials: "include",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
         });
         if (!res.ok) {
           throw new Error("플레이리스트 데이터를 불러오지 못했습니다.");

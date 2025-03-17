@@ -32,6 +32,7 @@ export default function LikeButton({
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // useEffect 수정 - 전역 이벤트 리스너 추가
   useEffect(() => {
     async function fetchLikeData() {
       try {
@@ -48,7 +49,7 @@ export default function LikeButton({
           return;
         }
 
-        // 좋아요 상태 확인
+        // 좋아요 상태 확인 - 캐시 방지 헤더 추가
         const likeStatus = await getPlaylistLikeStatus(playlistId);
         setIsLiked(likeStatus);
 
@@ -70,8 +71,36 @@ export default function LikeButton({
     }
 
     fetchLikeData();
+
+    // 다른 컴포넌트에서 발생한 좋아요 상태 변경 이벤트 처리
+    const handleLikeChanged = (event: CustomEvent) => {
+      const {
+        playlistId: changedPlaylistId,
+        isLiked: changedIsLiked,
+        likeCount: changedLikeCount,
+      } = event.detail;
+
+      // 현재 컴포넌트의 플레이리스트 ID와 일치하는 경우에만 상태 업데이트
+      if (changedPlaylistId === playlistId) {
+        setIsLiked(changedIsLiked);
+        setLikes(changedLikeCount);
+      }
+    };
+
+    window.addEventListener(
+      "playlist-like-changed",
+      handleLikeChanged as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "playlist-like-changed",
+        handleLikeChanged as EventListener
+      );
+    };
   }, [playlistId, initialLikes]);
 
+  // 좋아요 상태 변경 시 전역 이벤트 발생 추가
   const handleToggleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -96,10 +125,13 @@ export default function LikeButton({
     setIsLoading(true);
 
     try {
+      const newLikeStatus = !isLiked;
+
       if (isLiked) {
         // 좋아요 취소
         await unlikePlaylist(playlistId);
         setLikes((prev) => prev - 1);
+        setIsLiked(false); // 즉시 상태 업데이트
 
         // 좋아요 취소 시 콜백 호출
         if (onUnlike) {
@@ -113,14 +145,29 @@ export default function LikeButton({
         // 좋아요 추가
         await likePlaylist(playlistId);
         setLikes((prev) => prev + 1);
+        setIsLiked(true); // 즉시 상태 업데이트
 
         toast({
           title: "좋아요가 추가되었습니다",
         });
       }
 
-      // 좋아요 상태 업데이트
-      setIsLiked((prev) => !prev);
+      // 세션 스토리지에 좋아요 상태 직접 업데이트
+      sessionStorage.setItem(
+        `playlist_like_${playlistId}`,
+        newLikeStatus.toString()
+      );
+
+      // 전역 이벤트 발생 - 다른 컴포넌트에 좋아요 상태 변경을 알림
+      window.dispatchEvent(
+        new CustomEvent("playlist-like-changed", {
+          detail: {
+            playlistId,
+            isLiked: newLikeStatus,
+            likeCount: newLikeStatus ? likes + 1 : likes - 1,
+          },
+        })
+      );
     } catch (error) {
       console.error("좋아요 요청 처리 실패", error);
       toast({

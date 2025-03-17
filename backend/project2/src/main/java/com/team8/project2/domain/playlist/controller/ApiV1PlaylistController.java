@@ -5,7 +5,6 @@ import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
 import com.team8.project2.domain.playlist.dto.*;
-import com.team8.project2.domain.playlist.entity.Playlist;
 import com.team8.project2.domain.playlist.entity.PlaylistItem;
 import com.team8.project2.domain.playlist.repository.PlaylistLikeRepository;
 import com.team8.project2.domain.playlist.repository.PlaylistRepository;
@@ -16,12 +15,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 플레이리스트(Playlist) API 컨트롤러 클래스입니다.
@@ -174,21 +173,30 @@ public class ApiV1PlaylistController {
 
     /** ✅ 좋아요 증가 API */
     @PostMapping("/{id}/like")
-    public RsData<Void> likePlaylist(@PathVariable Long id, HttpServletRequest request) {
+    public RsData<Void> likePlaylist(@PathVariable Long id) {
         Long memberId = rq.getActor().getId();
-//        Long memberId = 1L; // 테스트용
         playlistService.likePlaylist(id, memberId);
         return RsData.success("좋아요가 변경되었습니다.", null);
     }
 
     /** ✅ 좋아요 상태 조회 API */
      @GetMapping("/{id}/like/status")
-    public RsData<Boolean> likeStatus(@PathVariable Long id, HttpServletRequest request) {
+    public RsData<Boolean> likeStatus(@PathVariable Long id) {
          try {
              Member member = rq.getActor();
-             boolean liked = playlistLikeRepository.existsByIdPlaylistIdAndIdMemberId(id, member.getId());
-//             Long memberId = 1L; // 테스트용
-//             boolean liked = playlistLikeRepository.existsByIdPlaylistIdAndIdMemberId(id, memberId);
+             String redisKey = "playlist_like_status:" + id + ":" + member.getId();
+
+             String likedValue = Optional.ofNullable(redisTemplate.opsForValue().get(redisKey))
+                     .map(Object::toString)
+                     .orElse(null);
+
+             Boolean liked = likedValue != null && likedValue.equals("true");
+
+             if (likedValue == null) {
+                 liked = playlistLikeRepository.existsByIdPlaylistIdAndIdMemberId(id, member.getId());
+                 redisTemplate.opsForValue().set(redisKey, liked.toString(), Duration.ofMinutes(10)); // 10분 캐싱
+             }
+
              return RsData.success("좋아요 상태를 조회하였습니다.", liked);
          } catch (Exception e) {
              return RsData.success("비로그인 상태입니다.", false);
@@ -199,7 +207,6 @@ public class ApiV1PlaylistController {
     @DeleteMapping("/{id}/like")
     public RsData<Void> unlikePlaylist(@PathVariable Long id) {
         Long memberId = rq.getActor().getId();
-//        Long memberId = 1L; // 테스트용
         playlistService.unlikePlaylist(id, memberId);
         return RsData.success("좋아요가 취소되었습니다.", null);
     }
@@ -207,17 +214,9 @@ public class ApiV1PlaylistController {
     /** ✅ 좋아요 개수 조회 API */
     @GetMapping("/{id}/like/count")
     public RsData<Long> getLikeCount(@PathVariable Long id) {
-        Double count = redisTemplate.opsForZSet().score("playlist_likes", id.toString());
-
-        if (count == null) {
-            Playlist playlist = playlistRepository.findById(id)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 플레이리스트를 찾을 수 없습니다."));
-            count = (double) playlist.getLikeCount();
-        }
-        return RsData.success("좋아요 개수를 조회하였습니다.", count.longValue());
+        long likeCount = playlistService.getLikeCount(id);
+        return RsData.success("좋아요 개수를 조회하였습니다.", likeCount);
     }
-
-
 
     /** ✅ 추천 API (정렬 기능 추가) */
     @GetMapping("/{id}/recommendation")
