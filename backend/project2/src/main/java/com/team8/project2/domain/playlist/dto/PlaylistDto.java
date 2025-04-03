@@ -68,13 +68,13 @@ public class PlaylistDto {
                 .title(playlist.getTitle())
                 .description(playlist.getDescription())
                 .isPublic(playlist.isPublic())
-                .viewCount(playlist.getViewCount())  // ✅ 추가
-                .likeCount(playlist.getLikeCount())  // ✅ 추가
+                .viewCount(playlist.getViewCount())
+                .likeCount(playlist.getLikeCount())
                 .items(playlist.getItems().stream()
                         .sorted(Comparator.comparing(item -> item.getDisplayOrder()))
                         .map(PlaylistItemDto::fromEntity)
                         .collect(Collectors.toList()))
-                .tags(playlist.getTagNames()) // ✅ 태그 가져오기
+                .tags(playlist.getTagNames())
                 .createdAt(playlist.getCreatedAt())
                 .isOwner(isOwner)
                 .build();

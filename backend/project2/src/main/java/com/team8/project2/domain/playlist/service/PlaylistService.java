@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -202,76 +203,133 @@ public class PlaylistService {
     }
 
     /**
-     * ✅ 조회수 증가
+     * 좋아요 토글 처리
      */
     @Transactional
     public void likePlaylist(Long playlistId, Long memberId) {
-        Playlist playlist = playlistRepository.findById(playlistId)
-                .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+        String redisKey = "playlist_like:" + playlistId;
+        String memberLikedKey = "member_liked_playlists:" + memberId;
+        String memberStr = String.valueOf(memberId);
 
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new NotFoundException("해당 사용자를 찾을 수 없습니다."));
+        String luaScript =
+                "if redis.call('SISMEMBER', KEYS[1], ARGV[1]) == 1 then " +
+                        "   redis.call('SREM', KEYS[1], ARGV[1]); return 0; " +  // 좋아요 취소
+                        "else " +
+                        "   redis.call('SADD', KEYS[1], ARGV[1]); return 1; " +  // 좋아요 추가
+                        "end";
 
-        Optional<PlaylistLike> existingLike = playlistLikeRepository.findByPlaylistAndMember(playlist, member);
+        Long result = redisTemplate.execute(
+                new DefaultRedisScript<>(luaScript, Long.class),
+                Collections.singletonList(redisKey),
+                memberStr
+        );
 
-        if (existingLike.isPresent()) {
-            return;
+        if (result != null && result == 1) {
+            redisTemplate.opsForSet().add(memberLikedKey, String.valueOf(playlistId));
+        } else if (result != null && result == 0) {
+            redisTemplate.opsForSet().remove(memberLikedKey, String.valueOf(playlistId));
         }
 
-        PlaylistLike newLike = PlaylistLike.createLike(playlist, member);
-        playlistLikeRepository.save(newLike);
+        Long likeCount = redisTemplate.opsForSet().size(redisKey);
 
-        redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, playlistId.toString(), 1);
-
-        long likeCount = getLikeCount(playlistId);
-        playlist.setLikeCount(likeCount);
-        playlistRepository.save(playlist);
-    }
-
-
-    /**
-     * ✅ 좋아요 취소
-     */
-    @Transactional
-    public void unlikePlaylist(Long playlistId, Long memberId) {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
+        playlist.setLikeCount(likeCount != null ? likeCount : 0);
+        playlistRepository.save(playlist);
 
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new NotFoundException("해당 사용자를 찾을 수 없습니다."));
+    }
 
-        Optional<PlaylistLike> existingLike = playlistLikeRepository.findByPlaylistAndMember(playlist, member);
+    /**
+     * 사용자가 좋아요한 플레이리스트 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public List<PlaylistDto> getLikedPlaylistsFromRedis(Long memberId) {
+        String memberLikedKey = "member_liked_playlists:" + memberId;
+        Set<Object> playlistIdObjs = redisTemplate.opsForSet().members(memberLikedKey);
+        if (playlistIdObjs == null || playlistIdObjs.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> playlistIds = playlistIdObjs.stream()
+                .map(obj -> Long.parseLong(obj.toString()))
+                .collect(Collectors.toList());
+        List<Playlist> playlists = playlistRepository.findAllById(playlistIds);
+        Member actor = rq.getActor();
+        return playlists.stream()
+                .map(playlist -> PlaylistDto.fromEntity(playlist, actor))
+                .collect(Collectors.toList());
+    }
 
-        if (existingLike.isPresent()) {
-            playlistLikeRepository.delete(existingLike.get());
+    /**
+     * Redis에 저장된 플레이리스트 좋아요 수를 DB 동기화
+     */
+    @Scheduled(fixedRate = 600000)
+    @Transactional
+    public void syncPlaylistLikesToDB() {
+        Set<String> keys = redisTemplate.keys("playlist_like:*");
 
-            Double currentLikes = redisTemplate.opsForZSet().score(LIKE_COUNT_KEY, playlistId.toString());
-            if (currentLikes != null && currentLikes > 0) {
-                redisTemplate.opsForZSet().incrementScore(LIKE_COUNT_KEY, playlistId.toString(), -1);
-            } else {
-                redisTemplate.opsForZSet().remove(LIKE_COUNT_KEY, playlistId.toString());
+        for (String key : keys) {
+            Long playlistId = Long.parseLong(key.split(":")[1]);
+            Playlist playlist = playlistRepository.findById(playlistId).orElse(null);
+            if (playlist == null) continue;
+
+            Set<Object> rawMemberIds = redisTemplate.opsForSet().members(key);
+            if (rawMemberIds == null) continue;
+
+            Set<String> memberIds = rawMemberIds.stream()
+                    .map(Object::toString)
+                    .collect(Collectors.toSet());
+
+            if (memberIds == null) continue;
+
+            for (String memberStr : memberIds) {
+                Long memberId = Long.parseLong(memberStr);
+                Member member = memberRepository.findById(memberId).orElse(null);
+                if (member == null) continue;
+
+                PlaylistLike.PlaylistLikeId likeId = new PlaylistLike.PlaylistLikeId();
+                likeId.setPlaylistId(playlistId);
+                likeId.setMemberId(memberId);
+
+                if (!playlistLikeRepository.existsById(likeId)) {
+                    PlaylistLike like = PlaylistLike.createLike(playlist, member);
+                    playlistLikeRepository.save(like);
+                }
             }
 
-            long likeCount = getLikeCount(playlistId);
-            playlist.setLikeCount(likeCount);
+            Long likeCount = redisTemplate.opsForSet().size(key);
+            playlist.setLikeCount(likeCount != null ? likeCount : 0);
             playlistRepository.save(playlist);
+
+            List<PlaylistLike> currentLikesInDB = playlistLikeRepository.findAllById_PlaylistId(playlistId);
+            Set<Long> currentMemberIdSet = memberIds.stream().map(Long::parseLong).collect(Collectors.toSet());
+
+            for (PlaylistLike dbLike : currentLikesInDB) {
+                if (!currentMemberIdSet.contains(dbLike.getMember().getId())) {
+                    playlistLikeRepository.delete(dbLike);
+                }
+            }
         }
+
     }
 
+
     /**
-     * 좋아요 수 조회
+     * 사용자의 특정 플레이리스트 좋아요 여부 확인
+     */
+    public boolean hasLikedPlaylist(Long playlistId, Long memberId) {
+        String redisKey = "playlist_like:" + playlistId;
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(redisKey, memberId.toString()));
+    }
+
+
+    /**
+     * 전체 좋아요 수 조회 반환
      */
     @Transactional(readOnly = true)
     public long getLikeCount(Long playlistId) {
-        Double count = redisTemplate.opsForZSet().score(LIKE_COUNT_KEY, playlistId.toString());
-
-        if (count == null) {
-            Playlist playlist = playlistRepository.findById(playlistId)
-                    .orElseThrow(() -> new NotFoundException("해당 플레이리스트를 찾을 수 없습니다."));
-            count = (double) playlist.getLikeCount();
-            redisTemplate.opsForZSet().add(LIKE_COUNT_KEY, playlistId.toString(), count);
-        }
-        return count.longValue();
+        String redisKey = "playlist_like:" + playlistId;
+        Long count = redisTemplate.opsForSet().size(redisKey);
+        return Optional.ofNullable(count).orElse(0L);
     }
 
     /**
@@ -630,7 +688,7 @@ public class PlaylistService {
     }
 
     /**
-     * 사용자가 좋아요한 플레이리스트 목록 조회
+     * 사용자가 좋아요한 모든 플레이리스트 목록 조회
      */
     @Transactional(readOnly = true)
     public List<PlaylistDto> getLikedPlaylists(Long memberId) {

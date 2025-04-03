@@ -112,9 +112,12 @@ public class Playlist {
     @Column
     private LocalDateTime modifiedAt;
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
+
+    public void updateLikeCount(long newLikeCount) {
+        this.likeCount = newLikeCount;
+    }
 
 }
