@@ -16,6 +16,7 @@ import type { Playlist } from "@/types/playlist";
 import LikeButton from "@/app/components/like-button";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
+import TagBadge from "./tag-badge";
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -161,6 +162,24 @@ export default function PlaylistGrid() {
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                   {playlist.description}
                 </p>
+              )}
+              {playlist.tags && playlist.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {playlist.tags.slice(0, 3).map((tag, idx) => (
+                    <TagBadge
+                      key={idx}
+                      tag={tag}
+                      variant="default"
+                      size="sm"
+                      className="text-xs"
+                    />
+                  ))}
+                  {playlist.tags.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{playlist.tags.length - 3}
+                    </Badge>
+                  )}
+                </div>
               )}
 
               <div className="flex items-center flex-wrap gap-2 mt-auto text-xs text-muted-foreground">

@@ -2,6 +2,8 @@ package com.team8.project2.domain.playlist.dto;
 
 import lombok.Data;
 
+import java.util.Set;
+
 /**
  * 플레이리스트 수정 요청을 위한 DTO 클래스입니다.
  * 클라이언트가 전송하는 수정 데이터를 검증하고 전달합니다.
@@ -31,4 +33,9 @@ public class PlaylistUpdateDto {
     public Boolean getIsPublic() {
         return isPublic;
     }
+
+    /**
+     * 플레이리스트에 포함할 태그 목록 (선택 입력)
+     */
+    private Set<String> tags;
 }

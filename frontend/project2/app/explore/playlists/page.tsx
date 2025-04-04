@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import type { Playlist } from "@/types/playlist";
 import { Badge } from "@/components/ui/badge";
 import LikeButton from "@/app/components/like-button";
+import TagBadge from "@/app/components/tag-badge";
 
 // 정렬 옵션 타입
 type SortOption = "latest" | "popular" | "mostLiked";
@@ -59,7 +60,9 @@ export default function ExplorePlaylists() {
     minLinks: 0,
     maxLinks: 100,
     minLikes: 0,
+    tags: [] as string[],
   });
+  const [allTags, setAllTags] = useState<string[]>([]);
 
   // 현재 경로를 세션 스토리지에 저장
   useEffect(() => {
@@ -90,6 +93,14 @@ export default function ExplorePlaylists() {
 
         const result = await res.json();
         setPlaylists(result.data);
+        // 모든 태그 추출
+        const extractedTags = new Set<string>();
+        result.data.forEach((playlist: Playlist) => {
+          if (playlist.tags && Array.isArray(playlist.tags)) {
+            playlist.tags.forEach((tag) => extractedTags.add(tag));
+          }
+        });
+        setAllTags(Array.from(extractedTags));
       } catch (error) {
         console.error("플레이리스트 로딩 오류", error);
         setError((error as Error).message);
@@ -159,6 +170,16 @@ export default function ExplorePlaylists() {
     return `${year}년 ${month}월 ${day}일`;
   };
 
+  const toggleTagFilter = (tag: string) => {
+    setFilterOptions((prev) => {
+      if (prev.tags.includes(tag)) {
+        return { ...prev, tags: prev.tags.filter((t) => t !== tag) };
+      } else {
+        return { ...prev, tags: [...prev.tags, tag] };
+      }
+    });
+  };
+
   // 검색 및 필터링된 플레이리스트
   const filteredPlaylists = playlists
     .filter(
@@ -166,7 +187,11 @@ export default function ExplorePlaylists() {
         playlist.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
         (playlist.items?.length || 0) >= filterOptions.minLinks &&
         (playlist.items?.length || 0) <= filterOptions.maxLinks &&
-        (playlist.likeCount || 0) >= filterOptions.minLikes
+        (playlist.likeCount || 0) >= filterOptions.minLikes &&
+        // 태그 필터링 추가
+        (filterOptions.tags.length === 0 ||
+          (playlist.tags &&
+            filterOptions.tags.every((tag) => playlist.tags?.includes(tag))))
     )
     .sort((a, b) => {
       if (sortBy === "latest") {
@@ -293,6 +318,7 @@ export default function ExplorePlaylists() {
                 minLinks: 0,
                 maxLinks: 100,
                 minLikes: 0,
+                tags: [],
               });
               setSortBy("latest");
             }}
@@ -320,6 +346,24 @@ export default function ExplorePlaylists() {
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                       {playlist.description}
                     </p>
+                  )}
+                  {playlist.tags && playlist.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {playlist.tags.slice(0, 3).map((tag, idx) => (
+                        <TagBadge
+                          key={idx}
+                          tag={tag}
+                          variant="default"
+                          size="sm"
+                          className="text-xs"
+                        />
+                      ))}
+                      {playlist.tags.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{playlist.tags.length - 3}
+                        </Badge>
+                      )}
+                    </div>
                   )}
 
                   <div className="flex items-center flex-wrap gap-2 mt-auto text-xs text-muted-foreground">
@@ -429,6 +473,32 @@ export default function ExplorePlaylists() {
                 }
               />
             </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">태그 필터</label>
+              <div className="flex flex-wrap gap-1.5 border rounded-md p-2 min-h-[60px]">
+                {allTags.length > 0 ? (
+                  allTags.map((tag, index) => (
+                    <TagBadge
+                      key={index}
+                      tag={tag}
+                      variant={
+                        filterOptions.tags.includes(tag) ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => toggleTagFilter(tag)}
+                      interactive
+                    />
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    사용 가능한 태그가 없습니다
+                  </p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                태그를 클릭하여 필터링할 수 있습니다
+              </p>
+            </div>
 
             <div className="grid gap-2">
               <label className="text-sm font-medium">정렬 기준</label>
@@ -458,6 +528,7 @@ export default function ExplorePlaylists() {
                   minLinks: 0,
                   maxLinks: 100,
                   minLikes: 0,
+                  tags: [],
                 });
                 setSortBy("latest");
               }}

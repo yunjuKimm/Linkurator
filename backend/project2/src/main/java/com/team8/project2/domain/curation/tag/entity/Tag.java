@@ -1,10 +1,13 @@
 package com.team8.project2.domain.curation.tag.entity;
 
 import com.team8.project2.domain.curation.curation.entity.CurationTag;
+import com.team8.project2.domain.playlist.entity.Playlist;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 태그(Tag) 엔티티 클래스입니다.
@@ -38,4 +41,11 @@ public class Tag {
      */
     @OneToMany(mappedBy = "tag")
     private List<CurationTag> curationTags;
+
+    /**
+     * 태그와 연관된 플레이리스트 목록 (N:M 관계)
+     */
+    @ManyToMany(mappedBy = "tags")
+    private Set<Playlist> playlists = new HashSet<>();
+
 }
