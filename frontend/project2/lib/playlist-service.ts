@@ -1,10 +1,11 @@
 import type { Playlist } from "@/types/playlist";
 
-// 플레이리스트 생성
+// 플레이리스트 생성 함수 수정 - tags 추가
 export async function createPlaylist(data: {
   title: string;
   description?: string;
   isPublic?: boolean;
+  tags?: string[];
 }): Promise<Playlist> {
   const response = await fetch("http://localhost:8080/api/v1/playlists", {
     cache: "no-store",
@@ -39,12 +40,14 @@ export async function getPlaylistById(id: number): Promise<Playlist> {
   return result.data;
 }
 
+// 플레이리스트 업데이트 함수 수정 - tags 추가
 export async function updatePlaylist(
   id: number,
   data: {
     title?: string;
     description?: string;
     isPublic?: boolean;
+    tags?: string[];
   }
 ): Promise<Playlist> {
   const response = await fetch(`http://localhost:8080/api/v1/playlists/${id}`, {

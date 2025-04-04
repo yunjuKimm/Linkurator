@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Set;
+
 
 /**
  * 플레이리스트 생성 요청을 위한 DTO 클래스입니다.
@@ -43,6 +45,12 @@ public class PlaylistCreateDto {
     public Boolean getIsPublic() {
         return isPublic != null ? isPublic : true;
     }
+
+    /**
+     * 플레이리스트에 포함할 태그 목록 (선택 입력)
+     */
+    private Set<String> tags;
+
 
 }
 

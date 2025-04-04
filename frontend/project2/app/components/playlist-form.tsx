@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 
 import { createPlaylist, updatePlaylist } from "@/lib/playlist-service";
 import type { Playlist } from "@/types/playlist";
+import TagInput from "./tag-input";
 
 // PlaylistFormProps 인터페이스에 onPlaylistCreated 콜백 추가
 interface PlaylistFormProps {
@@ -28,7 +29,8 @@ export default function PlaylistForm({
   const [formData, setFormData] = useState({
     title: playlist?.title || "",
     description: playlist?.description || "",
-    isPublic: true,
+    isPublic: playlist?.isPublic !== false, // 기본값은 true
+    tags: playlist?.tags || [],
   });
 
   const handleChange = (
@@ -52,10 +54,16 @@ export default function PlaylistForm({
           title: formData.title,
           description: formData.description,
           isPublic: formData.isPublic,
+          tags: formData.tags,
         });
         router.push(`/playlists/${updatedPlaylist.id}`);
       } else {
-        const newPlaylist = await createPlaylist(formData);
+        const newPlaylist = await createPlaylist({
+          title: formData.title,
+          description: formData.description,
+          isPublic: formData.isPublic,
+          tags: formData.tags,
+        });
 
         // 콜백이 있으면 호출
         if (onPlaylistCreated) {
@@ -110,6 +118,30 @@ export default function PlaylistForm({
               onChange={handleCheckboxChange}
             />{" "}
             공개
+          </div>
+          {/* 태그 입력 */}
+          <div className="space-y-2">
+            <Label htmlFor="tags">태그</Label>
+            <TagInput
+              tags={formData.tags}
+              onChange={(newTags) =>
+                setFormData((prev) => ({ ...prev, tags: newTags }))
+              }
+              placeholder="태그 입력 후 엔터"
+              maxTags={5}
+              suggestions={[
+                "음악",
+                "영화",
+                "책",
+                "개발",
+                "디자인",
+                "요리",
+                "여행",
+                "스포츠",
+                "게임",
+                "학습",
+              ]}
+            />
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">

@@ -1,5 +1,7 @@
 package com.team8.project2.domain.playlist.service;
 
+import com.team8.project2.domain.curation.tag.entity.Tag;
+import com.team8.project2.domain.curation.tag.repository.TagRepository;
 import com.team8.project2.domain.link.entity.Link;
 import com.team8.project2.domain.link.service.LinkService;
 import com.team8.project2.domain.member.entity.Member;
@@ -43,6 +45,7 @@ public class PlaylistService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final MemberRepository memberRepository;
     private final PlaylistLikeRepository playlistLikeRepository;
+    private final TagRepository tagRepository;
     private static final String VIEW_COUNT_KEY = "playlist:view_count:"; // 조회수 저장
     private static final String LIKE_COUNT_KEY = "playlist:like_count:"; // 좋아요 수 저장
     private static final String RECOMMEND_KEY = "playlist:recommend:"; // 추천 캐싱
@@ -161,6 +164,8 @@ public class PlaylistService {
 
         return similarPlaylists;
     }
+
+
 
 
     /**
@@ -368,6 +373,14 @@ public class PlaylistService {
                 .member(member)
                 .build();
 
+        if (request.getTags() != null && !request.getTags().isEmpty()) {
+            Set<Tag> tags = request.getTags().stream()
+                    .map(tagName -> tagRepository.findByName(tagName)
+                            .orElseGet(() -> tagRepository.save(Tag.builder().name(tagName).build()))
+                    ).collect(Collectors.toSet());
+
+            playlist.setTags(tags);
+        }
         return PlaylistDto.fromEntity(playlistRepository.save(playlist), member);
     }
 
@@ -555,6 +568,15 @@ public class PlaylistService {
         if (request.getTitle() != null) playlist.setTitle(request.getTitle());
         if (request.getDescription() != null) playlist.setDescription(request.getDescription());
         if (request.getIsPublic() != null) playlist.setPublic(request.getIsPublic());
+
+        if (request.getTags() != null) {
+            Set<Tag> tags = request.getTags().stream()
+                    .map(tagName -> tagRepository.findByName(tagName)
+                            .orElseGet(() -> tagRepository.save(Tag.builder().name(tagName).build()))
+                    ).collect(Collectors.toSet());
+
+            playlist.setTags(tags);
+        }
 
         return PlaylistDto.fromEntity(playlistRepository.save(playlist), actor);
     }

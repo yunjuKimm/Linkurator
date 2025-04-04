@@ -11,16 +11,28 @@ import {
   LinkIcon,
   Share2,
   RefreshCw,
+  Tag,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import AddLinkButton from "@/app/components/add-link-button";
 import PlaylistItems from "@/app/components/playlist-items";
 import LikeButton from "@/app/components/like-button";
 import type { Playlist } from "@/types/playlist";
+import TagBadge from "@/app/components/tag-badge";
+import TagInput from "@/app/components/tag-input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { updatePlaylist } from "@/lib/playlist-service";
 
 export default function PlaylistDetailPage() {
   const params = useParams();
@@ -34,6 +46,8 @@ export default function PlaylistDetailPage() {
   const [previousPath, setPreviousPath] = useState<string>("/playlists"); // 기본값 설정
   const [refreshKey, setRefreshKey] = useState(0); // 강제 리렌더링을 위한 키
   const [hasRetried, setHasRetried] = useState(false); // 재시도 여부 (한 번만 시도)
+  const [showTagDialog, setShowTagDialog] = useState(false);
+  const [editingTags, setEditingTags] = useState<string[]>([]);
 
   // 이전 경로 확인 로직 개선
   useEffect(() => {
@@ -78,6 +92,28 @@ export default function PlaylistDetailPage() {
       }
     }
   }, [params.id]);
+
+  const updateTags = async (newTags: string[]) => {
+    if (!playlist) return;
+
+    try {
+      const updatedPlaylist = await updatePlaylist(playlist.id, {
+        tags: newTags,
+      });
+
+      // 플레이리스트 상태 업데이트
+      setPlaylist({
+        ...playlist,
+        tags: updatedPlaylist.tags,
+      });
+
+      setShowTagDialog(false);
+      toast.success("태그가 업데이트되었습니다.");
+    } catch (error) {
+      console.error("태그 업데이트 실패:", error);
+      toast.error("태그 업데이트에 실패했습니다.");
+    }
+  };
 
   const fetchData = useCallback(
     async (incrementView = true) => {
@@ -243,6 +279,11 @@ export default function PlaylistDetailPage() {
     fetchData(false); // 조회수 증가 없이 데이터만 새로고침
   };
 
+  const openTagDialog = () => {
+    setEditingTags(playlist?.tags || []);
+    setShowTagDialog(true);
+  };
+
   // useEffect 수정 - 좋아요 상태 변경 이벤트 리스너 추가
   useEffect(() => {
     if (params.id) {
@@ -359,13 +400,44 @@ export default function PlaylistDetailPage() {
                   <h1 className="text-3xl font-bold tracking-tight">
                     {playlist.title}
                   </h1>
-                  {playlist.tags &&
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {playlist.tags &&
                     Array.isArray(playlist.tags) &&
-                    playlist.tags.length > 0 && (
-                      <Badge variant="secondary" className="ml-2">
-                        {playlist.tags.join(", ")}
-                      </Badge>
-                    )}
+                    playlist.tags.length > 0 ? (
+                      playlist.tags.map((tag, index) => (
+                        <TagBadge
+                          key={index}
+                          tag={tag}
+                          variant="default"
+                          size="sm"
+                        />
+                      ))
+                    ) : isPlaylistOwner() ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={openTagDialog}
+                      >
+                        <Tag className="h-3.5 w-3.5 mr-1" />
+                        태그 추가
+                      </Button>
+                    ) : null}
+
+                    {isPlaylistOwner() &&
+                      playlist.tags &&
+                      playlist.tags.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={openTagDialog}
+                        >
+                          <Tag className="h-3.5 w-3.5 mr-1" />
+                          태그 편집
+                        </Button>
+                      )}
+                  </div>
                 </div>
                 {playlist.description && (
                   <p className="text-muted-foreground mt-2 max-w-2xl">
@@ -515,6 +587,44 @@ export default function PlaylistDetailPage() {
           </div>
         </div>
       </div>
+      {/* 태그 편집 다이얼로그 */}
+      <Dialog open={showTagDialog} onOpenChange={setShowTagDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>플레이리스트 태그 관리</DialogTitle>
+            <DialogDescription>
+              태그를 추가하거나 삭제하여 플레이리스트를 분류하세요.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <TagInput
+              tags={editingTags}
+              onChange={setEditingTags}
+              maxTags={5}
+              suggestions={[
+                "음악",
+                "영화",
+                "책",
+                "개발",
+                "디자인",
+                "요리",
+                "여행",
+                "스포츠",
+                "게임",
+                "학습",
+              ]}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTagDialog(false)}>
+              취소
+            </Button>
+            <Button onClick={() => updateTags(editingTags)}>저장</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
